@@ -1,6 +1,6 @@
 /// <reference path="./globals.d.ts" />
 
-declare module 'back-lib-foundation/EntityBase' {
+declare module 'back-lib-persistence/src/app/EntityBase' {
 	import { Model } from 'objection';
 	export abstract class EntityBase extends Model {
 	    static readonly tableName: string;
@@ -8,9 +8,9 @@ declare module 'back-lib-foundation/EntityBase' {
 	}
 
 }
-declare module 'back-lib-foundation/RepositoryBase' {
+declare module 'back-lib-persistence/src/app/RepositoryBase' {
 	import { QueryBuilder } from 'objection';
-	import { EntityBase } from 'back-lib-foundation/EntityBase';
+	import { EntityBase } from 'back-lib-persistence/src/app/EntityBase';
 	export class PagedArray<T> extends Array<T> {
 	    private _total;
 	    /**
@@ -45,9 +45,9 @@ declare module 'back-lib-foundation/RepositoryBase' {
 	}
 
 }
-declare module 'back-lib-foundation' {
+declare module 'back-lib-persistence' {
 	import 'automapper-ts';
-	export * from 'back-lib-foundation/EntityBase';
-	export * from 'back-lib-foundation/RepositoryBase';
+	export * from 'back-lib-persistence/src/app/EntityBase';
+	export * from 'back-lib-persistence/src/app/RepositoryBase';
 
 }
