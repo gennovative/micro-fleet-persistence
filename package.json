@@ -1,7 +1,7 @@
 {
   "name": "back-lib-persistence",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Classes for connecting to database.",
   "main": "./dist/app/index.js",
   "types": "./typings/app.d.ts",
@@ -10,7 +10,7 @@
   },
   "dependencies": {
 	"automapper-ts": "^1.8.1",
-	"back-lib-common-util": "git@bitbucket.org:gennovahall/back-lib-common-util.git",
+	"back-lib-common-util": "git@bitbucket.org:gennovahall/back-lib-common-util.git#1.0.0",
     "knex": "^0.12.6",
     "lodash": "^4.17.4",
     "objection": "^0.6.2",
