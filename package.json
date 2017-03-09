@@ -1,7 +1,7 @@
 {
   "name": "back-lib-persistence",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Classes for connecting to database.",
   "main": "./dist/app/index.js",
   "types": "./typings/app.d.ts",
