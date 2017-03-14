@@ -3,7 +3,6 @@
 // Definitions by: Matthew McEachen <https://github.com/mceachen> & Drew R. <https://github.com/drew-r>
 
 /// <reference types="node" />
-/// <reference types="knex" />
 
 declare module "objection" {
 
