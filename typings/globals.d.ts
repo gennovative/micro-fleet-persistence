@@ -6,5 +6,3 @@
 declare interface IModelDTO {
 	id: number;
 }
-
-declare type AutoMapper = AutoMapperJs.AutoMapper;
