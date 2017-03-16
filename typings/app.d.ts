@@ -176,10 +176,17 @@ declare module 'back-lib-persistence/src/app/KnexDatabaseConnector' {
 	}
 
 }
-declare module 'back-lib-persistence/src/app/index' {
+declare module 'back-lib-persistence/src/app/Types' {
+	export class Types {
+	    static readonly DB_CONNECTOR: symbol;
+	}
+
+}
+declare module 'back-lib-persistence' {
 	export * from 'back-lib-persistence/src/app/EntityBase';
 	export * from 'back-lib-persistence/src/app/RepositoryBase';
 	export * from 'back-lib-persistence/src/app/IDatabaseConnector';
 	export * from 'back-lib-persistence/src/app/KnexDatabaseConnector';
+	export * from 'back-lib-persistence/src/app/Types';
 
 }

@@ -7,5 +7,6 @@ __export(require("./EntityBase"));
 __export(require("./RepositoryBase"));
 __export(require("./IDatabaseConnector"));
 __export(require("./KnexDatabaseConnector"));
+__export(require("./Types"));
 
 //# sourceMappingURL=index.js.map
