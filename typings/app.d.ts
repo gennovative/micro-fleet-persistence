@@ -1,6 +1,4 @@
-/// <reference path="./globals.d.ts" />
-
-declare module 'back-lib-persistence/src/app/EntityBase' {
+declare module 'back-lib-persistence/EntityBase' {
 	import { Model } from 'objection';
 	export abstract class EntityBase extends Model {
 	    /**
@@ -11,7 +9,7 @@ declare module 'back-lib-persistence/src/app/EntityBase' {
 	}
 
 }
-declare module 'back-lib-persistence/src/app/IDatabaseConnector' {
+declare module 'back-lib-persistence/IDatabaseConnector' {
 	import { QueryBuilder } from 'objection';
 	/**
 	 * Db driver names for `IConnectionDetail.clientName` property.
@@ -119,9 +117,9 @@ declare module 'back-lib-persistence/src/app/IDatabaseConnector' {
 	}
 
 }
-declare module 'back-lib-persistence/src/app/RepositoryBase' {
-	import { EntityBase } from 'back-lib-persistence/src/app/EntityBase';
-	import { IDatabaseConnector, QueryCallback } from 'back-lib-persistence/src/app/IDatabaseConnector';
+declare module 'back-lib-persistence/RepositoryBase' {
+	import { EntityBase } from 'back-lib-persistence/EntityBase';
+	import { IDatabaseConnector, QueryCallback } from 'back-lib-persistence/IDatabaseConnector';
 	export class PagedArray<T> extends Array<T> {
 	    /**
 	     * Gets total number of items in database.
@@ -162,9 +160,9 @@ declare module 'back-lib-persistence/src/app/RepositoryBase' {
 	}
 
 }
-declare module 'back-lib-persistence/src/app/KnexDatabaseConnector' {
-	import { EntityBase } from 'back-lib-persistence/src/app/EntityBase';
-	import { IDatabaseConnector, IConnectionDetail, QueryCallback } from 'back-lib-persistence/src/app/IDatabaseConnector';
+declare module 'back-lib-persistence/KnexDatabaseConnector' {
+	import { EntityBase } from 'back-lib-persistence/EntityBase';
+	import { IDatabaseConnector, IConnectionDetail, QueryCallback } from 'back-lib-persistence/IDatabaseConnector';
 	/**
 	 * Provides settings from package
 	 */
@@ -176,17 +174,17 @@ declare module 'back-lib-persistence/src/app/KnexDatabaseConnector' {
 	}
 
 }
-declare module 'back-lib-persistence/src/app/Types' {
+declare module 'back-lib-persistence/Types' {
 	export class Types {
 	    static readonly DB_CONNECTOR: symbol;
 	}
 
 }
 declare module 'back-lib-persistence' {
-	export * from 'back-lib-persistence/src/app/EntityBase';
-	export * from 'back-lib-persistence/src/app/RepositoryBase';
-	export * from 'back-lib-persistence/src/app/IDatabaseConnector';
-	export * from 'back-lib-persistence/src/app/KnexDatabaseConnector';
-	export * from 'back-lib-persistence/src/app/Types';
+	export * from 'back-lib-persistence/EntityBase';
+	export * from 'back-lib-persistence/RepositoryBase';
+	export * from 'back-lib-persistence/IDatabaseConnector';
+	export * from 'back-lib-persistence/KnexDatabaseConnector';
+	export * from 'back-lib-persistence/Types';
 
 }
