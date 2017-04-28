@@ -9,7 +9,7 @@
     "test": "./node_modules/.bin/mocha --reporter spec ./dist/test/**/*.js"
   },
   "dependencies": {
-	"back-lib-common-util": "git@bitbucket.org:gennovahall/back-lib-common-util.git#1.0.0",
+	"back-lib-common-util": "git@bitbucket.org:firstinteractive/back-lib-common-util.git#development",
     "knex": "^0.12.6",
     "lodash": "^4.17.4",
     "objection": "^0.6.2",
