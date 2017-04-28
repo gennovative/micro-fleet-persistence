@@ -1,3 +1,5 @@
+/// <reference path="./globals.d.ts" />
+
 declare module 'back-lib-persistence/EntityBase' {
 	import { Model } from 'objection';
 	export abstract class EntityBase extends Model {
