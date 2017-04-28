@@ -80,9 +80,10 @@ declare module 'back-lib-persistence/IDatabaseConnector' {
 	 */
 	export interface IDatabaseConnector {
 	    /**
-	     * Makes a new database connection to managed list.
+	     * Makes a new database connection then adds to managed list.
 	     * @param detail {IConnectionDetail} Credentials to make connection.
 	     * @param name {string} Optionally give a name to the connection, for later reference.
+	     * 	If not given, the position index of connection in the managed list will be assigned as name.
 	     */
 	    addConnection(detail: IConnectionDetail, name?: string): void;
 	    /**
@@ -95,8 +96,7 @@ declare module 'back-lib-persistence/IDatabaseConnector' {
 	     *
 	     * @param EntityClass {Class} An entity class to bind a connection.
 	     * @param callback {QueryCallback} A callback to invoke each time a connection is bound.
-	     * @param names {string[]} Optionally filter out and only execute query on connections with specified name,
-	     * 	if not given, the position index of connection in the managed list will be assigned as name.
+	     * @param names {string[]} Optionally filters out and only executes the query on connections with specified names.
 	     * @example
 	     * 	// Must add at least one connection.
 	     * 	connector.addConnection({...});
@@ -150,9 +150,11 @@ declare module 'back-lib-persistence/RepositoryBase' {
 	    /**
 	     * Waits for query execution on first connection which is primary,
 	     * do not care about the others, which is for backup.
-	     * TODO: Consider putting database access layer in a separate microservice.
 	     */
 	    protected first(promises: Promise<any>[]): Promise<any>;
+	    /**
+	     * @see IDatabaseConnector.query
+	     */
 	    protected abstract query<TEntity>(callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[];
 	    protected abstract createModelMap(): void;
 	    protected abstract toEntity(from: TModel | TModel[]): TEntity & TEntity[];

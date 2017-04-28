@@ -128,6 +128,9 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 		return await promises[0];
 	}
 
+	/**
+	 * @see IDatabaseConnector.query
+	 */
 	protected abstract query<TEntity>(callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[];
 	protected abstract createModelMap(): void;
 	protected abstract toEntity(from: TModel | TModel[]): TEntity & TEntity[];
