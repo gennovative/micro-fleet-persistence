@@ -1,6 +1,6 @@
-/// <reference path="./globals.d.ts" />
+/// <reference path="./global.d.ts" />
 
-declare module 'back-lib-persistence/src/app/EntityBase' {
+declare module 'back-lib-persistence/EntityBase' {
 	import { Model } from 'objection';
 	export abstract class EntityBase extends Model {
 	    /**
@@ -11,7 +11,7 @@ declare module 'back-lib-persistence/src/app/EntityBase' {
 	}
 
 }
-declare module 'back-lib-persistence/src/app/IDatabaseConnector' {
+declare module 'back-lib-persistence/IDatabaseConnector' {
 	import { QueryBuilder } from 'objection';
 	/**
 	 * Db driver names for `IConnectionDetail.clientName` property.
@@ -82,9 +82,10 @@ declare module 'back-lib-persistence/src/app/IDatabaseConnector' {
 	 */
 	export interface IDatabaseConnector {
 	    /**
-	     * Makes a new database connection to managed list.
+	     * Makes a new database connection then adds to managed list.
 	     * @param detail {IConnectionDetail} Credentials to make connection.
 	     * @param name {string} Optionally give a name to the connection, for later reference.
+	     * 	If not given, the position index of connection in the managed list will be assigned as name.
 	     */
 	    addConnection(detail: IConnectionDetail, name?: string): void;
 	    /**
@@ -97,8 +98,7 @@ declare module 'back-lib-persistence/src/app/IDatabaseConnector' {
 	     *
 	     * @param EntityClass {Class} An entity class to bind a connection.
 	     * @param callback {QueryCallback} A callback to invoke each time a connection is bound.
-	     * @param names {string[]} Optionally filter out and only execute query on connections with specified name,
-	     * 	if not given, the position index of connection in the managed list will be assigned as name.
+	     * @param names {string[]} Optionally filters out and only executes the query on connections with specified names.
 	     * @example
 	     * 	// Must add at least one connection.
 	     * 	connector.addConnection({...});
@@ -119,9 +119,9 @@ declare module 'back-lib-persistence/src/app/IDatabaseConnector' {
 	}
 
 }
-declare module 'back-lib-persistence/src/app/RepositoryBase' {
-	import { EntityBase } from 'back-lib-persistence/src/app/EntityBase';
-	import { IDatabaseConnector, QueryCallback } from 'back-lib-persistence/src/app/IDatabaseConnector';
+declare module 'back-lib-persistence/RepositoryBase' {
+	import { EntityBase } from 'back-lib-persistence/EntityBase';
+	import { IDatabaseConnector, QueryCallback } from 'back-lib-persistence/IDatabaseConnector';
 	export class PagedArray<T> extends Array<T> {
 	    /**
 	     * Gets total number of items in database.
@@ -152,9 +152,11 @@ declare module 'back-lib-persistence/src/app/RepositoryBase' {
 	    /**
 	     * Waits for query execution on first connection which is primary,
 	     * do not care about the others, which is for backup.
-	     * TODO: Consider putting database access layer in a separate microservice.
 	     */
 	    protected first(promises: Promise<any>[]): Promise<any>;
+	    /**
+	     * @see IDatabaseConnector.query
+	     */
 	    protected abstract query<TEntity>(callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[];
 	    protected abstract createModelMap(): void;
 	    protected abstract toEntity(from: TModel | TModel[]): TEntity & TEntity[];
@@ -162,9 +164,9 @@ declare module 'back-lib-persistence/src/app/RepositoryBase' {
 	}
 
 }
-declare module 'back-lib-persistence/src/app/KnexDatabaseConnector' {
-	import { EntityBase } from 'back-lib-persistence/src/app/EntityBase';
-	import { IDatabaseConnector, IConnectionDetail, QueryCallback } from 'back-lib-persistence/src/app/IDatabaseConnector';
+declare module 'back-lib-persistence/KnexDatabaseConnector' {
+	import { EntityBase } from 'back-lib-persistence/EntityBase';
+	import { IDatabaseConnector, IConnectionDetail, QueryCallback } from 'back-lib-persistence/IDatabaseConnector';
 	/**
 	 * Provides settings from package
 	 */
@@ -176,17 +178,17 @@ declare module 'back-lib-persistence/src/app/KnexDatabaseConnector' {
 	}
 
 }
-declare module 'back-lib-persistence/src/app/Types' {
+declare module 'back-lib-persistence/Types' {
 	export class Types {
 	    static readonly DB_CONNECTOR: symbol;
 	}
 
 }
 declare module 'back-lib-persistence' {
-	export * from 'back-lib-persistence/src/app/EntityBase';
-	export * from 'back-lib-persistence/src/app/RepositoryBase';
-	export * from 'back-lib-persistence/src/app/IDatabaseConnector';
-	export * from 'back-lib-persistence/src/app/KnexDatabaseConnector';
-	export * from 'back-lib-persistence/src/app/Types';
+	export * from 'back-lib-persistence/EntityBase';
+	export * from 'back-lib-persistence/RepositoryBase';
+	export * from 'back-lib-persistence/IDatabaseConnector';
+	export * from 'back-lib-persistence/KnexDatabaseConnector';
+	export * from 'back-lib-persistence/Types';
 
 }
