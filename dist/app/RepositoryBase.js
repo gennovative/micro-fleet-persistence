@@ -18,20 +18,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const back_lib_common_util_1 = require("back-lib-common-util");
-class PagedArray extends Array {
-    constructor(_total, source) {
-        super();
-        this._total = _total;
-        Array.prototype.push.apply(this, source);
-    }
-    /**
-     * Gets total number of items in database.
-     */
-    get total() {
-        return this._total;
-    }
-}
-exports.PagedArray = PagedArray;
+const back_lib_common_contracts_1 = require("back-lib-common-contracts");
 let RepositoryBase = class RepositoryBase {
     constructor(_modelMapper, _dbConnector) {
         this._modelMapper = _modelMapper;
@@ -95,7 +82,7 @@ let RepositoryBase = class RepositoryBase {
                 return null;
             }
             dtoList = this.toDTO(foundList.results);
-            return new PagedArray(foundList.total, dtoList);
+            return new back_lib_common_contracts_1.PagedArray(foundList.total, dtoList);
         });
     }
     update(model) {

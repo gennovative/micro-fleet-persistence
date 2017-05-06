@@ -120,24 +120,9 @@ declare module 'back-lib-persistence/IDatabaseConnector' {
 
 }
 declare module 'back-lib-persistence/RepositoryBase' {
+	import { PagedArray, IRepository } from 'back-lib-common-contracts';
 	import { EntityBase } from 'back-lib-persistence/EntityBase';
 	import { IDatabaseConnector, QueryCallback } from 'back-lib-persistence/IDatabaseConnector';
-	export class PagedArray<T> extends Array<T> {
-	    /**
-	     * Gets total number of items in database.
-	     */
-	    readonly total: number;
-	    constructor(_total: any, source: Array<T>);
-	}
-	export interface IRepository<TModel extends IModelDTO> {
-	    countAll(): Promise<number>;
-	    create(model: TModel): Promise<TModel>;
-	    delete(id: number): Promise<number>;
-	    find(id: number): Promise<TModel>;
-	    page(pageIndex: number, pageSize: number): Promise<PagedArray<TModel>>;
-	    patch(model: Partial<TModel>): Promise<number>;
-	    update(model: TModel): Promise<number>;
-	}
 	export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends IModelDTO> implements IRepository<TModel> {
 	    protected _modelMapper: AutoMapper;
 	    protected _dbConnector: IDatabaseConnector;
@@ -152,6 +137,7 @@ declare module 'back-lib-persistence/RepositoryBase' {
 	    /**
 	     * Waits for query execution on first connection which is primary,
 	     * do not care about the others, which is for backup.
+	     * TODO: Consider putting database access layer in a separate microservice.
 	     */
 	    protected first(promises: Promise<any>[]): Promise<any>;
 	    /**

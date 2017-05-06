@@ -3,8 +3,9 @@ import 'automapper-ts'; // Singleton
 import { expect } from 'chai';
 
 import { InvalidArgumentException } from 'back-lib-common-util';
+import { PagedArray } from 'back-lib-common-contracts';
 
-import { RepositoryBase, EntityBase, PagedArray, QueryCallback, IDatabaseConnector,
+import { RepositoryBase, EntityBase, QueryCallback, IDatabaseConnector,
 		KnexDatabaseConnector, DbClient } from '../app';
 
 

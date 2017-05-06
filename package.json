@@ -5,11 +5,9 @@
   "description": "Classes for connecting to database.",
   "main": "./dist/app/index.js",
   "types": "./typings/app.d.ts",
-  "scripts": {
-    "test": "./node_modules/.bin/mocha --reporter spec ./dist/test/**/*.js"
-  },
   "dependencies": {
-	"back-lib-common-util": "git@bitbucket.org:firstinteractive/back-lib-common-util.git#development",
+    "back-lib-common-contracts": "git+ssh://git@bitbucket.org/firstinteractive/back-lib-common-contracts.git#development",
+    "back-lib-common-util": "git+ssh://git@bitbucket.org:firstinteractive/back-lib-common-util.git#development",
     "knex": "^0.12.6",
     "lodash": "^4.17.4",
     "objection": "^0.6.2",
