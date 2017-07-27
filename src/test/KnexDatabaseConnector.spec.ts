@@ -138,7 +138,7 @@ describe('KnexDatabaseConnector', () => {
 			expect(exception).to.be.not.null;
 			expect(exception).to.equal('No database settings!');
 		});
-	});
+	}); // END describe 'addConnection'
 	
 	describe('dispose', () => {
 		it('should release all resources', async () => {
@@ -161,9 +161,9 @@ describe('KnexDatabaseConnector', () => {
 			});
 			expect(callMe).to.be.called;
 		});
-	});
+	}); // END describe 'dispose'
 
-	describe('query', () => {
+	describe('prepare', () => {
 		it('should execute query with all connections', async () => {
 			// Arrange
 			let dbConnector = new KnexDatabaseConnector(),
@@ -185,7 +185,7 @@ describe('KnexDatabaseConnector', () => {
 			// });
 
 			// Act
-			await dbConnector.query<DummyEntity>(DummyEntity, (query) => {
+			await dbConnector.prepare<DummyEntity>(DummyEntity, (query) => {
 				callMe();
 				return Promise.resolve();
 			});
@@ -216,7 +216,7 @@ describe('KnexDatabaseConnector', () => {
 			}, 'second');
 
 			// Act
-			await dbConnector.query<DummyEntity>(DummyEntity, (query) => {
+			await dbConnector.prepare<DummyEntity>(DummyEntity, (query) => {
 				callMe();
 				return Promise.resolve();
 			}, 'first');
@@ -249,7 +249,7 @@ describe('KnexDatabaseConnector', () => {
 			// });
 
 			// Act
-			await dbConnector.query<DummyEntity>(DummyEntity, (query, BoundDummyEntity) => {
+			await dbConnector.prepare<DummyEntity>(DummyEntity, (query, BoundDummyEntity) => {
 				callMe();
 				newKnex = BoundDummyEntity['knex']();
 				return Promise.resolve();
@@ -260,5 +260,5 @@ describe('KnexDatabaseConnector', () => {
 			expect(oldKnex).not.to.equal(newKnex);
 			await dbConnector.dispose();
 		});
-	});
+	}); // END describe 'prepare'
 });

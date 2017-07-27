@@ -1,5 +1,8 @@
 import { QueryBuilder } from 'objection';
 
+import { EntityBase } from './EntityBase';
+
+
 /**
  * Db driver names for `IConnectionDetail.clientName` property.
  */
@@ -116,5 +119,5 @@ export interface IDatabaseConnector {
 	 * 	let result = await promises[0];
 	 * @return {Promise[]} An array of promises returned by all above callbacks.
 	 */
-	query<TEntity>(EntityClass, callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[];
+	prepare<TEntity extends EntityBase>(EntityClass, callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[];
 }

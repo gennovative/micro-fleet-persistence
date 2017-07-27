@@ -1,5 +1,6 @@
 import * as knex from 'knex';
 import { Model, QueryBuilder } from 'objection';
+const isEmpty = require('lodash/isEmpty');
 
 import { injectable, Guard } from 'back-lib-common-util';
 
@@ -21,7 +22,7 @@ export class KnexDatabaseConnector implements IDatabaseConnector {
 	}
 
 	public addConnection(detail: IConnectionDetail, name?: string): void {
-		Guard.assertDefined('detail', detail);
+		Guard.assertArgDefined('detail', detail);
 
 		let settings = {
 				client: detail.clientName,
@@ -42,13 +43,14 @@ export class KnexDatabaseConnector implements IDatabaseConnector {
 		return <any>destroyPromises;
 	}
 
-	public query<TEntity extends EntityBase>(EntityClass, callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[] {
+	public prepare<TEntity extends EntityBase>(EntityClass, callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[] {
+		Guard.assertIsNotEmpty(this._connections, 'Must call addConnection() before executing any query.');
 		return this._connections.map(conn => {
 			let BoundClass;
 
-			// If connection names is specified, we only execute queries on those connections.
-			if (names && names.length) {
-				if (names.findIndex(name => name == conn['customName']) >= 0) {
+			// If connection names are specified, we only execute queries on those connections.
+			if (!isEmpty(names)) {
+				if (names.includes(conn['customName'])) {
 					BoundClass = EntityClass['bindKnex'](conn);
 					return callback(BoundClass['query'](), BoundClass);
 				}

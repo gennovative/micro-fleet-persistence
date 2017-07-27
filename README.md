@@ -1,8 +1,21 @@
 # Gennova backend persistence library
 
-# INSTALLATION
+## USAGE
 
 `import 'automapper-ts';` only once in the entire program.
+
+## INSTALLATION
+
+`npm i`: To install dependencies.
+`gulp` to transpile TypeScript.
+
+## DEVELOPMENT
+
+`gulp watch`: To transpile and watch for edit.
+
+## RELEASE
+
+`gulp release`: To transpile and create `app.d.ts` definition file.
 
 # Versions
 ## 1.0.0

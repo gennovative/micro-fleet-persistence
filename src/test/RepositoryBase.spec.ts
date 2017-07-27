@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import 'automapper-ts'; // Singleton
 import { expect } from 'chai';
+import * as moment from 'moment';
 
 import { InvalidArgumentException } from 'back-lib-common-util';
 import { PagedArray } from 'back-lib-common-contracts';
@@ -10,13 +11,14 @@ import { RepositoryBase, EntityBase, QueryCallback, IDatabaseConnector,
 
 
 const CONN_FILE = `${process.cwd()}/database-adapter-test.sqlite`,
+	CONN_FILE_2 = `${process.cwd()}/database-adapter-test-second.sqlite`,
 	// For SQLite3 file
 	DB_TABLE = 'userdata',
 
 	// For PostgreSQL
 	//DB_TABLE = 'gennova.userdata',
 
-	IMPOSSIBLE_ID = 0;
+	IMPOSSIBLE_ID = '0';
 
 
 // Should put this in Types.ts
@@ -26,9 +28,10 @@ const TYPE_USER_DTO = Symbol('UserDTO'),
 class UserDTO implements IModelDTO {
 	// NOTE: Class variales must be initialized, otherwise they
 	// will disappear in transpiled code.
-	public id: number = undefined;
+	public id: BigSInt = undefined;
 	public name: string = undefined;
 	public age: number = undefined;
+	public deleted_at: number = undefined;
 }
 
 class UserEntity extends EntityBase {
@@ -40,6 +43,7 @@ class UserEntity extends EntityBase {
 	// will disappear in transpiled code.
 	public name: string = undefined;
 	public age: number = undefined;
+	public deleted_at: number = undefined;
 }
 
 class UserRepo extends RepositoryBase<UserEntity, UserDTO> {
@@ -54,8 +58,8 @@ class UserRepo extends RepositoryBase<UserEntity, UserDTO> {
 	/**
 	 * @override
 	 */
-	protected query<UserEntity>(callback: QueryCallback<UserEntity>, ...names: string[]): Promise<any>[] {
-		return this._dbConnector.query(UserEntity, callback, ...names);
+	protected prepare<UserEntity>(callback: QueryCallback<UserEntity>, ...names: string[]): Promise<any>[] {
+		return this._dbConnector.prepare(UserEntity, <any>callback, ...names);
 	}
 
 	/**
@@ -97,14 +101,14 @@ describe('RepositoryBase', () => {
 	beforeEach('Initialize db adapter', () => {
 		dbConnector = new KnexDatabaseConnector();
 		dbConnector.addConnection({
-			// For SQLite3 file
+			// // For SQLite3 file
 			clientName: DbClient.SQLITE3,
 			fileName: CONN_FILE,
 
-			// For PostgreSQL
-			//clientName: DbClient.POSTGRESQL,
+			// // For PostgreSQL
+			// clientName: DbClient.POSTGRESQL,
 			// host: {
-			// 	address: '192.168.1.4',
+			// 	address: 'localhost',
 			// 	user: 'postgres',
 			// 	password: 'postgres',
 			// 	database: 'unittest',
@@ -117,8 +121,7 @@ describe('RepositoryBase', () => {
 		dbConnector = null;
 	});
 
-	describe('create', function () {
-		this.timeout(30000);
+	describe('create', () => {
 		it('should insert a row to database', async () => {
 			// Arrange
 			let usrRepo = new UserRepo(automapper, dbConnector),
@@ -131,9 +134,30 @@ describe('RepositoryBase', () => {
 
 			// Assert
 			expect(createdDTO).to.be.not.null;
-			expect(createdDTO.id).to.be.greaterThan(0);
+			expect(+createdDTO.id).to.be.greaterThan(0); // Need parse to int, because Postgres returns bigint as string.
 			expect(createdDTO.name).to.equal(model.name);
 			expect(createdDTO.age).to.equal(model.age);
+		});
+		
+		it('should throw error if not success on all connections', async () => {
+			// Arrange
+			let usrRepo = new UserRepo(automapper, dbConnector),
+				model = new UserDTO();
+			model.name = 'Hiri';
+			model.age = 29;
+
+			dbConnector.addConnection({
+				clientName: DbClient.SQLITE3,
+				fileName: CONN_FILE_2,
+			});
+
+			// Act
+			try {
+				let createdDTO: UserDTO = await usrRepo.create(model);
+				expect(createdDTO).to.be.null;
+			} catch (ex) {
+				expect(ex).to.be.not.null;
+			}
 		});
 	}); // END describe 'create'
 
@@ -278,10 +302,36 @@ describe('RepositoryBase', () => {
 		});
 	}); // END describe 'update'
 
-	describe('delete', () => {
+	describe('delete (soft)', () => {
+		it('should return a possitive number and the record is still in database', async () => {
+			// Arrange
+			let usrRepo = new UserRepo(automapper, dbConnector),
+				model = new UserDTO();
+			
+			usrRepo['_isSoftDelete'] = true; // Default
+
+			model.name = 'Hiri';
+			model.age = 29;
+
+			cachedDTO = await usrRepo.create(model);
+
+			// Act
+			let affectedRows: number = await usrRepo.delete(cachedDTO.id),
+				refetchedDTO: UserDTO = await usrRepo.find(cachedDTO.id);
+			
+			// Assert
+			expect(affectedRows).to.be.greaterThan(0);
+			// If `delete` is successful, we must be able to still find that entity with the id.
+			expect(refetchedDTO).to.exist;
+			expect(refetchedDTO.deleted_at).to.exist;
+		});
+	});
+
+	describe('delete (hard)', () => {
 		it('should return a possitive number if found', async () => {
 			// Arrange
 			let usrRepo = new UserRepo(automapper, dbConnector);
+			usrRepo['_isSoftDelete'] = false;
 			
 			// Act
 			let affectedRows: number = await usrRepo.delete(cachedDTO.id),
@@ -316,7 +366,7 @@ describe('RepositoryBase', () => {
 			let usrRepo = new UserRepo(automapper, dbConnector);
 
 			// Deletes all from DB
-			await Promise.all(usrRepo['query'](query => query.delete()));
+			await Promise.all(usrRepo['prepare'](query => query.delete()));
 
 			// Act
 			let models: PagedArray<UserDTO> = await usrRepo.page(PAGE, SIZE);
@@ -334,7 +384,7 @@ describe('RepositoryBase', () => {
 				entity: UserDTO;
 
 			// Deletes all from DB
-			await Promise.all(usrRepo['query'](query => query.delete()));
+			await Promise.all(usrRepo['prepare'](query => query.delete()));
 
 			for (let i = 0; i < TOTAL; i++) {
 				entity = new UserDTO();
@@ -370,7 +420,7 @@ describe('RepositoryBase', () => {
 			let usrRepo = new UserRepo(automapper, dbConnector);
 
 			// Deletes all from DB
-			await Promise.all(usrRepo['query'](query => query.delete()));
+			await Promise.all(usrRepo['prepare'](query => query.delete()));
 
 			// Act
 			let count = await usrRepo.countAll();

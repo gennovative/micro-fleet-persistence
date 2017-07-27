@@ -9,7 +9,7 @@ export abstract class EntityBase extends Model {
 		throw 'This method must be implemented by derived class!';
 	}
 
-	public id: number;
+	public id: BigSInt = undefined;
 }
 
 EntityBase.knex(null);

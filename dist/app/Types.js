@@ -4,6 +4,5 @@ class Types {
 }
 Types.DB_CONNECTOR = Symbol('IDatabaseConnector');
 exports.Types = Types;
-;
 
 //# sourceMappingURL=Types.js.map

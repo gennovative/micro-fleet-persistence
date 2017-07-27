@@ -10,6 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const knex = require("knex");
+const isEmpty = require('lodash/isEmpty');
 const back_lib_common_util_1 = require("back-lib-common-util");
 /**
  * Provides settings from package
@@ -20,7 +21,7 @@ let KnexDatabaseConnector = class KnexDatabaseConnector {
         this._knex = knex;
     }
     addConnection(detail, name) {
-        back_lib_common_util_1.Guard.assertDefined('detail', detail);
+        back_lib_common_util_1.Guard.assertArgDefined('detail', detail);
         let settings = {
             client: detail.clientName,
             useNullAsDefault: true,
@@ -37,12 +38,13 @@ let KnexDatabaseConnector = class KnexDatabaseConnector {
         this._connections = null;
         return destroyPromises;
     }
-    query(EntityClass, callback, ...names) {
+    prepare(EntityClass, callback, ...names) {
+        back_lib_common_util_1.Guard.assertIsNotEmpty(this._connections, 'Must call addConnection() before executing any query.');
         return this._connections.map(conn => {
             let BoundClass;
-            // If connection names is specified, we only execute queries on those connections.
-            if (names && names.length) {
-                if (names.findIndex(name => name == conn['customName']) >= 0) {
+            // If connection names are specified, we only execute queries on those connections.
+            if (!isEmpty(names)) {
+                if (names.includes(conn['customName'])) {
                     BoundClass = EntityClass['bindKnex'](conn);
                     return callback(BoundClass['query'](), BoundClass);
                 }

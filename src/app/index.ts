@@ -1,3 +1,4 @@
+import './convert-utc';
 export * from './EntityBase';
 export * from './RepositoryBase';
 export * from './IDatabaseConnector';

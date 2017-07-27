@@ -1,3 +1,6 @@
+const every = require('lodash/every');
+const isEmpty = require('lodash/isEmpty');
+import * as moment from 'moment';
 import { injectable, Guard } from 'back-lib-common-util';
 import { PagedArray, IRepository } from 'back-lib-common-contracts';
 
@@ -9,106 +12,161 @@ import { IDatabaseConnector, QueryCallback } from './IDatabaseConnector';
 export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends IModelDTO>
 	implements IRepository<TModel> {
 
+
 	constructor(
 		protected _modelMapper: AutoMapper,
-		protected _dbConnector: IDatabaseConnector
+		protected _dbConnector: IDatabaseConnector,
+		protected _isSoftDelete: boolean = true
 	) {
-		Guard.assertDefined('modelMapper', this._modelMapper);
+		Guard.assertArgDefined('_modelMapper', _modelMapper);
 		this.createModelMap();
 	}
 
+	/**
+	 * @see IRepository.isSoftDelete
+	 */
+	public get isSoftDelete(): boolean {
+		return this._isSoftDelete;
+	}
+
+	/**
+	 * @see IRepository.countAll
+	 */
 	public async countAll(): Promise<number> {
-		let promises = this.query(query => {
-			return query.count('id as total');
-		}, '0'), // Only fetch data from primary connection. By convention, the firstly added connection is the primary.
-			result = await this.first(promises);
+		let result = await this.executeQuery(query => {
+				return query.count('id as total');
+			});
 
 		// In case with Postgres, `count` returns a bigint type which will be a String 
 		// and not a Number.
 		/* istanbul ignore next */
-		return (result && result.length ? +(result[0]['total']) : 0);
+		return (isEmpty(result) ? 0 : +(result[0]['total']));
 	}
 
+	/**
+	 * @see IRepository.create
+	 */
 	public async create(model: TModel): Promise<TModel> {
-		let promises = this.query(query => {
-			return query.insert(model);
-		}),
-			newEnt = await this.first(promises);
+		let entity = this.toEntity(model),
+			newEnt: TEntity = await this.executeCommand(query => {
+				return query.insert(entity);
+			});
 
 		return this.toDTO(newEnt);
 	}
 
-	public async delete(id: number): Promise<number> {
-		let promises = this.query(query => {
-			return query.deleteById(id);
-		}),
-			affectedRows = await this.first(promises);
+	/**
+	 * @see IRepository.delete
+	 */
+	public async delete(id: BigSInt): Promise<number> {
+		let affectedRows: number;
+		
+		if (this.isSoftDelete) {
+			affectedRows = await this.patch(<any>{
+				id,
+				deleted_at: moment(new Date()).utc().format()
+			});
+		} else {
+			affectedRows = await this.executeCommand(query => {
+				return query.deleteById(id);
+			});
+		}
 
 		return affectedRows;
 	}
 
-	public async find(id: number): Promise<TModel> {
-		let promises = this.query(query => {
-			return query.findById(id);
-		}, '0'),
-			foundEnt = await this.first(promises);
+	/**
+	 * @see IRepository.find
+	 */
+	public async find(id: BigSInt): Promise<TModel> {
+		let foundEnt: TEntity = await this.executeQuery(query => {
+				return query.findById(id);
+			});
 
 		return this.toDTO(foundEnt);
 	}
 
-	public async patch(model: Partial<TModel>): Promise<number> {
-		Guard.assertDefined('entity.id', model.id);
-
-		let promises = this.query(query => {
-			return query.where('id', model.id).patch(<TModel>model);
-		}),
-			affectedRows = await this.first(promises);
-
-		return affectedRows;
-	}
-
+	/**
+	 * @see IRepository.page
+	 */
 	public async page(pageIndex: number, pageSize: number): Promise<PagedArray<TModel>> {
 		let foundList: { total: number, results: Array<TEntity> },
 			dtoList: TModel[],
-			affectedRows;
+			affectedRows: number;
 
-		let promises = this.query(query => {
+		foundList = await this.executeQuery(query => {
 			return query.page(pageIndex, pageSize);
-		}, '0');
+		});
 
-		foundList = await this.first(promises);
-		if (!foundList || !foundList.results || !foundList.results.length) {
+		if (!foundList || isEmpty(foundList.results)) {
 			return null;
 		}
 		dtoList = this.toDTO(foundList.results);
 		return new PagedArray<TModel>(foundList.total, dtoList);
 	}
 
-	public async update(model: TModel): Promise<number> {
-		Guard.assertDefined('entity.id', model.id);
+	/**
+	 * @see IRepository.patch
+	 */
+	public async patch(model: Partial<TModel>): Promise<number> {
+		Guard.assertArgDefined('model.id', model.id);
 
-		let promises = this.query(query => {
-			return query.where('id', model.id).update(model);
-		}),
-			affectedRows = await this.first(promises);
+		let entity = this.toEntity(model),
+			affectedRows: number = await this.executeCommand(query => {
+				return query.where('id', entity.id).patch(entity);
+			});
+		return affectedRows;
+	}
+
+	/**
+	 * @see IRepository.update
+	 */
+	public async update(model: TModel): Promise<number> {
+		Guard.assertArgDefined('model.id', model.id);
+
+		let entity = this.toEntity(model),
+			affectedRows: number = await this.executeCommand(query => {
+				return query.where('id', entity.id).update(entity);
+			});
 
 		return affectedRows;
 	}
 
 	/**
-	 * Waits for query execution on first connection which is primary,
-	 * do not care about the others, which is for backup.
-	 * TODO: Consider putting database access layer in a separate microservice.
+	 * Executing an query that does something and doesn't expect return value.
+	 * This kind of query is executed on all added connections.
+	 * @return A promise that resolve to affected rows.
+	 * @throws {[errorMsg, affectedRows]} When not all connections have same affected rows.
 	 */
-	protected async first(promises: Promise<any>[]) {
-		return await promises[0];
+	protected executeCommand(callback: QueryCallback<TEntity>, ...names: string[]): Promise<number & TEntity> {
+		let queryJobs = this.prepare(callback, ...names);
+		return <any>Promise.all(queryJobs)
+			.then((affectedRows: number[]) => {
+				// If there is no affected rows, or if not all connections have same affected rows.
+				/* istanbul ignore next */
+				if (isEmpty(affectedRows) || !every(affectedRows, r => r == affectedRows[0])) {
+					throw ['Not successful on all connections', affectedRows];
+				}
+				// If all connections have same affected rows, it means the execution was successful.
+				return affectedRows[0];
+			});
+	}
+
+	/**
+	 * Executing an query that has returned value.
+	 * This kind of query is executed on the primary (first) connection.
+	 */
+	protected executeQuery(callback: QueryCallback<TEntity>, name: string = '0'): Promise<any> {
+		let queryJobs = this.prepare(callback, name);
+		// Get value from first connection
+		return queryJobs[0];
 	}
 
 	/**
 	 * @see IDatabaseConnector.query
 	 */
-	protected abstract query<TEntity>(callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[];
+	protected abstract prepare(callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[];
 	protected abstract createModelMap(): void;
-	protected abstract toEntity(from: TModel | TModel[]): TEntity & TEntity[];
-	protected abstract toDTO(from: TEntity | TEntity[]): TModel & TModel[];
+	protected abstract toEntity(from: TModel | TModel[] | Partial<TModel>): TEntity & TEntity[];
+	protected abstract toDTO(from: TEntity | TEntity[] | Partial<TEntity>): TModel & TModel[];
 }

@@ -17,97 +17,153 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const every = require('lodash/every');
+const isEmpty = require('lodash/isEmpty');
+const moment = require("moment");
 const back_lib_common_util_1 = require("back-lib-common-util");
 const back_lib_common_contracts_1 = require("back-lib-common-contracts");
 let RepositoryBase = class RepositoryBase {
-    constructor(_modelMapper, _dbConnector) {
+    constructor(_modelMapper, _dbConnector, _isSoftDelete = true) {
         this._modelMapper = _modelMapper;
         this._dbConnector = _dbConnector;
-        back_lib_common_util_1.Guard.assertDefined('modelMapper', this._modelMapper);
+        this._isSoftDelete = _isSoftDelete;
+        back_lib_common_util_1.Guard.assertArgDefined('_modelMapper', _modelMapper);
         this.createModelMap();
     }
+    /**
+     * @see IRepository.isSoftDelete
+     */
+    get isSoftDelete() {
+        return this._isSoftDelete;
+    }
+    /**
+     * @see IRepository.countAll
+     */
     countAll() {
         return __awaiter(this, void 0, void 0, function* () {
-            let promises = this.query(query => {
+            let result = yield this.executeQuery(query => {
                 return query.count('id as total');
-            }, '0'), // Only fetch data from primary connection. By convention, the firstly added connection is the primary.
-            result = yield this.first(promises);
+            });
             // In case with Postgres, `count` returns a bigint type which will be a String 
             // and not a Number.
             /* istanbul ignore next */
-            return (result && result.length ? +(result[0]['total']) : 0);
+            return (isEmpty(result) ? 0 : +(result[0]['total']));
         });
     }
+    /**
+     * @see IRepository.create
+     */
     create(model) {
         return __awaiter(this, void 0, void 0, function* () {
-            let promises = this.query(query => {
-                return query.insert(model);
-            }), newEnt = yield this.first(promises);
+            let entity = this.toEntity(model), newEnt = yield this.executeCommand(query => {
+                return query.insert(entity);
+            });
             return this.toDTO(newEnt);
         });
     }
+    /**
+     * @see IRepository.delete
+     */
     delete(id) {
         return __awaiter(this, void 0, void 0, function* () {
-            let promises = this.query(query => {
-                return query.deleteById(id);
-            }), affectedRows = yield this.first(promises);
+            let affectedRows;
+            if (this.isSoftDelete) {
+                affectedRows = yield this.patch({
+                    id,
+                    deleted_at: moment(new Date()).utc().format()
+                });
+            }
+            else {
+                affectedRows = yield this.executeCommand(query => {
+                    return query.deleteById(id);
+                });
+            }
             return affectedRows;
         });
     }
+    /**
+     * @see IRepository.find
+     */
     find(id) {
         return __awaiter(this, void 0, void 0, function* () {
-            let promises = this.query(query => {
+            let foundEnt = yield this.executeQuery(query => {
                 return query.findById(id);
-            }, '0'), foundEnt = yield this.first(promises);
+            });
             return this.toDTO(foundEnt);
         });
     }
-    patch(model) {
-        return __awaiter(this, void 0, void 0, function* () {
-            back_lib_common_util_1.Guard.assertDefined('entity.id', model.id);
-            let promises = this.query(query => {
-                return query.where('id', model.id).patch(model);
-            }), affectedRows = yield this.first(promises);
-            return affectedRows;
-        });
-    }
+    /**
+     * @see IRepository.page
+     */
     page(pageIndex, pageSize) {
         return __awaiter(this, void 0, void 0, function* () {
             let foundList, dtoList, affectedRows;
-            let promises = this.query(query => {
+            foundList = yield this.executeQuery(query => {
                 return query.page(pageIndex, pageSize);
-            }, '0');
-            foundList = yield this.first(promises);
-            if (!foundList || !foundList.results || !foundList.results.length) {
+            });
+            if (!foundList || isEmpty(foundList.results)) {
                 return null;
             }
             dtoList = this.toDTO(foundList.results);
             return new back_lib_common_contracts_1.PagedArray(foundList.total, dtoList);
         });
     }
-    update(model) {
+    /**
+     * @see IRepository.patch
+     */
+    patch(model) {
         return __awaiter(this, void 0, void 0, function* () {
-            back_lib_common_util_1.Guard.assertDefined('entity.id', model.id);
-            let promises = this.query(query => {
-                return query.where('id', model.id).update(model);
-            }), affectedRows = yield this.first(promises);
+            back_lib_common_util_1.Guard.assertArgDefined('model.id', model.id);
+            let entity = this.toEntity(model), affectedRows = yield this.executeCommand(query => {
+                return query.where('id', entity.id).patch(entity);
+            });
             return affectedRows;
         });
     }
     /**
-     * Waits for query execution on first connection which is primary,
-     * do not care about the others, which is for backup.
-     * TODO: Consider putting database access layer in a separate microservice.
+     * @see IRepository.update
      */
-    first(promises) {
+    update(model) {
         return __awaiter(this, void 0, void 0, function* () {
-            return yield promises[0];
+            back_lib_common_util_1.Guard.assertArgDefined('model.id', model.id);
+            let entity = this.toEntity(model), affectedRows = yield this.executeCommand(query => {
+                return query.where('id', entity.id).update(entity);
+            });
+            return affectedRows;
         });
+    }
+    /**
+     * Executing an query that does something and doesn't expect return value.
+     * This kind of query is executed on all added connections.
+     * @return A promise that resolve to affected rows.
+     * @throws {[errorMsg, affectedRows]} When not all connections have same affected rows.
+     */
+    executeCommand(callback, ...names) {
+        let queryJobs = this.prepare(callback, ...names);
+        return Promise.all(queryJobs)
+            .then((affectedRows) => {
+            // If there is no affected rows, or if not all connections have same affected rows.
+            /* istanbul ignore next */
+            if (isEmpty(affectedRows) || !every(affectedRows, r => r == affectedRows[0])) {
+                throw ['Not successful on all connections', affectedRows];
+            }
+            // If all connections have same affected rows, it means the execution was successful.
+            return affectedRows[0];
+        });
+    }
+    /**
+     * Executing an query that has returned value.
+     * This kind of query is executed on the primary (first) connection.
+     */
+    executeQuery(callback, name = '0') {
+        let queryJobs = this.prepare(callback, name);
+        // Get value from first connection
+        return queryJobs[0];
     }
 };
 RepositoryBase = __decorate([
     back_lib_common_util_1.injectable(),
-    __metadata("design:paramtypes", [Object, Object])
+    __metadata("design:paramtypes", [Object, Object, Boolean])
 ], RepositoryBase);
 exports.RepositoryBase = RepositoryBase;
 

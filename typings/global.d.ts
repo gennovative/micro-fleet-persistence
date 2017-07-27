@@ -1,1 +1,0 @@
-/// <reference path="./objection.d.ts" />

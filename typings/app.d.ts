@@ -7,12 +7,13 @@ declare module 'back-lib-persistence/EntityBase' {
 	     * @abstract
 	     */
 	    static readonly tableName: string;
-	    id: number;
+	    id: BigSInt;
 	}
 
 }
 declare module 'back-lib-persistence/IDatabaseConnector' {
 	import { QueryBuilder } from 'objection';
+	import { EntityBase } from 'back-lib-persistence/EntityBase';
 	/**
 	 * Db driver names for `IConnectionDetail.clientName` property.
 	 */
@@ -115,7 +116,7 @@ declare module 'back-lib-persistence/IDatabaseConnector' {
 	     * 	let result = await promises[0];
 	     * @return {Promise[]} An array of promises returned by all above callbacks.
 	     */
-	    query<TEntity>(EntityClass: any, callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[];
+	    prepare<TEntity extends EntityBase>(EntityClass: any, callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[];
 	}
 
 }
@@ -126,27 +127,59 @@ declare module 'back-lib-persistence/RepositoryBase' {
 	export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends IModelDTO> implements IRepository<TModel> {
 	    protected _modelMapper: AutoMapper;
 	    protected _dbConnector: IDatabaseConnector;
-	    constructor(_modelMapper: AutoMapper, _dbConnector: IDatabaseConnector);
+	    protected _isSoftDelete: boolean;
+	    constructor(_modelMapper: AutoMapper, _dbConnector: IDatabaseConnector, _isSoftDelete?: boolean);
+	    /**
+	     * @see IRepository.isSoftDelete
+	     */
+	    readonly isSoftDelete: boolean;
+	    /**
+	     * @see IRepository.countAll
+	     */
 	    countAll(): Promise<number>;
+	    /**
+	     * @see IRepository.create
+	     */
 	    create(model: TModel): Promise<TModel>;
-	    delete(id: number): Promise<number>;
-	    find(id: number): Promise<TModel>;
-	    patch(model: Partial<TModel>): Promise<number>;
+	    /**
+	     * @see IRepository.delete
+	     */
+	    delete(id: BigSInt): Promise<number>;
+	    /**
+	     * @see IRepository.find
+	     */
+	    find(id: BigSInt): Promise<TModel>;
+	    /**
+	     * @see IRepository.page
+	     */
 	    page(pageIndex: number, pageSize: number): Promise<PagedArray<TModel>>;
+	    /**
+	     * @see IRepository.patch
+	     */
+	    patch(model: Partial<TModel>): Promise<number>;
+	    /**
+	     * @see IRepository.update
+	     */
 	    update(model: TModel): Promise<number>;
 	    /**
-	     * Waits for query execution on first connection which is primary,
-	     * do not care about the others, which is for backup.
-	     * TODO: Consider putting database access layer in a separate microservice.
+	     * Executing an query that does something and doesn't expect return value.
+	     * This kind of query is executed on all added connections.
+	     * @return A promise that resolve to affected rows.
+	     * @throws {[errorMsg, affectedRows]} When not all connections have same affected rows.
 	     */
-	    protected first(promises: Promise<any>[]): Promise<any>;
+	    protected executeCommand(callback: QueryCallback<TEntity>, ...names: string[]): Promise<number & TEntity>;
+	    /**
+	     * Executing an query that has returned value.
+	     * This kind of query is executed on the primary (first) connection.
+	     */
+	    protected executeQuery(callback: QueryCallback<TEntity>, name?: string): Promise<any>;
 	    /**
 	     * @see IDatabaseConnector.query
 	     */
-	    protected abstract query<TEntity>(callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[];
+	    protected abstract prepare(callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[];
 	    protected abstract createModelMap(): void;
-	    protected abstract toEntity(from: TModel | TModel[]): TEntity & TEntity[];
-	    protected abstract toDTO(from: TEntity | TEntity[]): TModel & TModel[];
+	    protected abstract toEntity(from: TModel | TModel[] | Partial<TModel>): TEntity & TEntity[];
+	    protected abstract toDTO(from: TEntity | TEntity[] | Partial<TEntity>): TModel & TModel[];
 	}
 
 }
@@ -157,11 +190,11 @@ declare module 'back-lib-persistence/KnexDatabaseConnector' {
 	 * Provides settings from package
 	 */
 	export class KnexDatabaseConnector implements IDatabaseConnector {
-	    constructor();
+	    	    	    constructor();
 	    addConnection(detail: IConnectionDetail, name?: string): void;
 	    dispose(): Promise<void>;
-	    query<TEntity extends EntityBase>(EntityClass: any, callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[];
-	}
+	    prepare<TEntity extends EntityBase>(EntityClass: any, callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[];
+	    	}
 
 }
 declare module 'back-lib-persistence/Types' {
@@ -171,6 +204,7 @@ declare module 'back-lib-persistence/Types' {
 
 }
 declare module 'back-lib-persistence' {
+	import 'back-lib-persistence/convert-utc';
 	export * from 'back-lib-persistence/EntityBase';
 	export * from 'back-lib-persistence/RepositoryBase';
 	export * from 'back-lib-persistence/IDatabaseConnector';
