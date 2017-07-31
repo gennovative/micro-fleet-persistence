@@ -25,7 +25,7 @@
     "@types/mocha": "^2.2.41",
     "@types/node": "^7.0.38",
     "chai": "^4.1.0",
-    "chai-spies": "^0.7.1",
+    "chai-spies": "git://github.com/chaijs/chai-spies.git#b11aeebf",
     "del": "^3.0.0",
     "dts-generator": "^2.1.0",
     "gulp": "^3.9.1",
