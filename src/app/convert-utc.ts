@@ -10,6 +10,7 @@ const TIMESTAMPTZ_OID = 1184, // Timestamp without timezone
  * This piece of code makes sure all date values loaded from database are converted
  * as UTC format.
  */
+/* istanbul ignore next */
 let parseFn = function(val) {
 	return val === null ? null : moment(val).toDate();
 };
