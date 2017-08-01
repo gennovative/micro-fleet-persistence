@@ -23,7 +23,10 @@ export abstract class EntityBase extends Model {
 		json = super.$formatDatabaseJson(json);
 
 		return mapKeys(json, (value, key) => {
-			// Maps from "camelCase" to "snake_case"
+			// Maps from "camelCase" to "snake_case" except special keyword.
+			if (key.indexOf('#') == 0) {
+				return key;
+			}
 			return snakeCase(<any>key);
 		});
 	}
