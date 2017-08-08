@@ -37,6 +37,12 @@ let RepositoryBase = class RepositoryBase {
         return this._isSoftDelete;
     }
     /**
+     * Gets current date time in UTC.
+     */
+    get utcNow() {
+        return moment(new Date()).utc().format();
+    }
+    /**
      * @see IRepository.countAll
      */
     countAll() {
@@ -70,7 +76,7 @@ let RepositoryBase = class RepositoryBase {
             if (this.isSoftDelete) {
                 affectedRows = yield this.patch({
                     id,
-                    deletedAt: moment(new Date()).utc().format()
+                    deletedAt: this.utcNow
                 });
             }
             else {
