@@ -142,6 +142,10 @@ declare module 'back-lib-persistence/RepositoryBase' {
 	     */
 	    readonly isSoftDelete: boolean;
 	    /**
+	     * Gets current date time in UTC.
+	     */
+	    protected readonly utcNow: string;
+	    /**
 	     * @see IRepository.countAll
 	     */
 	    countAll(): Promise<number>;

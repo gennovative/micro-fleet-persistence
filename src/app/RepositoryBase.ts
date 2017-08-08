@@ -30,6 +30,14 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 	}
 
 	/**
+	 * Gets current date time in UTC.
+	 */
+	protected get utcNow(): string {
+		return moment(new Date()).utc().format();
+	}
+
+
+	/**
 	 * @see IRepository.countAll
 	 */
 	public async countAll(): Promise<number> {
@@ -64,7 +72,7 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 		if (this.isSoftDelete) {
 			affectedRows = await this.patch(<any>{
 				id,
-				deletedAt: moment(new Date()).utc().format()
+				deletedAt: this.utcNow
 			});
 		} else {
 			affectedRows = await this.executeCommand(query => {
