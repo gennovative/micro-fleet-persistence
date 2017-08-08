@@ -23,18 +23,12 @@ const moment = require("moment");
 const back_lib_common_util_1 = require("back-lib-common-util");
 const back_lib_common_contracts_1 = require("back-lib-common-contracts");
 let RepositoryBase = class RepositoryBase {
-    constructor(_modelMapper, _dbConnector, _isSoftDelete = true) {
+    constructor(_modelMapper, _dbConnector) {
         this._modelMapper = _modelMapper;
         this._dbConnector = _dbConnector;
-        this._isSoftDelete = _isSoftDelete;
         back_lib_common_util_1.Guard.assertArgDefined('_modelMapper', _modelMapper);
-        this.createModelMap();
-    }
-    /**
-     * @see IRepository.isSoftDelete
-     */
-    get isSoftDelete() {
-        return this._isSoftDelete;
+        this.isSoftDeletable = true;
+        this.isAuditable = true;
     }
     /**
      * Gets current date time in UTC.
@@ -61,10 +55,16 @@ let RepositoryBase = class RepositoryBase {
      */
     create(model) {
         return __awaiter(this, void 0, void 0, function* () {
-            let entity = this.toEntity(model), newEnt = yield this.executeCommand(query => {
+            /* istanbul ignore else */
+            if (this.isAuditable) {
+                model['createdAt'] = this.utcNow;
+                model['updatedAt'] = this.utcNow;
+            }
+            let entity = this.toEntity(model, false), newEnt;
+            newEnt = yield this.executeCommand(query => {
                 return query.insert(entity);
             });
-            return this.toDTO(newEnt);
+            return this.toDTO(newEnt, false);
         });
     }
     /**
@@ -73,7 +73,7 @@ let RepositoryBase = class RepositoryBase {
     delete(id) {
         return __awaiter(this, void 0, void 0, function* () {
             let affectedRows;
-            if (this.isSoftDelete) {
+            if (this.isSoftDeletable) {
                 affectedRows = yield this.patch({
                     id,
                     deletedAt: this.utcNow
@@ -95,7 +95,7 @@ let RepositoryBase = class RepositoryBase {
             let foundEnt = yield this.executeQuery(query => {
                 return query.findById(id);
             });
-            return this.toDTO(foundEnt);
+            return this.toDTO(foundEnt, false);
         });
     }
     /**
@@ -110,8 +110,8 @@ let RepositoryBase = class RepositoryBase {
             if (!foundList || isEmpty(foundList.results)) {
                 return null;
             }
-            dtoList = this.toDTO(foundList.results);
-            return new back_lib_common_contracts_1.PagedArray(foundList.total, dtoList);
+            dtoList = this.toDTO(foundList.results, false);
+            return new back_lib_common_contracts_1.PagedArray(foundList.total, ...dtoList);
         });
     }
     /**
@@ -120,7 +120,13 @@ let RepositoryBase = class RepositoryBase {
     patch(model) {
         return __awaiter(this, void 0, void 0, function* () {
             back_lib_common_util_1.Guard.assertArgDefined('model.id', model.id);
-            let entity = this.toEntity(model), affectedRows = yield this.executeCommand(query => {
+            /* istanbul ignore else */
+            if (this.isAuditable) {
+                let modelAlias = model;
+                modelAlias['updatedAt'] = this.utcNow;
+            }
+            let entity = this.toEntity(model, true), affectedRows;
+            affectedRows = yield this.executeCommand(query => {
                 return query.where('id', entity.id).patch(entity);
             });
             return affectedRows;
@@ -132,7 +138,12 @@ let RepositoryBase = class RepositoryBase {
     update(model) {
         return __awaiter(this, void 0, void 0, function* () {
             back_lib_common_util_1.Guard.assertArgDefined('model.id', model.id);
-            let entity = this.toEntity(model), affectedRows = yield this.executeCommand(query => {
+            /* istanbul ignore else */
+            if (this.isAuditable) {
+                model['updatedAt'] = this.utcNow;
+            }
+            let entity = this.toEntity(model, false), affectedRows;
+            affectedRows = yield this.executeCommand(query => {
                 return query.where('id', entity.id).update(entity);
             });
             return affectedRows;
@@ -169,7 +180,7 @@ let RepositoryBase = class RepositoryBase {
 };
 RepositoryBase = __decorate([
     back_lib_common_util_1.injectable(),
-    __metadata("design:paramtypes", [Object, Object, Boolean])
+    __metadata("design:paramtypes", [Object, Object])
 ], RepositoryBase);
 exports.RepositoryBase = RepositoryBase;
 

@@ -12,22 +12,18 @@ import { IDatabaseConnector, QueryCallback } from './IDatabaseConnector';
 export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends IModelDTO>
 	implements IRepository<TModel> {
 
+	public isSoftDeletable: boolean;
+	public isAuditable: boolean;
 
 	constructor(
 		protected _modelMapper: AutoMapper,
-		protected _dbConnector: IDatabaseConnector,
-		protected _isSoftDelete: boolean = true
+		protected _dbConnector: IDatabaseConnector
 	) {
 		Guard.assertArgDefined('_modelMapper', _modelMapper);
-		this.createModelMap();
+		this.isSoftDeletable = true;
+		this.isAuditable = true;
 	}
 
-	/**
-	 * @see IRepository.isSoftDelete
-	 */
-	public get isSoftDelete(): boolean {
-		return this._isSoftDelete;
-	}
 
 	/**
 	 * Gets current date time in UTC.
@@ -55,12 +51,20 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 	 * @see IRepository.create
 	 */
 	public async create(model: TModel): Promise<TModel> {
-		let entity = this.toEntity(model),
-			newEnt: TEntity = await this.executeCommand(query => {
-				return query.insert(entity);
-			});
+		/* istanbul ignore else */
+		if (this.isAuditable) {
+			model['createdAt'] = this.utcNow;
+			model['updatedAt'] = this.utcNow;
+		}
 
-		return this.toDTO(newEnt);
+		let entity = this.toEntity(model, false),
+			newEnt: TEntity;
+
+		newEnt = await this.executeCommand(query => {
+			return query.insert(entity);
+		});
+
+		return this.toDTO(newEnt, false);
 	}
 
 	/**
@@ -68,8 +72,8 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 	 */
 	public async delete(id: BigSInt): Promise<number> {
 		let affectedRows: number;
-		
-		if (this.isSoftDelete) {
+
+		if (this.isSoftDeletable) {
 			affectedRows = await this.patch(<any>{
 				id,
 				deletedAt: this.utcNow
@@ -91,7 +95,7 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 				return query.findById(id);
 			});
 
-		return this.toDTO(foundEnt);
+		return this.toDTO(foundEnt, false);
 	}
 
 	/**
@@ -109,8 +113,8 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 		if (!foundList || isEmpty(foundList.results)) {
 			return null;
 		}
-		dtoList = this.toDTO(foundList.results);
-		return new PagedArray<TModel>(foundList.total, dtoList);
+		dtoList = this.toDTO(foundList.results, false);
+		return new PagedArray<TModel>(foundList.total, ...dtoList);
 	}
 
 	/**
@@ -119,10 +123,18 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 	public async patch(model: Partial<TModel>): Promise<number> {
 		Guard.assertArgDefined('model.id', model.id);
 
-		let entity = this.toEntity(model),
-			affectedRows: number = await this.executeCommand(query => {
-				return query.where('id', entity.id).patch(entity);
-			});
+		/* istanbul ignore else */
+		if (this.isAuditable) {
+			let modelAlias: any = model;
+			modelAlias['updatedAt'] = this.utcNow;
+		}
+
+		let entity = this.toEntity(model, true),
+			affectedRows: number;
+
+		affectedRows = await this.executeCommand(query => {
+			return query.where('id', entity.id).patch(entity);
+		});
 		return affectedRows;
 	}
 
@@ -132,10 +144,17 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 	public async update(model: TModel): Promise<number> {
 		Guard.assertArgDefined('model.id', model.id);
 
-		let entity = this.toEntity(model),
-			affectedRows: number = await this.executeCommand(query => {
-				return query.where('id', entity.id).update(entity);
-			});
+		/* istanbul ignore else */
+		if (this.isAuditable) {
+			model['updatedAt'] = this.utcNow;
+		}
+
+		let entity = this.toEntity(model, false),
+			affectedRows: number;
+
+		affectedRows = await this.executeCommand(query => {
+			return query.where('id', entity.id).update(entity);
+		});
 
 		return affectedRows;
 	}
@@ -174,7 +193,6 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 	 * @see IDatabaseConnector.query
 	 */
 	protected abstract prepare(callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[];
-	protected abstract createModelMap(): void;
-	protected abstract toEntity(from: TModel | TModel[] | Partial<TModel>): TEntity & TEntity[];
-	protected abstract toDTO(from: TEntity | TEntity[] | Partial<TEntity>): TModel & TModel[];
+	protected abstract toEntity(from: TModel | TModel[] | Partial<TModel>, isPartial: boolean): TEntity & TEntity[];
+	protected abstract toDTO(from: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel & TModel[];
 }

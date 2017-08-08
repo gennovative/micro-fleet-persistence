@@ -1,10 +1,8 @@
-import 'reflect-metadata';
 import 'automapper-ts'; // Singleton
 import { expect } from 'chai';
-import * as moment from 'moment';
 
 import { InvalidArgumentException } from 'back-lib-common-util';
-import { PagedArray } from 'back-lib-common-contracts';
+import { PagedArray, ModelAutoMapper } from 'back-lib-common-contracts';
 
 import { RepositoryBase, EntityBase, QueryCallback, IDatabaseConnector,
 		KnexDatabaseConnector, DbClient } from '../app';
@@ -26,7 +24,10 @@ const TYPE_USER_DTO = Symbol('UserDTO'),
 	TYPE_USER_ENT = Symbol('UserEntity');
 
 class UserDTO implements IModelDTO {
-	// NOTE: Class variales must be initialized, otherwise they
+
+	public static translator: ModelAutoMapper<UserDTO> = new ModelAutoMapper(UserDTO);
+
+	// NOTE: Class properties must be initialized, otherwise they
 	// will disappear in transpiled code.
 	public id: BigSInt = undefined;
 	public name: string = undefined;
@@ -34,12 +35,18 @@ class UserDTO implements IModelDTO {
 	public deletedAt: number = undefined;
 }
 
+
 class UserEntity extends EntityBase {
-	/* override */ static get tableName(): string {
+	/**
+	 * @override
+	 */
+	public static get tableName(): string {
 		return DB_TABLE;
 	}
 
-	// NOTE: Class variales must be initialized, otherwise they
+	public static translator: ModelAutoMapper<UserEntity> = new ModelAutoMapper(UserEntity);
+
+	// NOTE: Class properties must be initialized, otherwise they
 	// will disappear in transpiled code.
 	public name: string = undefined;
 	public age: number = undefined;
@@ -65,29 +72,22 @@ class UserRepo extends RepositoryBase<UserEntity, UserDTO> {
 	/**
 	 * @override
 	 */
-	protected createModelMap(): void {
-		let mapper = this._modelMapper;
-		mapper.createMap(UserDTO, UserEntity);
-		mapper.createMap(UserEntity, UserDTO);
-			// Ignores all properties that UserEntity has but UserDTO doesn't.
-			//.convertToType(UserDTO);
+	protected toEntity(from: UserDTO | UserDTO[], isPartial: boolean): UserEntity & UserEntity[] {
+		if (isPartial) {
+			return <any>UserEntity.translator.partial(from);
+		}
+		return <any>UserEntity.translator.whole(from);
 	}
 
 	/**
 	 * @override
 	 */
-	protected toEntity(from: UserDTO | UserDTO[]): UserEntity & UserEntity[] {
-		return this._modelMapper.map(UserDTO, UserEntity, from);
-							// (DTO)===^         ^===(Entity)
-	}
-
-	/**
-	 * @override
-	 */
-	protected toDTO(from: UserEntity | UserEntity[]): UserDTO & UserDTO[] {
-		return this._modelMapper.map(UserEntity, UserDTO, from);
-							// (Entity)===^         ^===(DTO)
-								// Be EXTREMELY careful! It's very easy to make mistake here!
+	protected toDTO(from: UserEntity | UserEntity[], isPartial: boolean): UserDTO & UserDTO[] {
+		if (isPartial) {
+			return <any>UserDTO.translator.partial(from, { enableValidation: false });
+		}
+		// Disable validation because it's unnecessary.
+		return <any>UserDTO.translator.whole(from, { enableValidation: false });
 	}
 }
 
@@ -176,7 +176,7 @@ describe('RepositoryBase', () => {
 			expect(foundDTO.age).to.equal(cachedDTO.age);
 		});
 		
-		it('should return `undefined` if not found', async () => {
+		it('should return `null` if not found', async () => {
 			// Arrange
 			let usrRepo = new UserRepo(automapper, dbConnector);
 			
@@ -184,7 +184,7 @@ describe('RepositoryBase', () => {
 			let model: UserDTO = await usrRepo.find(IMPOSSIBLE_ID);
 			
 			// Assert
-			expect(model).to.be.undefined;
+			expect(model).to.be.null;
 		});
 	}); // END describe 'find'
 
@@ -218,7 +218,7 @@ describe('RepositoryBase', () => {
 			// Assert
 			expect(affectedRows).to.equal(0);
 			// If `patch` returns 0, but we actually find an entity with the id, then something is wrong.
-			expect(refetchedDTO).to.be.undefined;
+			expect(refetchedDTO).to.be.null;
 		});
 		
 		it('should throw exception if `id` is not provided', async () => {
@@ -276,7 +276,7 @@ describe('RepositoryBase', () => {
 			// Assert
 			expect(affectedRows).to.equal(0);
 			// If `update` returns 0, but we actually find an entity with the id, then something is wrong.
-			expect(refetchedDTO).to.be.undefined;
+			expect(refetchedDTO).to.be.null;
 		});
 		
 		it('should throw exception if `id` is not provided', async () => {
@@ -308,7 +308,7 @@ describe('RepositoryBase', () => {
 			let usrRepo = new UserRepo(automapper, dbConnector),
 				model = new UserDTO();
 			
-			usrRepo['_isSoftDelete'] = true; // Default
+			usrRepo.isSoftDeletable = true; // Default
 
 			model.name = 'Hiri';
 			model.age = 29;
@@ -331,7 +331,7 @@ describe('RepositoryBase', () => {
 		it('should return a possitive number if found', async () => {
 			// Arrange
 			let usrRepo = new UserRepo(automapper, dbConnector);
-			usrRepo['_isSoftDelete'] = false;
+			usrRepo.isSoftDeletable = false;
 
 			// Act
 			let affectedRows: number = await usrRepo.delete(cachedDTO.id),
@@ -340,7 +340,7 @@ describe('RepositoryBase', () => {
 			// Assert
 			expect(affectedRows).to.be.greaterThan(0);
 			// If `delete` is successful, but we still find an entity with the id, then something is wrong.
-			expect(refetchedDTO).to.be.undefined;
+			expect(refetchedDTO).to.be.null;
 		});
 
 		it('should return 0 if not found', async () => {
@@ -354,7 +354,7 @@ describe('RepositoryBase', () => {
 			// Assert
 			expect(affectedRows).to.equal(0);
 			// If `delete` returns 0, but we actually find an entity with the id, then something is wrong.
-			expect(refetchedDTO).to.be.undefined;
+			expect(refetchedDTO).to.be.null;
 		});
 	}); // END describe 'delete'
 	

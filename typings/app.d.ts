@@ -135,12 +135,9 @@ declare module 'back-lib-persistence/RepositoryBase' {
 	export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends IModelDTO> implements IRepository<TModel> {
 	    protected _modelMapper: AutoMapper;
 	    protected _dbConnector: IDatabaseConnector;
-	    protected _isSoftDelete: boolean;
-	    constructor(_modelMapper: AutoMapper, _dbConnector: IDatabaseConnector, _isSoftDelete?: boolean);
-	    /**
-	     * @see IRepository.isSoftDelete
-	     */
-	    readonly isSoftDelete: boolean;
+	    isSoftDeletable: boolean;
+	    isAuditable: boolean;
+	    constructor(_modelMapper: AutoMapper, _dbConnector: IDatabaseConnector);
 	    /**
 	     * Gets current date time in UTC.
 	     */
@@ -189,9 +186,8 @@ declare module 'back-lib-persistence/RepositoryBase' {
 	     * @see IDatabaseConnector.query
 	     */
 	    protected abstract prepare(callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[];
-	    protected abstract createModelMap(): void;
-	    protected abstract toEntity(from: TModel | TModel[] | Partial<TModel>): TEntity & TEntity[];
-	    protected abstract toDTO(from: TEntity | TEntity[] | Partial<TEntity>): TModel & TModel[];
+	    protected abstract toEntity(from: TModel | TModel[] | Partial<TModel>, isPartial: boolean): TEntity & TEntity[];
+	    protected abstract toDTO(from: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel & TModel[];
 	}
 
 }

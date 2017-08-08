@@ -1,4 +1,5 @@
-if (!Reflect || typeof Reflect.hasOwnMetadata !== 'function') {
+/* istanbul ignore else */
+if (!Reflect || typeof Reflect['hasOwnMetadata'] !== 'function') {
 	require('reflect-metadata');
 }
 import './convert-utc';
