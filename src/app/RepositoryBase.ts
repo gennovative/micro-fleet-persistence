@@ -64,7 +64,7 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 		if (this.isSoftDelete) {
 			affectedRows = await this.patch(<any>{
 				id,
-				deleted_at: moment(new Date()).utc().format()
+				deletedAt: moment(new Date()).utc().format()
 			});
 		} else {
 			affectedRows = await this.executeCommand(query => {

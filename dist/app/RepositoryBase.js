@@ -70,7 +70,7 @@ let RepositoryBase = class RepositoryBase {
             if (this.isSoftDelete) {
                 affectedRows = yield this.patch({
                     id,
-                    deleted_at: moment(new Date()).utc().format()
+                    deletedAt: moment(new Date()).utc().format()
                 });
             }
             else {

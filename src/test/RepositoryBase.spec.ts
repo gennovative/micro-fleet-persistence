@@ -31,7 +31,7 @@ class UserDTO implements IModelDTO {
 	public id: BigSInt = undefined;
 	public name: string = undefined;
 	public age: number = undefined;
-	public deleted_at: number = undefined;
+	public deletedAt: number = undefined;
 }
 
 class UserEntity extends EntityBase {
@@ -43,7 +43,7 @@ class UserEntity extends EntityBase {
 	// will disappear in transpiled code.
 	public name: string = undefined;
 	public age: number = undefined;
-	public deleted_at: number = undefined;
+	public deletedAt: number = undefined;
 }
 
 class UserRepo extends RepositoryBase<UserEntity, UserDTO> {
@@ -318,12 +318,12 @@ describe('RepositoryBase', () => {
 			// Act
 			let affectedRows: number = await usrRepo.delete(cachedDTO.id),
 				refetchedDTO: UserDTO = await usrRepo.find(cachedDTO.id);
-			
+
 			// Assert
 			expect(affectedRows).to.be.greaterThan(0);
 			// If `delete` is successful, we must be able to still find that entity with the id.
 			expect(refetchedDTO).to.exist;
-			expect(refetchedDTO.deleted_at).to.exist;
+			expect(refetchedDTO.deletedAt).to.exist;
 		});
 	});
 
@@ -332,30 +332,30 @@ describe('RepositoryBase', () => {
 			// Arrange
 			let usrRepo = new UserRepo(automapper, dbConnector);
 			usrRepo['_isSoftDelete'] = false;
-			
+
 			// Act
 			let affectedRows: number = await usrRepo.delete(cachedDTO.id),
 				refetchedDTO: UserDTO = await usrRepo.find(cachedDTO.id);
-			
+
 			// Assert
 			expect(affectedRows).to.be.greaterThan(0);
 			// If `delete` is successful, but we still find an entity with the id, then something is wrong.
 			expect(refetchedDTO).to.be.undefined;
 		});
-		
+
 		it('should return 0 if not found', async () => {
 			// Arrange
 			let usrRepo = new UserRepo(automapper, dbConnector);
-			
+
 			// Act
 			let affectedRows: number = await usrRepo.delete(IMPOSSIBLE_ID),
 				refetchedDTO: UserDTO = await usrRepo.find(IMPOSSIBLE_ID);
-			
+
 			// Assert
 			expect(affectedRows).to.equal(0);
 			// If `delete` returns 0, but we actually find an entity with the id, then something is wrong.
 			expect(refetchedDTO).to.be.undefined;
-		});		
+		});
 	}); // END describe 'delete'
 	
 	describe('page', () => {
@@ -370,7 +370,7 @@ describe('RepositoryBase', () => {
 
 			// Act
 			let models: PagedArray<UserDTO> = await usrRepo.page(PAGE, SIZE);
-			
+
 			// Assert
 			expect(models).to.be.null;
 		});
@@ -410,7 +410,7 @@ describe('RepositoryBase', () => {
 
 			// Act
 			let count = await usrRepo.countAll();
-			
+
 			// Assert
 			expect(count).to.be.greaterThan(0);
 		});

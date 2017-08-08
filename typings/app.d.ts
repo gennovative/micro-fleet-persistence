@@ -8,6 +8,14 @@ declare module 'back-lib-persistence/EntityBase' {
 	     */
 	    static readonly tableName: string;
 	    id: BigSInt;
+	    /**
+	     * This is called when an object is serialized to database format.
+	     */
+	    $formatDatabaseJson(json: any): any;
+	    /**
+	     * This is called when an object is read from database.
+	     */
+	    $parseDatabaseJson(json: any): Object;
 	}
 
 }
