@@ -60,11 +60,6 @@ export class AtomicSessionFlow {
 					// and reject when ``rejectAllTransactions()` is called.
 					let outputs = await Promise.all(transPromises);
 					resolve(outputs[0]);
-					// resolve(outputs[0]);
-
-						// Error from query execution
-						// .catch(reject);
-
 				}
 				// Error on init transaction
 				catch (err) { reject(err); }
@@ -103,9 +98,7 @@ export class AtomicSessionFlow {
 
 				// `transPro` resolves when transaction is commited. Otherwise, it rejects.
 				let transPro: Promise<any> = transaction(knexConn, trans => {
-					this._sessions.push(new AtomicSession(knexConn, trans, null, null));
-					// let promise = this.wrapTransaction(knexConn, trans);
-					// transPromises.push(promise);
+					this._sessions.push(new AtomicSession(knexConn, trans));
 
 					i++;
 					// Last connection

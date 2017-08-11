@@ -53,9 +53,6 @@ class AtomicSessionFlow {
                     // and reject when ``rejectAllTransactions()` is called.
                     let outputs = yield Promise.all(transPromises);
                     resolve(outputs[0]);
-                    // resolve(outputs[0]);
-                    // Error from query execution
-                    // .catch(reject);
                 }
                 // Error on init transaction
                 catch (err) {
@@ -86,9 +83,7 @@ class AtomicSessionFlow {
                 }
                 // `transPro` resolves when transaction is commited. Otherwise, it rejects.
                 let transPro = objection_1.transaction(knexConn, trans => {
-                    this._sessions.push(new back_lib_common_contracts_1.AtomicSession(knexConn, trans, null, null));
-                    // let promise = this.wrapTransaction(knexConn, trans);
-                    // transPromises.push(promise);
+                    this._sessions.push(new back_lib_common_contracts_1.AtomicSession(knexConn, trans));
                     i++;
                     // Last connection
                     if (i == len || (names && names.length && i == names.length)) {
