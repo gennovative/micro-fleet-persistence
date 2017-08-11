@@ -1,4 +1,12 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const objection_1 = require("objection");
 const back_lib_common_util_1 = require("back-lib-common-util");
@@ -31,23 +39,29 @@ class AtomicSessionFlow {
      */
     closePipe() {
         if (!this.isPipeClosed) {
-            this._finalPromise = new Promise((resolve, reject) => {
+            this._finalPromise = new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
                 this._abortFn = reject;
-                this._initPromise.then(transPromises => {
+                try {
+                    let transPromises = yield this._initPromise;
                     // Clean up
                     this._initPromise = null;
+                    // Start executing enqueued tasks
+                    this.loop();
                     // Waits for all transaction to complete,
                     // but only takes output from primary (first) one.
                     // `transPromises` resolves when `resolveAllTransactions` is called,
                     // and reject when ``rejectAllTransactions()` is called.
-                    Promise.all(transPromises)
-                        .then(outputs => resolve(outputs[0]))
-                        .catch(reject);
-                    // Start executing enqueued tasks
-                    this.loop();
-                })
-                    .catch(reject);
-            });
+                    let outputs = yield Promise.all(transPromises);
+                    resolve(outputs[0]);
+                    // resolve(outputs[0]);
+                    // Error from query execution
+                    // .catch(reject);
+                }
+                // Error on init transaction
+                catch (err) {
+                    reject(err);
+                }
+            }));
         }
         return this._finalPromise;
     }
@@ -68,7 +82,7 @@ class AtomicSessionFlow {
             // Start a new transaction for each connection.
             for (let knexConn of conns) {
                 if (names && names.length && !names.includes(knexConn.customName)) {
-                    return;
+                    continue;
                 }
                 // `transPro` resolves when transaction is commited. Otherwise, it rejects.
                 let transPro = objection_1.transaction(knexConn, trans => {
@@ -77,7 +91,7 @@ class AtomicSessionFlow {
                     // transPromises.push(promise);
                     i++;
                     // Last connection
-                    if (i == len) {
+                    if (i == len || (names && names.length && i == names.length)) {
                         resolveInit(transPromises);
                     }
                     return null;
@@ -85,27 +99,6 @@ class AtomicSessionFlow {
                 transPromises.push(transPro);
             } // END for
         });
-    }
-    /**
-     * @deprecated
-     */
-    wrapTransaction(knexConn, knexTrans) {
-        return new Promise((resolve, reject) => {
-            this._sessions.push(new back_lib_common_contracts_1.AtomicSession(knexConn, knexTrans, resolve, reject));
-        })
-            .catch(err => this.rejectAllTransactions(err));
-    }
-    loop(prevOutputs) {
-        let prevWorks = this.doTask(prevOutputs);
-        if (!prevWorks) {
-            return;
-        }
-        prevWorks
-            .then(prev => {
-            this.loop(prev);
-        })
-            .catch(err => this.rejectAllTransactions(err))
-            .catch(this._abortFn);
     }
     doTask(prevOutputs) {
         let task = this._tasks.shift();
@@ -131,7 +124,8 @@ class AtomicSessionFlow {
                         // If there is at least one error,
                         // all transactions are marked as failure.
                         if (errors.length) {
-                            reject(errors);
+                            /* istanbul ignore next */
+                            reject(errors.length == 1 ? errors[0] : errors);
                         }
                         else {
                             // All transactions are marked as success
@@ -144,11 +138,24 @@ class AtomicSessionFlow {
                     errors.push(er);
                     // Collect error from all queries.
                     if (++i == sLen) {
-                        reject(errors);
+                        /* istanbul ignore next */
+                        reject(errors.length == 1 ? errors[0] : errors);
                     }
                 });
             } // END for
         });
+    }
+    loop(prevOutputs) {
+        let prevWorks = this.doTask(prevOutputs);
+        if (!prevWorks) {
+            return;
+        }
+        prevWorks
+            .then(prev => {
+            this.loop(prev);
+        })
+            .catch(err => this.rejectAllTransactions(err))
+            .catch(this._abortFn);
     }
     resolveAllTransactions(outputs) {
         this._sessions.forEach((s, i) => s.knexTransaction.commit(outputs[i]));

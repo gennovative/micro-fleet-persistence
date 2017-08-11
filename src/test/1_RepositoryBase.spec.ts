@@ -1,10 +1,10 @@
 import { expect } from 'chai';
 
-import { InvalidArgumentException } from 'back-lib-common-util';
+import { InvalidArgumentException, MinorException } from 'back-lib-common-util';
 import { PagedArray, ModelAutoMapper, AtomicSession } from 'back-lib-common-contracts';
 
 import { RepositoryBase, EntityBase, QueryCallback, IDatabaseConnector,
-		KnexDatabaseConnector, DbClient, AtomicSessionFactory } from '../app';
+		KnexDatabaseConnector, DbClient, AtomicSessionFactory, AtomicSessionFlow } from '../app';
 import DB_DETAILS from './database-details';
 
 
@@ -89,6 +89,119 @@ class UserRepo extends RepositoryBase<UserEntity, UserDTO> {
 			.closePipe();
 	}
 
+	private _counter = 0;
+	public firstOutput;
+	public failOnSecondTransaction(adam: UserDTO, eva: UserDTO): Promise<UserDTO[]> {
+		return this._sessionFactory.startSession()
+			.pipe(session => {
+				return this.create(adam, session)
+					.then(arg => {
+						return arg;
+					})
+					.catch(err => {
+						debugger;
+						return Promise.reject(err);
+					});
+			})
+			.pipe((session, createdAdam) => {
+				this._counter++;
+				// If this is transaction of the second connection
+				if (this._counter == 2) {
+					return new Promise((resolve, reject) => {
+						// Delay here to let first transaction to finish,
+						// but throw MinorException before it resolves.
+						setTimeout(() => {
+							reject(new MinorException('Error on second transaction'));
+						}, 100);
+				});
+				} else {
+					return new Promise((resolve, reject) => {
+						this.create(eva, session)
+							.then(createdEva => {
+								this.firstOutput = [createdAdam, createdEva];
+								// First transaction has finished but not yet resolves,
+								// it must delay here to let second transaction to fail
+								setTimeout(() => {
+									resolve(this.firstOutput);
+								}, 200);
+							});
+					});
+				}
+			})
+			.closePipe();
+	}
+
+	public createAdamOnSecondConn(adam: UserDTO): Promise<UserDTO> {
+		return this._sessionFactory.startSession('sec')
+			.pipe(session => {
+				return this.create(adam, session)
+					.then(arg => {
+						return arg;
+					})
+					.catch(err => {
+						debugger;
+						return Promise.reject(err);
+					});
+			})
+			.closePipe();
+	}
+
+	public createSessionPipe(adam: UserDTO, eva: UserDTO): AtomicSessionFlow {
+		return this._sessionFactory.startSession()
+			.pipe(session => {
+				return this.create(adam, session)
+					.then(arg => {
+						return arg;
+					})
+					.catch(err => {
+						debugger;
+						return Promise.reject(err);
+					});
+			})
+			.pipe((session, createdAdam) => {
+				if (!createdAdam) {
+					debugger;
+					// In fact, this scenario should never happen.
+					// Because when we come to this point, the previous task must have been successfull.
+					return Promise.reject('Cannot live without my husband!');
+				}
+				return this.create(eva, session)
+					.then(createdEva => [createdAdam, createdEva]);
+			});
+			//.closePipe(); // Not closing pipe
+	}
+
+	public createEmptyPipe(adam: UserDTO, eva: UserDTO): AtomicSessionFlow {
+		return this._sessionFactory.startSession()
+			.pipe(session => {
+				return Promise.resolve('Nothing');
+			});
+			//.closePipe(); // Not closing pipe
+	}
+
+	public async findOnFirstConn(id: BigSInt): Promise<UserDTO> {
+		let foundEnt: UserEntity = await this.executeQuery(query => {
+				return query.findById(id);
+			}, null, '0'); // Executing on first connection only.
+
+		return this.toDTO(foundEnt, false);
+	}
+
+	public async findOnSecondConn(id: BigSInt): Promise<UserDTO> {
+		let foundEnt: UserEntity = await this.executeQuery(query => {
+				return query.findById(id);
+			}, null, 'sec'); // Executing on second connection (named 'sec').
+
+		return this.toDTO(foundEnt, false);
+	}
+
+	public async deleteOnSecondConn(id: BigSInt): Promise<UserDTO> {
+		let affectedRows = await this.executeCommand(query => {
+				return query.deleteById(id);
+			}, null, 'sec');
+		return affectedRows;
+	}
+
 	public deleteAll(): Promise<void> {
 		return this.executeCommand(query => query.delete());
 	}
@@ -123,22 +236,23 @@ class UserRepo extends RepositoryBase<UserEntity, UserDTO> {
 }
 
 let cachedDTO: UserDTO,
-	dbConnector: IDatabaseConnector;
+	dbConnector: IDatabaseConnector,
+	usrRepo: UserRepo;
 
-// Commented. Because these tests make real connection to SqlLite file.
-// Change `describe.skip(...)` to `describe(...)` to enable these tests.
+// These test suites make real changes to SqlLite file or PostgreSQl server.
 describe('RepositoryBase', () => {
 	
 	beforeEach('Initialize db adapter', () => {
 		dbConnector = new KnexDatabaseConnector();
-		// For SQLite3 file
+		// // For SQLite3 file
 		// dbConnector.addConnection({
 			// clientName: DbClient.SQLITE3,
 			// fileName: CONN_FILE,
 		// });
 
-		// For PostgreSQL
+		// // For PostgreSQL
 		dbConnector.addConnection(DB_DETAILS);
+		usrRepo = new UserRepo(dbConnector);
 	});
 
 	afterEach('Tear down db adapter', async () => {
@@ -146,30 +260,14 @@ describe('RepositoryBase', () => {
 		dbConnector = null;
 	});
 
-	describe('create', function() {
-		this.timeout(60000);
+	describe.skip('create with transaction', function () {
+		this.timeout(10000);
+		console.warn('MUST Make sure sequence `userdata_id_sq` on two databases are same value!');
+		console.warn('!MUST Make sure this test suite runs FIRST OF ALL');
 
-		it('should insert a row to database', async () => {
+		it('should insert two rows to database', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(dbConnector),
-				model = new UserDTO();
-			model.name = 'Hiri';
-			model.age = 29;
-
-			// Act
-			let createdDTO: UserDTO = cachedDTO = await usrRepo.create(model);
-
-			// Assert
-			expect(createdDTO).to.be.not.null;
-			expect(+createdDTO.id).to.be.greaterThan(0); // Need parse to int, because Postgres returns bigint as string.
-			expect(createdDTO.name).to.equal(model.name);
-			expect(createdDTO.age).to.equal(model.age);
-		});
-
-		it.only('should insert two rows to database in a transaction', async () => {
-			// Arrange
-			let usrRepo = new UserRepo(dbConnector),
-				modelOne = new UserDTO(),
+			let modelOne = new UserDTO(),
 				modelTwo = new UserDTO();
 			modelOne.name = 'One';
 			modelOne.age = 11;
@@ -178,8 +276,10 @@ describe('RepositoryBase', () => {
 			modelTwo.age = 22;
 
 			// Add second connection
-			DB_DETAILS.host.database = 'unittestTwo';
-			dbConnector.addConnection(DB_DETAILS);
+			let secondDb = Object.assign({}, DB_DETAILS);
+			secondDb.host = Object.assign({}, DB_DETAILS.host);
+			secondDb.host.database = 'unittestTwo';
+			dbConnector.addConnection(secondDb);
 
 			try {
 				// Act
@@ -188,8 +288,6 @@ describe('RepositoryBase', () => {
 
 				let [createdOne, createdTwo] = output;
 				// Assert
-				console.log('createdOne: ', createdOne);
-				console.log('createdTwo: ', createdTwo);
 				expect(createdOne).to.exist;
 				expect(createdTwo).to.exist;
 				expect(+createdOne.id).to.be.greaterThan(0); // Need parse to int, because Postgres returns bigint as string.
@@ -209,10 +307,9 @@ describe('RepositoryBase', () => {
 			}
 		});
 
-		it.only('should rollback all transactions when a query fails', async () => {
+		it('should rollback all transactions when a query fails either on one or all transactions', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(dbConnector),
-				modelOne = new UserDTO(),
+			let modelOne = new UserDTO(),
 				modelTwo = new UserDTO();
 			modelOne.name = 'One';
 			modelOne.age = 11;
@@ -221,25 +318,192 @@ describe('RepositoryBase', () => {
 			modelTwo.age = 22;
 
 			// Add second connection
-			DB_DETAILS.host.database = 'unittestTwo';
-			dbConnector.addConnection(DB_DETAILS);
+			let secondDb = Object.assign({}, DB_DETAILS);
+			secondDb.host = Object.assign({}, DB_DETAILS.host);
+			secondDb.host.database = 'unittestTwo';
+			dbConnector.addConnection(secondDb);
 
 			try {
-				// Act KnexDatabaseConnector RepositoryBase.spec.js AtomicSessionFlow.js
+				// Act
 				let output = await usrRepo.createCoupleWithTransaction(modelOne, modelTwo);
 				expect(output).not.to.exist;
 			} catch (errors) {
+				// Assert
 				expect(errors).to.exist;
 				expect(errors.length).to.equal(2);
 			}
+			// Assert
 			let count = await usrRepo.countAll();
 			expect(count).to.equal(0);
 		});
-		
+
+		it('should resolve same result if calling `closePipe` multiple times', async () => {
+			// Arrange
+			let modelOne = new UserDTO(),
+				modelTwo = new UserDTO();
+			modelOne.name = 'One';
+			modelOne.age = 11;
+
+			modelTwo.name = 'Two';
+			modelTwo.age = 22;
+
+			// Add second connection
+			let secondDb = Object.assign({}, DB_DETAILS);
+			secondDb.host = Object.assign({}, DB_DETAILS.host);
+			secondDb.host.database = 'unittestTwo';
+			dbConnector.addConnection(secondDb);
+
+			try {
+				// Act
+				let flow = usrRepo.createSessionPipe(modelOne, modelTwo),
+					outputOne = await flow.closePipe(),
+					outputTwo = await flow.closePipe();
+
+				// Assert
+				expect(outputOne).to.exist;
+				expect(outputTwo).to.exist;
+				expect(outputOne[0]).to.equal(outputTwo[0]);
+				expect(outputOne[1]).to.equal(outputTwo[1]);
+
+				// Clean up
+				usrRepo.isSoftDeletable = false;
+				await usrRepo.delete(outputOne[0].id);
+				await usrRepo.delete(outputOne[1].id);
+			} catch (err) {
+				console.error(err);
+				expect(err).not.to.exist;
+			}
+		});
+
+		it('should throw error if calling `pipe` after `closePipe`', () => {
+			// Arrange
+			let modelOne = new UserDTO(),
+				modelTwo = new UserDTO();
+			modelOne.name = 'One';
+			modelOne.age = 11;
+
+			modelTwo.name = 'Two';
+			modelTwo.age = 22;
+
+			// Add second connection
+			let secondDb = Object.assign({}, DB_DETAILS);
+			secondDb.host = Object.assign({}, DB_DETAILS.host);
+			secondDb.host.database = 'unittestTwo';
+			dbConnector.addConnection(secondDb);
+
+			try {
+				// Act
+				let flow = usrRepo.createEmptyPipe(modelOne, modelTwo);
+
+				flow.closePipe();
+				flow.pipe(s => {
+					expect(null, 'Should not go here!').to.exist;
+					return Promise.reject(null);
+				});
+			} catch (err) {
+				// Assert
+				expect(err).to.exist;
+				expect(err).to.be.instanceOf(MinorException);
+				expect(err.message).to.equal('Pipe has been closed!');
+			}
+		});
+
+		it('should execute on named connection(s) only', async () => {
+			// Arrange
+			let adam = new UserDTO();
+			adam.name = 'One';
+			adam.age = 11;
+
+			// Add second connection
+			let secondDb = Object.assign({}, DB_DETAILS);
+			secondDb.host = Object.assign({}, DB_DETAILS.host);
+			secondDb.host.database = 'unittestTwo';
+			dbConnector.addConnection(secondDb, 'sec'); // Name this connection as 'sec'
+
+			try {
+				// Act
+				let createdAdam = await usrRepo.createAdamOnSecondConn(adam);
+				expect(createdAdam).to.exist;
+
+				let nonExistAdam = await usrRepo.findOnFirstConn(createdAdam.id);
+				let refetchAdam = await usrRepo.findOnSecondConn(createdAdam.id);
+				
+				// Assert: model is inserted on second connection, but not on the first one.
+				expect(nonExistAdam).not.to.exist;
+				expect(refetchAdam).to.exist;
+
+				// Clean up
+				usrRepo.isSoftDeletable = false;
+				await usrRepo.deleteOnSecondConn(createdAdam.id);
+			} catch (err) {
+				console.error(err);
+				expect(err).not.to.exist;
+			}
+		});
+
+		it('should rollback all transactions if some transactions succeed but at least one transaction fails', async () => {
+			// Arrange
+			let modelOne = new UserDTO(),
+				modelTwo = new UserDTO();
+			modelOne.name = 'One';
+			modelOne.age = 11;
+
+			modelTwo.name = 'Two';
+			modelTwo.age = 22;
+
+			// Add second connection
+			let secondDb = Object.assign({}, DB_DETAILS);
+			secondDb.host = Object.assign({}, DB_DETAILS.host);
+			secondDb.host.database = 'unittestTwo';
+			dbConnector.addConnection(secondDb);
+
+			try {
+				// Act
+				let output = await usrRepo.failOnSecondTransaction(modelOne, modelTwo);
+				expect(output).not.to.exist;
+
+			} catch (err) {
+				// Assert: The second transaction failed
+				expect(err).to.exist;
+				expect(err).to.be.instanceOf(MinorException);
+				expect(err.message).to.equal('Error on second transaction');
+			}
+
+			// Assert: The first transaction was successful...
+			let firstOutput = usrRepo.firstOutput;
+			expect(firstOutput).to.exist;
+			expect(firstOutput.length).to.equal(2);
+			expect(+firstOutput[0].id).to.be.greaterThan(0);
+			expect(+firstOutput[1].id).to.be.greaterThan(0);
+			expect(firstOutput[0].name).to.equal('One');
+			expect(firstOutput[1].name).to.equal('Two');
+
+			// Assert: All transactions were rolled back.
+			let count = await usrRepo.countAll();
+			expect(count).to.equal(0);
+		});
+	});
+
+	describe('create without transaction', () => {
+		it('should insert a row to database without transaction', async () => {
+			// Arrange
+			let model = new UserDTO();
+			model.name = 'Hiri';
+			model.age = 29;
+
+			// Act
+			let createdDTO: UserDTO = cachedDTO = await usrRepo.create(model);
+
+			// Assert
+			expect(createdDTO).to.be.not.null;
+			expect(+createdDTO.id).to.be.greaterThan(0); // Need parse to int, because Postgres returns bigint as string.
+			expect(createdDTO.name).to.equal(model.name);
+			expect(createdDTO.age).to.equal(model.age);
+		});
+
 		it('should throw error if not success on all connections', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(dbConnector),
-				model = new UserDTO();
+			let model = new UserDTO();
 			model.name = 'Hiri';
 			model.age = 29;
 
@@ -260,26 +524,20 @@ describe('RepositoryBase', () => {
 
 	describe('find', () => {
 		it('should return an model instance if found', async () => {
-			// Arrange
-			let usrRepo = new UserRepo(dbConnector);
-			
 			// Act
 			let foundDTO: UserDTO = await usrRepo.find(cachedDTO.id);
-			
+
 			// Assert
 			expect(foundDTO).to.be.not.null;
 			expect(foundDTO.id).to.equal(cachedDTO.id);
 			expect(foundDTO.name).to.equal(cachedDTO.name);
 			expect(foundDTO.age).to.equal(cachedDTO.age);
 		});
-		
+
 		it('should return `null` if not found', async () => {
-			// Arrange
-			let usrRepo = new UserRepo(dbConnector);
-			
 			// Act
 			let model: UserDTO = await usrRepo.find(IMPOSSIBLE_ID);
-			
+
 			// Assert
 			expect(model).to.be.null;
 		});
@@ -288,13 +546,12 @@ describe('RepositoryBase', () => {
 	describe('patch', () => {
 		it('should return a possitive number if found', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(dbConnector),
-				newAge = 45;
-			
+			let newAge = 45;
+
 			// Act
 			let affectedRows: number = await usrRepo.patch({ id: cachedDTO.id, age: newAge}),
 				refetchedDTO: UserDTO = await usrRepo.find(cachedDTO.id);
-			
+
 			// Assert
 			expect(affectedRows).to.be.greaterThan(0);
 			expect(refetchedDTO).to.be.not.null;
@@ -302,12 +559,11 @@ describe('RepositoryBase', () => {
 			expect(refetchedDTO.name).to.equal(cachedDTO.name);
 			expect(refetchedDTO.age).to.equal(newAge);
 		});
-		
+
 		it('should return 0 if not found', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(dbConnector),
-				newAge = 45;
-			
+			let newAge = 45;
+
 			// Act
 			let affectedRows: number = await usrRepo.patch({ id: IMPOSSIBLE_ID, age: newAge}),
 				refetchedDTO: UserDTO = await usrRepo.find(IMPOSSIBLE_ID);
@@ -317,11 +573,10 @@ describe('RepositoryBase', () => {
 			// If `patch` returns 0, but we actually find an entity with the id, then something is wrong.
 			expect(refetchedDTO).to.be.null;
 		});
-		
+
 		it('should throw exception if `id` is not provided', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(dbConnector),
-				newAge = 45;
+			let newAge = 45;
 
 			// Act
 			let affectedRows = -1,
@@ -341,15 +596,14 @@ describe('RepositoryBase', () => {
 	describe('update', () => {
 		it('should return a possitive number if found', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(dbConnector),
-				newName = 'Brian',
+			let newName = 'Brian',
 				updatedDTO: UserDTO = Object.assign(new UserDTO, cachedDTO);
 			updatedDTO.name = newName;
-			
+
 			// Act
 			let affectedRows: number = await usrRepo.update(<UserDTO>updatedDTO),
 				refetchedDTO: UserDTO = await usrRepo.find(cachedDTO.id);
-			
+
 			// Assert
 			expect(affectedRows).to.be.greaterThan(0);
 			expect(refetchedDTO).to.be.not.null;
@@ -357,29 +611,27 @@ describe('RepositoryBase', () => {
 			expect(refetchedDTO.name).to.equal(newName);
 			expect(refetchedDTO.age).to.equal(cachedDTO.age);
 		});
-		
+
 		it('should return 0 if not found', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(dbConnector),
-				newName = 'Brian',
+			let newName = 'Brian',
 				updatedDTO: UserDTO = Object.assign(new UserDTO, cachedDTO);
 			updatedDTO.id = IMPOSSIBLE_ID;
 			updatedDTO.name = newName;
-			
+
 			// Act
 			let affectedRows: number = await usrRepo.update(<UserDTO>updatedDTO),
 				refetchedDTO: UserDTO = await usrRepo.find(updatedDTO.id);
-			
+
 			// Assert
 			expect(affectedRows).to.equal(0);
 			// If `update` returns 0, but we actually find an entity with the id, then something is wrong.
 			expect(refetchedDTO).to.be.null;
 		});
-		
+
 		it('should throw exception if `id` is not provided', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(dbConnector),
-				newName = 'Brian',
+			let newName = 'Brian',
 				updatedDTO: UserDTO = Object.assign(new UserDTO, cachedDTO);
 			delete updatedDTO.id;
 			updatedDTO.name = newName;
@@ -402,9 +654,8 @@ describe('RepositoryBase', () => {
 	describe('delete (soft)', () => {
 		it('should return a possitive number and the record is still in database', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(dbConnector),
-				model = new UserDTO();
-			
+			let model = new UserDTO();
+
 			usrRepo.isSoftDeletable = true; // Default
 
 			model.name = 'Hiri';
@@ -427,7 +678,6 @@ describe('RepositoryBase', () => {
 	describe('delete (hard)', () => {
 		it('should return a possitive number if found', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(dbConnector);
 			usrRepo.isSoftDeletable = false;
 
 			// Act
@@ -441,9 +691,6 @@ describe('RepositoryBase', () => {
 		});
 
 		it('should return 0 if not found', async () => {
-			// Arrange
-			let usrRepo = new UserRepo(dbConnector);
-
 			// Act
 			let affectedRows: number = await usrRepo.delete(IMPOSSIBLE_ID),
 				refetchedDTO: UserDTO = await usrRepo.find(IMPOSSIBLE_ID);
@@ -460,7 +707,6 @@ describe('RepositoryBase', () => {
 			// Arrange
 			const PAGE = 1,
 				SIZE = 10;
-			let usrRepo = new UserRepo(dbConnector);
 
 			// Deletes all from DB
 			await usrRepo.deleteAll();
@@ -477,8 +723,7 @@ describe('RepositoryBase', () => {
 			const PAGE = 1,
 				SIZE = 10,
 				TOTAL = SIZE * 2;
-			let usrRepo = new UserRepo(dbConnector),
-				entity: UserDTO;
+			let entity: UserDTO;
 
 			// Deletes all from DB
 			await usrRepo.deleteAll();
@@ -502,9 +747,6 @@ describe('RepositoryBase', () => {
 
 	describe('count', () => {
 		it('Should return a positive number if there are records in database.', async () => {
-			// Arrange
-			let usrRepo = new UserRepo(dbConnector);
-
 			// Act
 			let count = await usrRepo.countAll();
 
@@ -513,9 +755,6 @@ describe('RepositoryBase', () => {
 		});
 
 		it('Should return 0 if there is no records in database.', async () => {
-			// Arrange
-			let usrRepo = new UserRepo(dbConnector);
-
 			// Deletes all from DB
 			await usrRepo.deleteAll();
 

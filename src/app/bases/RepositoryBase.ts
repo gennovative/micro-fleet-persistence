@@ -77,19 +77,9 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 				deletedAt: this.utcNow
 			}, atomicSession);
 		} else {
-			try {
-				console.log('before delete(%d)', id);
-				affectedRows = await this.executeCommand(query => {
-					return query.deleteById(id).then(r => {
-						console.log('after delete (%d): ', id, r);
-						if (r == 0) {
-							debugger;
-						}
-					});
-				}, atomicSession);
-			} catch (err) {
-				console.error('delete error: ', err);
-			}
+			affectedRows = await this.executeCommand(query => {
+				return query.deleteById(id);
+			}, atomicSession);
 		}
 
 		return affectedRows;

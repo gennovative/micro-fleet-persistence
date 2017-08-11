@@ -94,22 +94,23 @@ export class KnexDatabaseConnector implements IDatabaseConnector {
 	}
 
 	private prepareSimpleQuery<TEntity>(EntityClass, callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[] {
-		return this._connections.map(knexConn => {
-			let BoundClass;
+		let calls: Promise<any>[] = [],
+			BoundClass;
 
-			// If connection names are specified, we only execute queries on those connections.
-			if (!isEmpty(names)) {
+		for (let knexConn of this._connections) {
+			if (isEmpty(names)) {
+				BoundClass = EntityClass['bindKnex'](knexConn);
+				calls.push(callback(BoundClass['query'](), BoundClass));
+			} else {
+				// If connection names are specified, we only execute queries on those connections.
 				if (names.includes(knexConn.customName)) {
 					BoundClass = EntityClass['bindKnex'](knexConn);
-					return callback(BoundClass['query'](), BoundClass);
+					calls.push(callback(BoundClass['query'](), BoundClass));
 				}
-				return null;
 			}
+		}
 
-			BoundClass = EntityClass['bindKnex'](knexConn);
-
-			return callback(BoundClass['query'](), BoundClass);
-		});
+		return calls;
 	}
 
 	private prepareTransactionalQuery<TEntity>(EntityClass, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any>[] {

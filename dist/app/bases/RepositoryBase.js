@@ -78,20 +78,9 @@ let RepositoryBase = class RepositoryBase {
                 }, atomicSession);
             }
             else {
-                try {
-                    console.log('before delete(%d)', id);
-                    affectedRows = yield this.executeCommand(query => {
-                        return query.deleteById(id).then(r => {
-                            console.log('after delete (%d): ', id, r);
-                            if (r == 0) {
-                                debugger;
-                            }
-                        });
-                    }, atomicSession);
-                }
-                catch (err) {
-                    console.error('delete error: ', err);
-                }
+                affectedRows = yield this.executeCommand(query => {
+                    return query.deleteById(id);
+                }, atomicSession);
             }
             return affectedRows;
         });

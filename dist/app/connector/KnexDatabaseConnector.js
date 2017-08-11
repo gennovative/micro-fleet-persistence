@@ -81,19 +81,21 @@ let KnexDatabaseConnector = class KnexDatabaseConnector {
         throw new back_lib_common_util_1.MinorException('No database settings!');
     }
     prepareSimpleQuery(EntityClass, callback, ...names) {
-        return this._connections.map(knexConn => {
-            let BoundClass;
-            // If connection names are specified, we only execute queries on those connections.
-            if (!isEmpty(names)) {
+        let calls = [], BoundClass;
+        for (let knexConn of this._connections) {
+            if (isEmpty(names)) {
+                BoundClass = EntityClass['bindKnex'](knexConn);
+                calls.push(callback(BoundClass['query'](), BoundClass));
+            }
+            else {
+                // If connection names are specified, we only execute queries on those connections.
                 if (names.includes(knexConn.customName)) {
                     BoundClass = EntityClass['bindKnex'](knexConn);
-                    return callback(BoundClass['query'](), BoundClass);
+                    calls.push(callback(BoundClass['query'](), BoundClass));
                 }
-                return null;
             }
-            BoundClass = EntityClass['bindKnex'](knexConn);
-            return callback(BoundClass['query'](), BoundClass);
-        });
+        }
+        return calls;
     }
     prepareTransactionalQuery(EntityClass, callback, atomicSession) {
         let BoundClass = EntityClass['bindKnex'](atomicSession.knexConnection);

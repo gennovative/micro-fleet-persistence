@@ -23,9 +23,10 @@ Provides base repository class and database connector that helps connect to data
 
 ## 1.0.0
 
-- Converted `DatabaseAdapter` into `KnexDatabaseConnector` which supports executing same query on multiple database connections at the same time.
-- `RepositoryBase` no longer couples with `objection` and `knex`.
+- Converted **DatabaseAdapter** into **KnexDatabaseConnector** which supports executing same query on multiple database connections at the same time.
+- **RepositoryBase** no longer couples with `objection` and `knex`.
 - Makes sure all date values loaded from database are converted as UTC format.
+- **AtomicSessionFactory**, **AtomicSessionFlow** (use with **AtomicSession**): supports transactional queries to provide atomic operation. Their unittests are skipped, read the `console.warn(...)` in the unittest before running.
 - **Test coverage:** 100%
 
 ## 0.1.0

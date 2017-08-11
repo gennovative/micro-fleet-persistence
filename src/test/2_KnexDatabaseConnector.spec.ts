@@ -1,6 +1,7 @@
 import * as chai from 'chai';
 import * as spies from 'chai-spies';
 import * as _ from 'lodash';
+import { MinorException } from 'back-lib-common-util';
 
 import { KnexDatabaseConnector, DbClient, EntityBase } from '../app';
 import DB_DETAILS from './database-details';
@@ -80,15 +81,22 @@ describe('KnexDatabaseConnector', () => {
 		it('should configure connection with host credentials', async () => {
 			// Arrange
 			let dbConnector = new KnexDatabaseConnector(),
-				expectedSettings = Object.assign({
+				expectedSettings = {
+					client: DB_DETAILS.clientName,
 					useNullAsDefault: true,
-				}, DB_DETAILS);
+					connection: {
+						host: DB_DETAILS.host.address,
+						user: DB_DETAILS.host.user,
+						password: DB_DETAILS.host.password,
+						database: DB_DETAILS.host.database
+					}
+				};
 
 			dbConnector['_knex'] = chai.spy(() => {
 				return {};
 			});
 
-			// Act
+			// Act KnexDatabaseConnector.spec.js
 			dbConnector.addConnection(DB_DETAILS);
 
 			// Assert
@@ -99,7 +107,7 @@ describe('KnexDatabaseConnector', () => {
 		it('should throw exception if there is no settings for database connection', async () => {
 			// Arrange
 			let dbConnector = new KnexDatabaseConnector(),
-				exception = null,
+				exception: MinorException = null,
 				isSuccess = false;
 			dbConnector['_knex'] = chai.spy(() => {
 				return {};
@@ -118,7 +126,8 @@ describe('KnexDatabaseConnector', () => {
 			// Assert
 			expect(isSuccess).to.be.false;
 			expect(exception).to.be.not.null;
-			expect(exception).to.equal('No database settings!');
+			expect(exception).to.be.instanceOf(MinorException);
+			expect(exception.message).to.equal('No database settings!');
 		});
 	}); // END describe 'addConnection'
 
