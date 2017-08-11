@@ -1,7 +1,16 @@
+import * as knex from 'knex';
 import { QueryBuilder } from 'objection';
+import { AtomicSession } from 'back-lib-common-contracts';
 
-import { EntityBase } from './EntityBase';
+import { EntityBase } from '../bases/EntityBase';
 
+
+export interface KnexConnection extends knex {
+	/**
+	 * Connection name.
+	 */
+	customName: string;
+}
 
 /**
  * Db driver names for `IConnectionDetail.clientName` property.
@@ -73,8 +82,8 @@ export interface IConnectionDetail {
 
 /**
  * Invoked when a request for getting query is replied.
- * @param queryBuilder {QueryBuilder} A query that is bound to a connection.
- * @param boundEntityClass {Class extends Model} A class that is bound to a connection.
+ * @param {QueryBuilder} queryBuilder A query that is bound to a connection.
+ * @param {Class extends Model} boundEntityClass A class that is bound to a connection.
  */
 export type QueryCallback<TEntity> = (queryBuilder: QueryBuilder<TEntity>, boundEntityClass?) => Promise<any>;
 
@@ -84,9 +93,15 @@ export type QueryCallback<TEntity> = (queryBuilder: QueryBuilder<TEntity>, bound
  */
 export interface IDatabaseConnector {
 	/**
+	 * Gets list of established database connections.
+	 * Each item is a Knex instance.
+	 */
+	connections: KnexConnection[];
+
+	/**
 	 * Makes a new database connection then adds to managed list.
-	 * @param detail {IConnectionDetail} Credentials to make connection.
-	 * @param name {string} Optionally give a name to the connection, for later reference.
+	 * @param {IConnectionDetail} detail Credentials to make connection.
+	 * @param {string} name Optionally give a name to the connection, for later reference.
 	 * 	If not given, the position index of connection in the managed list will be assigned as name.
 	 */
 	addConnection(detail: IConnectionDetail, name?: string): void;
@@ -100,9 +115,10 @@ export interface IDatabaseConnector {
 	 * Executes same query on all managed connections. This connector binds connections 
 	 * to `EntityClass` and passes a queryable instance to `callback`.
 	 * 
-	 * @param EntityClass {Class} An entity class to bind a connection.
-	 * @param callback {QueryCallback} A callback to invoke each time a connection is bound.
-	 * @param names {string[]} Optionally filters out and only executes the query on connections with specified names.
+	 * @param {class} EntityClass An entity class to bind a connection.
+	 * @param {AtomicSession} atomicSession A session which provides transaction to execute queries on.
+	 * @param {QueryCallback} callback A callback to invoke each time a connection is bound.
+	 * @param {string[]} names Optionally filters out and only executes the query on connections with specified names.
 	 * @example
 	 * 	// Must add at least one connection.
 	 * 	connector.addConnection({...});
@@ -119,5 +135,5 @@ export interface IDatabaseConnector {
 	 * 	let result = await promises[0];
 	 * @return {Promise[]} An array of promises returned by all above callbacks.
 	 */
-	prepare<TEntity extends EntityBase>(EntityClass, callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[];
+	prepare<TEntity extends EntityBase>(EntityClass, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession, ...names: string[]): Promise<any>[];
 }
