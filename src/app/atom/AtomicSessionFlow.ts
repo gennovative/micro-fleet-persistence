@@ -17,6 +17,7 @@ export class AtomicSessionFlow {
 	private _tasks: SessionTask[];
 	private _initPromise: Promise<any[]>;
 	private _finalPromise: Promise<any>;
+	private _abortFn: (reason) => void;
 
 	/**
 	 * 
@@ -43,22 +44,27 @@ export class AtomicSessionFlow {
 	 */
 	public closePipe(): Promise<any> {
 		if (!this.isPipeClosed) {
-			this._finalPromise = this._initPromise
-				.then(transPromises => {
+			this._finalPromise = new Promise((resolve, reject) => {
+				this._abortFn = reject;
+				this._initPromise.then(transPromises => {
 					// Clean up
 					this._initPromise = null;
 
-					let finalPromise = Promise.all(transPromises)
-						.then(outputs => outputs[0]);
+					// Waits for all transaction to complete,
+					// but only takes output from primary (first) one.
+					// `transPromises` resolves when `resolveAllTransactions` is called,
+					// and reject when ``rejectAllTransactions()` is called.
+					Promise.all(transPromises)
+						.then(outputs => resolve(outputs[0]))
+						// Error from query execution
+						.catch(reject);
 
-					// Wrap in an array to pass to next "then",
-					// as we don't want to wait for it now.
-					return [finalPromise];
-				})
-				.then(([finalPromise]) => {
+					// Start executing enqueued tasks
 					this.loop();
-					return finalPromise;
-				});
+				})
+				// Error on init transaction
+				.catch(reject);
+			});
 		}
 
 		return this._finalPromise;
@@ -85,15 +91,17 @@ export class AtomicSessionFlow {
 				len = conns.length,
 				i = 0;
 
-			// For each connection, we start a new transaction.
-			conns.forEach(knexConn => {
+			// Start a new transaction for each connection.
+			for (let knexConn of conns) {
 				if (names && names.length && !names.includes(knexConn.customName)) {
 					return;
 				}
 
-				transaction(knexConn, trans => {
-					let promise = this.wrapTransaction(knexConn, trans);
-					transPromises.push(promise);
+				// `transPro` resolves when transaction is commited. Otherwise, it rejects.
+				let transPro: Promise<any> = transaction(knexConn, trans => {
+					this._sessions.push(new AtomicSession(knexConn, trans, null, null));
+					// let promise = this.wrapTransaction(knexConn, trans);
+					// transPromises.push(promise);
 
 					i++;
 					// Last connection
@@ -101,15 +109,16 @@ export class AtomicSessionFlow {
 						resolveInit(transPromises);
 					}
 
-					// Transaction is commited if this promise resolves.
-					// Otherwise, it is rolled back.
-					// This is how ObjectionJS transaction works.
-					return promise;
+					return null;
 				});
-			});
+				transPromises.push(transPro);
+			} // END for
 		});
 	}
 
+	/**
+	 * @deprecated
+	 */
 	private wrapTransaction(knexConn, knexTrans): Promise<any> {
 		return new Promise((resolve, reject) => {
 				this._sessions.push(new AtomicSession(knexConn, knexTrans, resolve, reject));
@@ -127,28 +136,68 @@ export class AtomicSessionFlow {
 			.then(prev => {
 				this.loop(prev);
 			})
-			.catch(err => this.rejectAllTransactions(err));
+			.catch(err => this.rejectAllTransactions(err))
+			// This catches both promise errors and AtomicSessionFlow's errors.
+			.catch(this._abortFn);
 	}
 
 	private doTask(prevOutputs: any[]): Promise<any[]> {
 		let task = this._tasks.shift();
 		prevOutputs = prevOutputs || [];
-		
+
 		if (!task) {
 			// When there's no more task, we commit all transactions.
-			this._sessions.forEach((s, i) => s.resolve(prevOutputs[i]));
-			this._sessions = this._tasks = null; // Clean up
+			this.resolveAllTransactions(prevOutputs);
 			return null;
 		}
 
-		// Execute each task on all connections (transactions).
-		return Promise.all(
-			this._sessions.map((s, i) => task(s, prevOutputs[i]))
-		);
+		return this.collectTasksOutputs(task, prevOutputs);
 	}
 
-	private rejectAllTransactions(error) {
-		this._sessions.forEach(s => s.reject(error));
-		return Promise.reject(error);
+	private collectTasksOutputs(task, prevOutputs): Promise<any> {
+		// Unlike Promise.all(), this promise collects all query errors.
+		return new Promise((resolve, reject) => {
+			let i = 0,
+				sessions = this._sessions,
+				sLen = sessions.length,
+				results = [],
+				errors = [];
+
+			// Execute each task on all sessions (transactions).
+			for (let s of sessions) {
+				task.call(null, s, prevOutputs[i])
+					.then(r => {
+						// Collect results
+						results.push(r);
+						if (++i == sLen) {
+							// If there is at least one error,
+							// all transactions are marked as failure.
+							if (errors.length) {
+								reject(errors);
+							} else {
+								// All transactions are marked as success
+								// only when all of them finish without error.
+								resolve(results);
+							}
+						}
+					})
+					.catch(er => {
+						errors.push(er);
+						// Collect error from all queries.
+						if (++i == sLen) {
+							reject(errors);
+						}
+					});
+			} // END for
+		});
+	}
+
+	private resolveAllTransactions(outputs): void {
+		this._sessions.forEach((s, i) => s.knexTransaction.commit(outputs[i]));
+		this._sessions = this._tasks = null; // Clean up
+	}
+
+	private rejectAllTransactions(error): void {
+		this._sessions.forEach(s => s.knexTransaction.rollback(error));
 	}
 }

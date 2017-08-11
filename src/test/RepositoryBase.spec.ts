@@ -166,7 +166,7 @@ describe('RepositoryBase', () => {
 			expect(createdDTO.age).to.equal(model.age);
 		});
 
-		it.only('should insert two rows to database in a transaction', () => {
+		it.only('should insert two rows to database in a transaction', async () => {
 			// Arrange
 			let usrRepo = new UserRepo(dbConnector),
 				modelOne = new UserDTO(),
@@ -181,35 +181,59 @@ describe('RepositoryBase', () => {
 			DB_DETAILS.host.database = 'unittestTwo';
 			dbConnector.addConnection(DB_DETAILS);
 
-			// Act KnexDatabaseConnector RepositoryBase.spec.js AtomicSessionFlow.js
-			return usrRepo.createCoupleWithTransaction(modelOne, modelTwo)
-				.then((output) => {
-					expect(output).to.exist;
+			try {
+				// Act
+				let output = await usrRepo.createCoupleWithTransaction(modelOne, modelTwo);
+				expect(output).to.exist;
 
-					let [createdOne, createdTwo] = output;
-					// Assert
-					console.log('createdOne: ', createdOne);
-					console.log('createdTwo: ', createdTwo);
-					expect(createdOne).to.exist;
-					expect(createdTwo).to.exist;
-					expect(+createdOne.id).to.be.greaterThan(0); // Need parse to int, because Postgres returns bigint as string.
-					expect(+createdTwo.id).to.be.greaterThan(0);
-					expect(createdOne.name).to.equal(modelOne.name);
-					expect(createdOne.age).to.equal(modelOne.age);
-					expect(createdTwo.name).to.equal(modelTwo.name);
-					expect(createdTwo.age).to.equal(modelTwo.age);
+				let [createdOne, createdTwo] = output;
+				// Assert
+				console.log('createdOne: ', createdOne);
+				console.log('createdTwo: ', createdTwo);
+				expect(createdOne).to.exist;
+				expect(createdTwo).to.exist;
+				expect(+createdOne.id).to.be.greaterThan(0); // Need parse to int, because Postgres returns bigint as string.
+				expect(+createdTwo.id).to.be.greaterThan(0);
+				expect(createdOne.name).to.equal(modelOne.name);
+				expect(createdOne.age).to.equal(modelOne.age);
+				expect(createdTwo.name).to.equal(modelTwo.name);
+				expect(createdTwo.age).to.equal(modelTwo.age);
 
-					// Clean up
-					usrRepo.isSoftDeletable = false;
-					return Promise.all([
-						usrRepo.delete(createdOne.id).catch(err => console.error('errOne: ', err)),
-						usrRepo.delete(createdTwo.id).catch(err => console.error('errTwo: ', err))
-					]);
-				})
-				.catch(err => {
-					console.error(err);
-					expect(err).not.to.exist;
-				});
+				// Clean up
+				usrRepo.isSoftDeletable = false;
+				await usrRepo.delete(createdOne.id);
+				await usrRepo.delete(createdTwo.id);
+			} catch (err) {
+				console.error(err);
+				expect(err).not.to.exist;
+			}
+		});
+
+		it.only('should rollback all transactions when a query fails', async () => {
+			// Arrange
+			let usrRepo = new UserRepo(dbConnector),
+				modelOne = new UserDTO(),
+				modelTwo = new UserDTO();
+			modelOne.name = 'One';
+			modelOne.age = 11;
+
+			modelTwo.name = null; // fail
+			modelTwo.age = 22;
+
+			// Add second connection
+			DB_DETAILS.host.database = 'unittestTwo';
+			dbConnector.addConnection(DB_DETAILS);
+
+			try {
+				// Act KnexDatabaseConnector RepositoryBase.spec.js AtomicSessionFlow.js
+				let output = await usrRepo.createCoupleWithTransaction(modelOne, modelTwo);
+				expect(output).not.to.exist;
+			} catch (errors) {
+				expect(errors).to.exist;
+				expect(errors.length).to.equal(2);
+			}
+			let count = await usrRepo.countAll();
+			expect(count).to.equal(0);
 		});
 		
 		it('should throw error if not success on all connections', async () => {
