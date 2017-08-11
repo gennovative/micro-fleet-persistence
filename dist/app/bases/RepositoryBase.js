@@ -23,10 +23,8 @@ const moment = require("moment");
 const back_lib_common_util_1 = require("back-lib-common-util");
 const back_lib_common_contracts_1 = require("back-lib-common-contracts");
 let RepositoryBase = class RepositoryBase {
-    constructor(_modelMapper, _dbConnector) {
-        this._modelMapper = _modelMapper;
+    constructor(_dbConnector) {
         this._dbConnector = _dbConnector;
-        back_lib_common_util_1.Guard.assertArgDefined('_modelMapper', _modelMapper);
         this.isSoftDeletable = true;
         this.isAuditable = true;
     }
@@ -39,11 +37,11 @@ let RepositoryBase = class RepositoryBase {
     /**
      * @see IRepository.countAll
      */
-    countAll() {
+    countAll(atomicSession) {
         return __awaiter(this, void 0, void 0, function* () {
             let result = yield this.executeQuery(query => {
                 return query.count('id as total');
-            });
+            }, atomicSession);
             // In case with Postgres, `count` returns a bigint type which will be a String 
             // and not a Number.
             /* istanbul ignore next */
@@ -53,7 +51,7 @@ let RepositoryBase = class RepositoryBase {
     /**
      * @see IRepository.create
      */
-    create(model) {
+    create(model, atomicSession) {
         return __awaiter(this, void 0, void 0, function* () {
             /* istanbul ignore else */
             if (this.isAuditable) {
@@ -63,26 +61,37 @@ let RepositoryBase = class RepositoryBase {
             let entity = this.toEntity(model, false), newEnt;
             newEnt = yield this.executeCommand(query => {
                 return query.insert(entity);
-            });
+            }, atomicSession);
             return this.toDTO(newEnt, false);
         });
     }
     /**
      * @see IRepository.delete
      */
-    delete(id) {
+    delete(id, atomicSession) {
         return __awaiter(this, void 0, void 0, function* () {
             let affectedRows;
             if (this.isSoftDeletable) {
                 affectedRows = yield this.patch({
                     id,
                     deletedAt: this.utcNow
-                });
+                }, atomicSession);
             }
             else {
-                affectedRows = yield this.executeCommand(query => {
-                    return query.deleteById(id);
-                });
+                try {
+                    console.log('before delete(%d)', id);
+                    affectedRows = yield this.executeCommand(query => {
+                        return query.deleteById(id).then(r => {
+                            console.log('after delete (%d): ', id, r);
+                            if (r == 0) {
+                                debugger;
+                            }
+                        });
+                    }, atomicSession);
+                }
+                catch (err) {
+                    console.error('delete error: ', err);
+                }
             }
             return affectedRows;
         });
@@ -90,23 +99,23 @@ let RepositoryBase = class RepositoryBase {
     /**
      * @see IRepository.find
      */
-    find(id) {
+    find(id, atomicSession) {
         return __awaiter(this, void 0, void 0, function* () {
             let foundEnt = yield this.executeQuery(query => {
                 return query.findById(id);
-            });
+            }, atomicSession);
             return this.toDTO(foundEnt, false);
         });
     }
     /**
      * @see IRepository.page
      */
-    page(pageIndex, pageSize) {
+    page(pageIndex, pageSize, atomicSession) {
         return __awaiter(this, void 0, void 0, function* () {
             let foundList, dtoList, affectedRows;
             foundList = yield this.executeQuery(query => {
                 return query.page(pageIndex, pageSize);
-            });
+            }, atomicSession);
             if (!foundList || isEmpty(foundList.results)) {
                 return null;
             }
@@ -117,7 +126,7 @@ let RepositoryBase = class RepositoryBase {
     /**
      * @see IRepository.patch
      */
-    patch(model) {
+    patch(model, atomicSession) {
         return __awaiter(this, void 0, void 0, function* () {
             back_lib_common_util_1.Guard.assertArgDefined('model.id', model.id);
             /* istanbul ignore else */
@@ -128,14 +137,14 @@ let RepositoryBase = class RepositoryBase {
             let entity = this.toEntity(model, true), affectedRows;
             affectedRows = yield this.executeCommand(query => {
                 return query.where('id', entity.id).patch(entity);
-            });
+            }, atomicSession);
             return affectedRows;
         });
     }
     /**
      * @see IRepository.update
      */
-    update(model) {
+    update(model, atomicSession) {
         return __awaiter(this, void 0, void 0, function* () {
             back_lib_common_util_1.Guard.assertArgDefined('model.id', model.id);
             /* istanbul ignore else */
@@ -145,7 +154,7 @@ let RepositoryBase = class RepositoryBase {
             let entity = this.toEntity(model, false), affectedRows;
             affectedRows = yield this.executeCommand(query => {
                 return query.where('id', entity.id).update(entity);
-            });
+            }, atomicSession);
             return affectedRows;
         });
     }
@@ -155,14 +164,19 @@ let RepositoryBase = class RepositoryBase {
      * @return A promise that resolve to affected rows.
      * @throws {[errorMsg, affectedRows]} When not all connections have same affected rows.
      */
-    executeCommand(callback, ...names) {
-        let queryJobs = this.prepare(callback, ...names);
+    executeCommand(callback, atomicSession = null, ...names) {
+        let queryJobs = this.prepare(callback, atomicSession, ...names), 
+        // Create exception here to have full error stack
+        exception = new back_lib_common_util_1.MinorException('Not successful on all connections');
+        if (atomicSession) {
+            return queryJobs[0];
+        }
         return Promise.all(queryJobs)
             .then((affectedRows) => {
             // If there is no affected rows, or if not all connections have same affected rows.
             /* istanbul ignore next */
             if (isEmpty(affectedRows) || !every(affectedRows, r => r == affectedRows[0])) {
-                throw ['Not successful on all connections', affectedRows];
+                return Promise.reject(exception);
             }
             // If all connections have same affected rows, it means the execution was successful.
             return affectedRows[0];
@@ -172,15 +186,15 @@ let RepositoryBase = class RepositoryBase {
      * Executing an query that has returned value.
      * This kind of query is executed on the primary (first) connection.
      */
-    executeQuery(callback, name = '0') {
-        let queryJobs = this.prepare(callback, name);
+    executeQuery(callback, atomicSession, name = '0') {
+        let queryJobs = this.prepare(callback, atomicSession, name);
         // Get value from first connection
         return queryJobs[0];
     }
 };
 RepositoryBase = __decorate([
     back_lib_common_util_1.injectable(),
-    __metadata("design:paramtypes", [Object, Object])
+    __metadata("design:paramtypes", [Object])
 ], RepositoryBase);
 exports.RepositoryBase = RepositoryBase;
 

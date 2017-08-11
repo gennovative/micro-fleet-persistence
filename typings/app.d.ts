@@ -133,11 +133,10 @@ declare module 'back-lib-persistence/RepositoryBase' {
 	import { EntityBase } from 'back-lib-persistence/EntityBase';
 	import { IDatabaseConnector, QueryCallback } from 'back-lib-persistence/IDatabaseConnector';
 	export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends IModelDTO> implements IRepository<TModel> {
-	    protected _modelMapper: AutoMapper;
 	    protected _dbConnector: IDatabaseConnector;
 	    isSoftDeletable: boolean;
 	    isAuditable: boolean;
-	    constructor(_modelMapper: AutoMapper, _dbConnector: IDatabaseConnector);
+	    constructor(_dbConnector: IDatabaseConnector);
 	    /**
 	     * Gets current date time in UTC.
 	     */

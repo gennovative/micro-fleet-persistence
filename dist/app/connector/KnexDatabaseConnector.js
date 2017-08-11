@@ -20,6 +20,15 @@ let KnexDatabaseConnector = class KnexDatabaseConnector {
         this._connections = [];
         this._knex = knex;
     }
+    /**
+     * @see IDatabaseConnector.connections
+     */
+    get connections() {
+        return this._connections;
+    }
+    /**
+     * @see IDatabaseConnector.addConnection
+     */
     addConnection(detail, name) {
         back_lib_common_util_1.Guard.assertArgDefined('detail', detail);
         let settings = {
@@ -27,9 +36,12 @@ let KnexDatabaseConnector = class KnexDatabaseConnector {
             useNullAsDefault: true,
             connection: this.buildConnSettings(detail)
         }, knexConn = this._knex(settings);
-        knexConn['customName'] = name ? name : (this._connections.length + '');
+        knexConn.customName = name ? name : (this._connections.length + '');
         this._connections.push(knexConn);
     }
+    /**
+     * @see IDatabaseConnector.dispose
+     */
     dispose() {
         let destroyPromises = this._connections.map(conn => {
             return conn['destroy']();
@@ -38,21 +50,15 @@ let KnexDatabaseConnector = class KnexDatabaseConnector {
         this._connections = null;
         return destroyPromises;
     }
-    prepare(EntityClass, callback, ...names) {
+    /**
+     * @see IDatabaseConnector.prepare
+     */
+    prepare(EntityClass, callback, atomicSession, ...names) {
         back_lib_common_util_1.Guard.assertIsNotEmpty(this._connections, 'Must call addConnection() before executing any query.');
-        return this._connections.map(conn => {
-            let BoundClass;
-            // If connection names are specified, we only execute queries on those connections.
-            if (!isEmpty(names)) {
-                if (names.includes(conn['customName'])) {
-                    BoundClass = EntityClass['bindKnex'](conn);
-                    return callback(BoundClass['query'](), BoundClass);
-                }
-                return null;
-            }
-            BoundClass = EntityClass['bindKnex'](conn);
-            return callback(BoundClass['query'](), BoundClass);
-        });
+        if (atomicSession) {
+            return this.prepareTransactionalQuery(EntityClass, callback, atomicSession);
+        }
+        return this.prepareSimpleQuery(EntityClass, callback, ...names);
     }
     buildConnSettings(detail) {
         // 1st priority: connect to a local file.
@@ -72,7 +78,28 @@ let KnexDatabaseConnector = class KnexDatabaseConnector {
                 database: detail.host.database,
             };
         }
-        throw 'No database settings!';
+        throw new back_lib_common_util_1.MinorException('No database settings!');
+    }
+    prepareSimpleQuery(EntityClass, callback, ...names) {
+        return this._connections.map(knexConn => {
+            let BoundClass;
+            // If connection names are specified, we only execute queries on those connections.
+            if (!isEmpty(names)) {
+                if (names.includes(knexConn.customName)) {
+                    BoundClass = EntityClass['bindKnex'](knexConn);
+                    return callback(BoundClass['query'](), BoundClass);
+                }
+                return null;
+            }
+            BoundClass = EntityClass['bindKnex'](knexConn);
+            return callback(BoundClass['query'](), BoundClass);
+        });
+    }
+    prepareTransactionalQuery(EntityClass, callback, atomicSession) {
+        let BoundClass = EntityClass['bindKnex'](atomicSession.knexConnection);
+        return [
+            callback(BoundClass['query'](atomicSession.knexTransaction), BoundClass)
+        ];
     }
 };
 KnexDatabaseConnector = __decorate([

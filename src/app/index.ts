@@ -3,8 +3,10 @@ if (!Reflect || typeof Reflect['hasOwnMetadata'] !== 'function') {
 	require('reflect-metadata');
 }
 import './convert-utc';
-export * from './EntityBase';
-export * from './RepositoryBase';
-export * from './IDatabaseConnector';
-export * from './KnexDatabaseConnector';
+export * from './atom/AtomicSessionFactory';
+export * from './atom/AtomicSessionFlow';
+export * from './bases/EntityBase';
+export * from './bases/RepositoryBase';
+export * from './connector/IDatabaseConnector';
+export * from './connector/KnexDatabaseConnector';
 export * from './Types';

@@ -1,20 +1,20 @@
-import 'automapper-ts'; // Singleton
 import { expect } from 'chai';
 
 import { InvalidArgumentException } from 'back-lib-common-util';
-import { PagedArray, ModelAutoMapper } from 'back-lib-common-contracts';
+import { PagedArray, ModelAutoMapper, AtomicSession } from 'back-lib-common-contracts';
 
 import { RepositoryBase, EntityBase, QueryCallback, IDatabaseConnector,
-		KnexDatabaseConnector, DbClient } from '../app';
+		KnexDatabaseConnector, DbClient, AtomicSessionFactory } from '../app';
+import DB_DETAILS from './database-details';
 
 
 const CONN_FILE = `${process.cwd()}/database-adapter-test.sqlite`,
 	CONN_FILE_2 = `${process.cwd()}/database-adapter-test-second.sqlite`,
 	// For SQLite3 file
-	DB_TABLE = 'userdata',
+	// DB_TABLE = 'userdata',
 
 	// For PostgreSQL
-	//DB_TABLE = 'gennova.userdata',
+	DB_TABLE = 'userdata',
 
 	IMPOSSIBLE_ID = '0';
 
@@ -55,18 +55,49 @@ class UserEntity extends EntityBase {
 
 class UserRepo extends RepositoryBase<UserEntity, UserDTO> {
 	
+	private _sessionFactory: AtomicSessionFactory;
+
 	constructor(
-		modelMapper: AutoMapper,
 		dbConnector: IDatabaseConnector
 	) {
-		super(modelMapper, dbConnector);
+		super(dbConnector);
+		this._sessionFactory = new AtomicSessionFactory(dbConnector);
+	}
+
+	public createCoupleWithTransaction(adam: UserDTO, eva: UserDTO): Promise<UserDTO[]> {
+		return this._sessionFactory.startSession()
+			.pipe(session => {
+				return this.create(adam, session)
+					.then(arg => {
+						return arg;
+					})
+					.catch(err => {
+						debugger;
+						return Promise.reject(err);
+					});
+			})
+			.pipe((session, createdAdam) => {
+				if (!createdAdam) {
+					debugger;
+					// In fact, this scenario should never happen.
+					// Because when we come to this point, the previous task must have been successfull.
+					return Promise.reject('Cannot live without my husband!');
+				}
+				return this.create(eva, session)
+					.then(createdEva => [createdAdam, createdEva]);
+			})
+			.closePipe();
+	}
+
+	public deleteAll(): Promise<void> {
+		return this.executeCommand(query => query.delete());
 	}
 
 	/**
 	 * @override
 	 */
-	protected prepare<UserEntity>(callback: QueryCallback<UserEntity>, ...names: string[]): Promise<any>[] {
-		return this._dbConnector.prepare(UserEntity, <any>callback, ...names);
+	protected prepare<UserEntity>(callback: QueryCallback<UserEntity>, atomicSession?: AtomicSession, ...names: string[]): Promise<any>[] {
+		return this._dbConnector.prepare(UserEntity, <any>callback, atomicSession, ...names);
 	}
 
 	/**
@@ -100,20 +131,14 @@ describe('RepositoryBase', () => {
 	
 	beforeEach('Initialize db adapter', () => {
 		dbConnector = new KnexDatabaseConnector();
-		dbConnector.addConnection({
-			// // For SQLite3 file
-			clientName: DbClient.SQLITE3,
-			fileName: CONN_FILE,
+		// For SQLite3 file
+		// dbConnector.addConnection({
+			// clientName: DbClient.SQLITE3,
+			// fileName: CONN_FILE,
+		// });
 
-			// // For PostgreSQL
-			// clientName: DbClient.POSTGRESQL,
-			// host: {
-			// 	address: 'localhost',
-			// 	user: 'postgres',
-			// 	password: 'postgres',
-			// 	database: 'unittest',
-			// }
-		});
+		// For PostgreSQL
+		dbConnector.addConnection(DB_DETAILS);
 	});
 
 	afterEach('Tear down db adapter', async () => {
@@ -121,10 +146,12 @@ describe('RepositoryBase', () => {
 		dbConnector = null;
 	});
 
-	describe('create', () => {
+	describe('create', function() {
+		this.timeout(60000);
+
 		it('should insert a row to database', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(automapper, dbConnector),
+			let usrRepo = new UserRepo(dbConnector),
 				model = new UserDTO();
 			model.name = 'Hiri';
 			model.age = 29;
@@ -138,10 +165,56 @@ describe('RepositoryBase', () => {
 			expect(createdDTO.name).to.equal(model.name);
 			expect(createdDTO.age).to.equal(model.age);
 		});
+
+		it.only('should insert two rows to database in a transaction', () => {
+			// Arrange
+			let usrRepo = new UserRepo(dbConnector),
+				modelOne = new UserDTO(),
+				modelTwo = new UserDTO();
+			modelOne.name = 'One';
+			modelOne.age = 11;
+
+			modelTwo.name = 'Two';
+			modelTwo.age = 22;
+
+			// Add second connection
+			DB_DETAILS.host.database = 'unittestTwo';
+			dbConnector.addConnection(DB_DETAILS);
+
+			// Act KnexDatabaseConnector RepositoryBase.spec.js AtomicSessionFlow.js
+			return usrRepo.createCoupleWithTransaction(modelOne, modelTwo)
+				.then((output) => {
+					expect(output).to.exist;
+
+					let [createdOne, createdTwo] = output;
+					// Assert
+					console.log('createdOne: ', createdOne);
+					console.log('createdTwo: ', createdTwo);
+					expect(createdOne).to.exist;
+					expect(createdTwo).to.exist;
+					expect(+createdOne.id).to.be.greaterThan(0); // Need parse to int, because Postgres returns bigint as string.
+					expect(+createdTwo.id).to.be.greaterThan(0);
+					expect(createdOne.name).to.equal(modelOne.name);
+					expect(createdOne.age).to.equal(modelOne.age);
+					expect(createdTwo.name).to.equal(modelTwo.name);
+					expect(createdTwo.age).to.equal(modelTwo.age);
+
+					// Clean up
+					usrRepo.isSoftDeletable = false;
+					return Promise.all([
+						usrRepo.delete(createdOne.id).catch(err => console.error('errOne: ', err)),
+						usrRepo.delete(createdTwo.id).catch(err => console.error('errTwo: ', err))
+					]);
+				})
+				.catch(err => {
+					console.error(err);
+					expect(err).not.to.exist;
+				});
+		});
 		
 		it('should throw error if not success on all connections', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(automapper, dbConnector),
+			let usrRepo = new UserRepo(dbConnector),
 				model = new UserDTO();
 			model.name = 'Hiri';
 			model.age = 29;
@@ -164,7 +237,7 @@ describe('RepositoryBase', () => {
 	describe('find', () => {
 		it('should return an model instance if found', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(automapper, dbConnector);
+			let usrRepo = new UserRepo(dbConnector);
 			
 			// Act
 			let foundDTO: UserDTO = await usrRepo.find(cachedDTO.id);
@@ -178,7 +251,7 @@ describe('RepositoryBase', () => {
 		
 		it('should return `null` if not found', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(automapper, dbConnector);
+			let usrRepo = new UserRepo(dbConnector);
 			
 			// Act
 			let model: UserDTO = await usrRepo.find(IMPOSSIBLE_ID);
@@ -191,7 +264,7 @@ describe('RepositoryBase', () => {
 	describe('patch', () => {
 		it('should return a possitive number if found', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(automapper, dbConnector),
+			let usrRepo = new UserRepo(dbConnector),
 				newAge = 45;
 			
 			// Act
@@ -208,7 +281,7 @@ describe('RepositoryBase', () => {
 		
 		it('should return 0 if not found', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(automapper, dbConnector),
+			let usrRepo = new UserRepo(dbConnector),
 				newAge = 45;
 			
 			// Act
@@ -223,7 +296,7 @@ describe('RepositoryBase', () => {
 		
 		it('should throw exception if `id` is not provided', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(automapper, dbConnector),
+			let usrRepo = new UserRepo(dbConnector),
 				newAge = 45;
 
 			// Act
@@ -244,7 +317,7 @@ describe('RepositoryBase', () => {
 	describe('update', () => {
 		it('should return a possitive number if found', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(automapper, dbConnector),
+			let usrRepo = new UserRepo(dbConnector),
 				newName = 'Brian',
 				updatedDTO: UserDTO = Object.assign(new UserDTO, cachedDTO);
 			updatedDTO.name = newName;
@@ -263,7 +336,7 @@ describe('RepositoryBase', () => {
 		
 		it('should return 0 if not found', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(automapper, dbConnector),
+			let usrRepo = new UserRepo(dbConnector),
 				newName = 'Brian',
 				updatedDTO: UserDTO = Object.assign(new UserDTO, cachedDTO);
 			updatedDTO.id = IMPOSSIBLE_ID;
@@ -281,7 +354,7 @@ describe('RepositoryBase', () => {
 		
 		it('should throw exception if `id` is not provided', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(automapper, dbConnector),
+			let usrRepo = new UserRepo(dbConnector),
 				newName = 'Brian',
 				updatedDTO: UserDTO = Object.assign(new UserDTO, cachedDTO);
 			delete updatedDTO.id;
@@ -305,7 +378,7 @@ describe('RepositoryBase', () => {
 	describe('delete (soft)', () => {
 		it('should return a possitive number and the record is still in database', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(automapper, dbConnector),
+			let usrRepo = new UserRepo(dbConnector),
 				model = new UserDTO();
 			
 			usrRepo.isSoftDeletable = true; // Default
@@ -330,7 +403,7 @@ describe('RepositoryBase', () => {
 	describe('delete (hard)', () => {
 		it('should return a possitive number if found', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(automapper, dbConnector);
+			let usrRepo = new UserRepo(dbConnector);
 			usrRepo.isSoftDeletable = false;
 
 			// Act
@@ -345,7 +418,7 @@ describe('RepositoryBase', () => {
 
 		it('should return 0 if not found', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(automapper, dbConnector);
+			let usrRepo = new UserRepo(dbConnector);
 
 			// Act
 			let affectedRows: number = await usrRepo.delete(IMPOSSIBLE_ID),
@@ -363,10 +436,10 @@ describe('RepositoryBase', () => {
 			// Arrange
 			const PAGE = 1,
 				SIZE = 10;
-			let usrRepo = new UserRepo(automapper, dbConnector);
+			let usrRepo = new UserRepo(dbConnector);
 
 			// Deletes all from DB
-			await Promise.all(usrRepo['prepare'](query => query.delete()));
+			await usrRepo.deleteAll();
 
 			// Act
 			let models: PagedArray<UserDTO> = await usrRepo.page(PAGE, SIZE);
@@ -380,11 +453,11 @@ describe('RepositoryBase', () => {
 			const PAGE = 1,
 				SIZE = 10,
 				TOTAL = SIZE * 2;
-			let usrRepo = new UserRepo(automapper, dbConnector),
+			let usrRepo = new UserRepo(dbConnector),
 				entity: UserDTO;
 
 			// Deletes all from DB
-			await Promise.all(usrRepo['prepare'](query => query.delete()));
+			await usrRepo.deleteAll();
 
 			for (let i = 0; i < TOTAL; i++) {
 				entity = new UserDTO();
@@ -406,7 +479,7 @@ describe('RepositoryBase', () => {
 	describe('count', () => {
 		it('Should return a positive number if there are records in database.', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(automapper, dbConnector);
+			let usrRepo = new UserRepo(dbConnector);
 
 			// Act
 			let count = await usrRepo.countAll();
@@ -417,10 +490,10 @@ describe('RepositoryBase', () => {
 
 		it('Should return 0 if there is no records in database.', async () => {
 			// Arrange
-			let usrRepo = new UserRepo(automapper, dbConnector);
+			let usrRepo = new UserRepo(dbConnector);
 
 			// Deletes all from DB
-			await Promise.all(usrRepo['prepare'](query => query.delete()));
+			await usrRepo.deleteAll();
 
 			// Act
 			let count = await usrRepo.countAll();

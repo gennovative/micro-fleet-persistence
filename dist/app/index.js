@@ -8,10 +8,12 @@ if (!Reflect || typeof Reflect['hasOwnMetadata'] !== 'function') {
     require('reflect-metadata');
 }
 require("./convert-utc");
-__export(require("./EntityBase"));
-__export(require("./RepositoryBase"));
-__export(require("./IDatabaseConnector"));
-__export(require("./KnexDatabaseConnector"));
+__export(require("./atom/AtomicSessionFactory"));
+__export(require("./atom/AtomicSessionFlow"));
+__export(require("./bases/EntityBase"));
+__export(require("./bases/RepositoryBase"));
+__export(require("./connector/IDatabaseConnector"));
+__export(require("./connector/KnexDatabaseConnector"));
 __export(require("./Types"));
 
 //# sourceMappingURL=index.js.map

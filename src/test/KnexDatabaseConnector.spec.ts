@@ -3,14 +3,11 @@ import * as spies from 'chai-spies';
 import * as _ from 'lodash';
 
 import { KnexDatabaseConnector, DbClient, EntityBase } from '../app';
+import DB_DETAILS from './database-details';
 
 chai.use(spies);
 
 const expect = chai.expect,
-	CONN_HOST = 'localhost',
-	CONN_USER = 'dbUser',
-	CONN_PASS = 'secret',
-	CONN_DB = 'randomDb',
 	CONN_FILE = `${process.cwd()}/database-adapter-test.sqlite`,
 	CONN_STRING = 'msql://localhost@user:pass',
 	DB_TABLE = 'userdata';
@@ -32,7 +29,7 @@ describe('KnexDatabaseConnector', () => {
 			// Arrange
 			let dbConnector = new KnexDatabaseConnector(),
 				expectedSettings;
-			
+
 			expectedSettings = {
 					client: DbClient.SQLITE3,
 					useNullAsDefault: true,
@@ -40,7 +37,7 @@ describe('KnexDatabaseConnector', () => {
 						filename: CONN_FILE
 					}
 				};
-			
+
 			// Spy on this method, because we need the real function be called.
 			dbConnector['_knex'] = chai.spy(() => {
 				return {};
@@ -56,7 +53,7 @@ describe('KnexDatabaseConnector', () => {
 			expect(dbConnector['_knex']).to.be.spy;
 			expect(dbConnector['_knex']).to.have.been.called.with(expectedSettings);
 		});
-		
+
 		it('should configure connection with connection string', async () => {
 			// Arrange
 			let dbConnector = new KnexDatabaseConnector(),
@@ -79,40 +76,26 @@ describe('KnexDatabaseConnector', () => {
 			expect(dbConnector['_knex']).to.be.spy;
 			expect(dbConnector['_knex']).to.have.been.called.with(expectedSettings);
 		});
-		
+
 		it('should configure connection with host credentials', async () => {
 			// Arrange
 			let dbConnector = new KnexDatabaseConnector(),
-				expectedSettings = {
-					client: DbClient.POSTGRESQL,
+				expectedSettings = Object.assign({
 					useNullAsDefault: true,
-					connection: {
-						host: CONN_HOST,
-						user: CONN_USER,
-						password: CONN_PASS,
-						database: CONN_DB,
-					}
-				};
+				}, DB_DETAILS);
+
 			dbConnector['_knex'] = chai.spy(() => {
 				return {};
 			});
 
 			// Act
-			dbConnector.addConnection({
-				clientName: DbClient.POSTGRESQL,
-				host: {
-					address: CONN_HOST,
-					user: CONN_USER,
-					password: CONN_PASS,
-					database: CONN_DB
-				}
-			});
+			dbConnector.addConnection(DB_DETAILS);
 
 			// Assert
 			expect(dbConnector['_knex']).to.be.spy;
 			expect(dbConnector['_knex']).to.have.been.called.with(expectedSettings);
 		});
-		
+
 		it('should throw exception if there is no settings for database connection', async () => {
 			// Arrange
 			let dbConnector = new KnexDatabaseConnector(),
@@ -138,7 +121,7 @@ describe('KnexDatabaseConnector', () => {
 			expect(exception).to.equal('No database settings!');
 		});
 	}); // END describe 'addConnection'
-	
+
 	describe('dispose', () => {
 		it('should release all resources', async () => {
 			// Arrange
@@ -173,15 +156,12 @@ describe('KnexDatabaseConnector', () => {
 				fileName: CONN_FILE
 			});
 
-			dbConnector.addConnection({
-				clientName: DbClient.SQLITE3,
-				fileName: CONN_FILE
-			});
-
 			// dbConnector.addConnection({
-			// 	clientName: DbClient.POSTGRESQL,
-			// 	connectionString: CONN_STRING
+			// 	clientName: DbClient.SQLITE3,
+			// 	fileName: CONN_FILE
 			// });
+
+			dbConnector.addConnection(DB_DETAILS);
 
 			// Act
 			await dbConnector.prepare<DummyEntity>(DummyEntity, (query) => {
@@ -190,10 +170,10 @@ describe('KnexDatabaseConnector', () => {
 			});
 
 			// Assert
-			expect(callMe).to.be.called;
+			expect(callMe).to.be.called.twice;
 			await dbConnector.dispose();
 		});
-		
+
 		it('should execute query with named connections', async () => {
 			// Arrange
 			let dbConnector = new KnexDatabaseConnector(),
@@ -209,23 +189,20 @@ describe('KnexDatabaseConnector', () => {
 			// 	fileName: CONN_FILE
 			// }, 'second');
 
-			dbConnector.addConnection({
-				clientName: DbClient.POSTGRESQL,
-				connectionString: CONN_STRING
-			}, 'second');
+			dbConnector.addConnection(DB_DETAILS, 'second');
 
 			// Act
 			await dbConnector.prepare<DummyEntity>(DummyEntity, (query) => {
 				callMe();
 				return Promise.resolve();
-			}, 'first');
+			}, null, 'first');
 
 			// Assert
 			expect(callMe).to.be.called.once;
 			await dbConnector.dispose();
 		});
-		
-		it('should bind entity class with new knex connection', async () => {
+
+		it('should bind entity class with each added knex connection', async () => {
 			// Arrange
 			let dbConnector = new KnexDatabaseConnector(),
 				callMe = chai.spy(),
@@ -237,26 +214,24 @@ describe('KnexDatabaseConnector', () => {
 				fileName: CONN_FILE
 			});
 
-			dbConnector.addConnection({
-				clientName: DbClient.SQLITE3,
-				fileName: CONN_FILE
-			});
-
 			// dbConnector.addConnection({
-			// 	clientName: DbClient.POSTGRESQL,
-			// 	connectionString: CONN_STRING
+			// 	clientName: DbClient.SQLITE3,
+			// 	fileName: CONN_FILE
 			// });
+
+			dbConnector.addConnection(DB_DETAILS);
 
 			// Act
 			await dbConnector.prepare<DummyEntity>(DummyEntity, (query, BoundDummyEntity) => {
 				callMe();
 				newKnex = BoundDummyEntity['knex']();
+				// Assert
+				expect(oldKnex).not.to.equal(newKnex);
 				return Promise.resolve();
 			});
 
 			// Assert
-			expect(callMe).to.be.called;
-			expect(oldKnex).not.to.equal(newKnex);
+			expect(callMe).to.be.called.twice;
 			await dbConnector.dispose();
 		});
 	}); // END describe 'prepare'
