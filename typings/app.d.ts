@@ -1,6 +1,12 @@
 /// <reference path="./global.d.ts" />
 
-declare module 'back-lib-persistence/EntityBase' {
+declare module 'back-lib-persistence/Types' {
+	export class Types {
+	    static readonly DB_CONNECTOR: symbol;
+	}
+
+}
+declare module 'back-lib-persistence/bases/EntityBase' {
 	import { Model } from 'objection';
 	export abstract class EntityBase extends Model {
 	    /**
@@ -19,9 +25,18 @@ declare module 'back-lib-persistence/EntityBase' {
 	}
 
 }
-declare module 'back-lib-persistence/IDatabaseConnector' {
+declare module 'back-lib-persistence/connector/IDatabaseConnector' {
+	/// <reference types="knex" />
+	import * as knex from 'knex';
 	import { QueryBuilder } from 'objection';
-	import { EntityBase } from 'back-lib-persistence/EntityBase';
+	import { AtomicSession } from 'back-lib-common-contracts';
+	import { EntityBase } from 'back-lib-persistence/bases/EntityBase';
+	export interface KnexConnection extends knex {
+	    /**
+	     * Connection name.
+	     */
+	    customName: string;
+	}
 	/**
 	 * Db driver names for `IConnectionDetail.clientName` property.
 	 */
@@ -81,8 +96,8 @@ declare module 'back-lib-persistence/IDatabaseConnector' {
 	}
 	/**
 	 * Invoked when a request for getting query is replied.
-	 * @param queryBuilder {QueryBuilder} A query that is bound to a connection.
-	 * @param boundEntityClass {Class extends Model} A class that is bound to a connection.
+	 * @param {QueryBuilder} queryBuilder A query that is bound to a connection.
+	 * @param {Class extends Model} boundEntityClass A class that is bound to a connection.
 	 */
 	export type QueryCallback<TEntity> = (queryBuilder: QueryBuilder<TEntity>, boundEntityClass?) => Promise<any>;
 	/**
@@ -91,9 +106,14 @@ declare module 'back-lib-persistence/IDatabaseConnector' {
 	 */
 	export interface IDatabaseConnector {
 	    /**
+	     * Gets list of established database connections.
+	     * Each item is a Knex instance.
+	     */
+	    connections: KnexConnection[];
+	    /**
 	     * Makes a new database connection then adds to managed list.
-	     * @param detail {IConnectionDetail} Credentials to make connection.
-	     * @param name {string} Optionally give a name to the connection, for later reference.
+	     * @param {IConnectionDetail} detail Credentials to make connection.
+	     * @param {string} name Optionally give a name to the connection, for later reference.
 	     * 	If not given, the position index of connection in the managed list will be assigned as name.
 	     */
 	    addConnection(detail: IConnectionDetail, name?: string): void;
@@ -105,9 +125,10 @@ declare module 'back-lib-persistence/IDatabaseConnector' {
 	     * Executes same query on all managed connections. This connector binds connections
 	     * to `EntityClass` and passes a queryable instance to `callback`.
 	     *
-	     * @param EntityClass {Class} An entity class to bind a connection.
-	     * @param callback {QueryCallback} A callback to invoke each time a connection is bound.
-	     * @param names {string[]} Optionally filters out and only executes the query on connections with specified names.
+	     * @param {class} EntityClass An entity class to bind a connection.
+	     * @param {AtomicSession} atomicSession A session which provides transaction to execute queries on.
+	     * @param {QueryCallback} callback A callback to invoke each time a connection is bound.
+	     * @param {string[]} names Optionally filters out and only executes the query on connections with specified names.
 	     * @example
 	     * 	// Must add at least one connection.
 	     * 	connector.addConnection({...});
@@ -124,14 +145,64 @@ declare module 'back-lib-persistence/IDatabaseConnector' {
 	     * 	let result = await promises[0];
 	     * @return {Promise[]} An array of promises returned by all above callbacks.
 	     */
-	    prepare<TEntity extends EntityBase>(EntityClass: any, callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[];
+	    prepare<TEntity extends EntityBase>(EntityClass: any, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession, ...names: string[]): Promise<any>[];
 	}
 
 }
-declare module 'back-lib-persistence/RepositoryBase' {
-	import { PagedArray, IRepository } from 'back-lib-common-contracts';
-	import { EntityBase } from 'back-lib-persistence/EntityBase';
-	import { IDatabaseConnector, QueryCallback } from 'back-lib-persistence/IDatabaseConnector';
+declare module 'back-lib-persistence/atom/AtomicSessionFlow' {
+	import { AtomicSession } from 'back-lib-common-contracts';
+	import { IDatabaseConnector } from 'back-lib-persistence/connector/IDatabaseConnector';
+	export type SessionTask = (session: AtomicSession, previousOutputs?: any[]) => Promise<any>;
+	/**
+	 * Provides method to execute queries on many database connections, but still make
+	 * sure those queries are wrapped in transactions.
+	 */
+	export class AtomicSessionFlow {
+	    protected _dbConnector: IDatabaseConnector;
+	    	    	    	    	    	    /**
+	     *
+	     * @param {string[]} names Only executes the queries on connections with specified names.
+	     */
+	    constructor(_dbConnector: IDatabaseConnector, names: string[]);
+	    /**
+	     * Checks if it is possible to call "pipe()".
+	     */
+	    readonly isPipeClosed: boolean;
+	    /**
+	     * Returns a promise which resolves to the output of the last query
+	     * on primary (first) connection.
+	     * This method must be called at the end of the pipe chain.
+	     */
+	    closePipe(): Promise<any>;
+	    /**
+	     * Adds a task to session, it will be executed inside transaction of each connections
+	     * This method is chainable and can only be called before `closePipe()` is invoked.
+	     */
+	    pipe(task: SessionTask): AtomicSessionFlow;
+	    	    	    	    	    	    	}
+
+}
+declare module 'back-lib-persistence/atom/AtomicSessionFactory' {
+	import { IDatabaseConnector } from 'back-lib-persistence/connector/IDatabaseConnector';
+	import { AtomicSessionFlow } from 'back-lib-persistence/atom/AtomicSessionFlow';
+	/**
+	 * Provides methods to create atomic sessions.
+	 */
+	export class AtomicSessionFactory {
+	    protected _dbConnector: IDatabaseConnector;
+	    constructor(_dbConnector: IDatabaseConnector);
+	    /**
+	     * Starts executing queries in transactions.
+	     * @param {string[]} names Only executes the queries on connections with specified names.
+	     */
+	    startSession(...names: string[]): AtomicSessionFlow;
+	}
+
+}
+declare module 'back-lib-persistence/bases/RepositoryBase' {
+	import { PagedArray, IRepository, AtomicSession } from 'back-lib-common-contracts';
+	import { IDatabaseConnector, QueryCallback } from 'back-lib-persistence/connector/IDatabaseConnector';
+	import { EntityBase } from 'back-lib-persistence/bases/EntityBase';
 	export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends IModelDTO> implements IRepository<TModel> {
 	    protected _dbConnector: IDatabaseConnector;
 	    isSoftDeletable: boolean;
@@ -144,78 +215,88 @@ declare module 'back-lib-persistence/RepositoryBase' {
 	    /**
 	     * @see IRepository.countAll
 	     */
-	    countAll(): Promise<number>;
+	    countAll(atomicSession?: AtomicSession): Promise<number>;
 	    /**
 	     * @see IRepository.create
 	     */
-	    create(model: TModel): Promise<TModel>;
+	    create(model: TModel, atomicSession?: AtomicSession): Promise<TModel>;
 	    /**
 	     * @see IRepository.delete
 	     */
-	    delete(id: BigSInt): Promise<number>;
+	    delete(id: BigSInt, atomicSession?: AtomicSession): Promise<number>;
 	    /**
 	     * @see IRepository.find
 	     */
-	    find(id: BigSInt): Promise<TModel>;
+	    find(id: BigSInt, atomicSession?: AtomicSession): Promise<TModel>;
 	    /**
 	     * @see IRepository.page
 	     */
-	    page(pageIndex: number, pageSize: number): Promise<PagedArray<TModel>>;
+	    page(pageIndex: number, pageSize: number, atomicSession?: AtomicSession): Promise<PagedArray<TModel>>;
 	    /**
 	     * @see IRepository.patch
 	     */
-	    patch(model: Partial<TModel>): Promise<number>;
+	    patch(model: Partial<TModel>, atomicSession?: AtomicSession): Promise<number>;
 	    /**
 	     * @see IRepository.update
 	     */
-	    update(model: TModel): Promise<number>;
+	    update(model: TModel, atomicSession?: AtomicSession): Promise<number>;
 	    /**
 	     * Executing an query that does something and doesn't expect return value.
 	     * This kind of query is executed on all added connections.
 	     * @return A promise that resolve to affected rows.
 	     * @throws {[errorMsg, affectedRows]} When not all connections have same affected rows.
 	     */
-	    protected executeCommand(callback: QueryCallback<TEntity>, ...names: string[]): Promise<number & TEntity>;
+	    protected executeCommand(callback: QueryCallback<TEntity>, atomicSession?: AtomicSession, ...names: string[]): Promise<any>;
 	    /**
 	     * Executing an query that has returned value.
 	     * This kind of query is executed on the primary (first) connection.
 	     */
-	    protected executeQuery(callback: QueryCallback<TEntity>, name?: string): Promise<any>;
+	    protected executeQuery(callback: QueryCallback<TEntity>, atomicSession?: AtomicSession, name?: string): Promise<any>;
 	    /**
 	     * @see IDatabaseConnector.query
 	     */
-	    protected abstract prepare(callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[];
+	    protected abstract prepare(callback: QueryCallback<TEntity>, atomicSession?: AtomicSession, ...names: string[]): Promise<any>[];
 	    protected abstract toEntity(from: TModel | TModel[] | Partial<TModel>, isPartial: boolean): TEntity & TEntity[];
 	    protected abstract toDTO(from: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel & TModel[];
 	}
 
 }
-declare module 'back-lib-persistence/KnexDatabaseConnector' {
-	import { EntityBase } from 'back-lib-persistence/EntityBase';
-	import { IDatabaseConnector, IConnectionDetail, QueryCallback } from 'back-lib-persistence/IDatabaseConnector';
+declare module 'back-lib-persistence/connector/KnexDatabaseConnector' {
+	import { AtomicSession } from 'back-lib-common-contracts';
+	import { EntityBase } from 'back-lib-persistence/bases/EntityBase';
+	import { IDatabaseConnector, IConnectionDetail, QueryCallback, KnexConnection } from 'back-lib-persistence/connector/IDatabaseConnector';
 	/**
 	 * Provides settings from package
 	 */
 	export class KnexDatabaseConnector implements IDatabaseConnector {
 	    	    	    constructor();
+	    /**
+	     * @see IDatabaseConnector.connections
+	     */
+	    readonly connections: KnexConnection[];
+	    /**
+	     * @see IDatabaseConnector.addConnection
+	     */
 	    addConnection(detail: IConnectionDetail, name?: string): void;
+	    /**
+	     * @see IDatabaseConnector.dispose
+	     */
 	    dispose(): Promise<void>;
-	    prepare<TEntity extends EntityBase>(EntityClass: any, callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[];
-	    	}
-
-}
-declare module 'back-lib-persistence/Types' {
-	export class Types {
-	    static readonly DB_CONNECTOR: symbol;
-	}
+	    /**
+	     * @see IDatabaseConnector.prepare
+	     */
+	    prepare<TEntity extends EntityBase>(EntityClass: any, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession, ...names: string[]): Promise<any>[];
+	    	    	    	}
 
 }
 declare module 'back-lib-persistence' {
 	import 'back-lib-persistence/convert-utc';
-	export * from 'back-lib-persistence/EntityBase';
-	export * from 'back-lib-persistence/RepositoryBase';
-	export * from 'back-lib-persistence/IDatabaseConnector';
-	export * from 'back-lib-persistence/KnexDatabaseConnector';
+	export * from 'back-lib-persistence/atom/AtomicSessionFactory';
+	export * from 'back-lib-persistence/atom/AtomicSessionFlow';
+	export * from 'back-lib-persistence/bases/EntityBase';
+	export * from 'back-lib-persistence/bases/RepositoryBase';
+	export * from 'back-lib-persistence/connector/IDatabaseConnector';
+	export * from 'back-lib-persistence/connector/KnexDatabaseConnector';
 	export * from 'back-lib-persistence/Types';
 
 }
