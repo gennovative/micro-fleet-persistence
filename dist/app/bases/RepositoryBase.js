@@ -32,7 +32,7 @@ let RepositoryBase = class RepositoryBase {
      * Gets current date time in UTC.
      */
     get utcNow() {
-        return moment(new Date()).utc().format();
+        return moment(new Date()).utc();
     }
     /**
      * @see IRepository.countAll
@@ -53,16 +53,19 @@ let RepositoryBase = class RepositoryBase {
      */
     create(model, atomicSession) {
         return __awaiter(this, void 0, void 0, function* () {
+            let entity = this.toEntity(model, false), newEnt;
             /* istanbul ignore else */
             if (this.isAuditable) {
-                model['createdAt'] = this.utcNow;
-                model['updatedAt'] = this.utcNow;
+                let now = this.utcNow;
+                model['createdAt'] = model['updatedAt'] = now.toDate();
+                entity['createdAt'] = entity['updatedAt'] = now.format();
             }
-            let entity = this.toEntity(model, false), newEnt;
             newEnt = yield this.executeCommand(query => {
                 return query.insert(entity);
             }, atomicSession);
-            return this.toDTO(newEnt, false);
+            let newDto = this.toDTO(newEnt, false);
+            newDto['createdAt'] = newDto['updatedAt'] = model['createdAt'];
+            return newDto;
         });
     }
     /**
@@ -74,7 +77,7 @@ let RepositoryBase = class RepositoryBase {
             if (this.isSoftDeletable) {
                 affectedRows = yield this.patch({
                     id,
-                    deletedAt: this.utcNow
+                    deletedAt: this.utcNow.format()
                 }, atomicSession);
             }
             else {
@@ -118,12 +121,13 @@ let RepositoryBase = class RepositoryBase {
     patch(model, atomicSession) {
         return __awaiter(this, void 0, void 0, function* () {
             back_lib_common_util_1.Guard.assertArgDefined('model.id', model.id);
+            let entity = this.toEntity(model, true), affectedRows;
             /* istanbul ignore else */
             if (this.isAuditable) {
-                let modelAlias = model;
-                modelAlias['updatedAt'] = this.utcNow;
+                let modelAlias = model, now = this.utcNow;
+                modelAlias['updatedAt'] = now.toDate();
+                entity['createdAt'] = now.format();
             }
-            let entity = this.toEntity(model, true), affectedRows;
             affectedRows = yield this.executeCommand(query => {
                 return query.where('id', entity.id).patch(entity);
             }, atomicSession);
@@ -136,11 +140,13 @@ let RepositoryBase = class RepositoryBase {
     update(model, atomicSession) {
         return __awaiter(this, void 0, void 0, function* () {
             back_lib_common_util_1.Guard.assertArgDefined('model.id', model.id);
+            let entity = this.toEntity(model, false), affectedRows;
             /* istanbul ignore else */
             if (this.isAuditable) {
-                model['updatedAt'] = this.utcNow;
+                let now = this.utcNow;
+                model['updatedAt'] = now.toDate();
+                entity['updatedAt'] = now.format();
             }
-            let entity = this.toEntity(model, false), affectedRows;
             affectedRows = yield this.executeCommand(query => {
                 return query.where('id', entity.id).update(entity);
             }, atomicSession);
