@@ -1,12 +1,13 @@
 /// <reference path="./global.d.ts" />
 
-declare module 'back-lib-persistence/Types' {
+declare module 'back-lib-persistence/dist/app/Types' {
 	export class Types {
 	    static readonly DB_CONNECTOR: symbol;
+	    static readonly ATOMIC_SESSION_FACTORY: symbol;
 	}
 
 }
-declare module 'back-lib-persistence/bases/EntityBase' {
+declare module 'back-lib-persistence/dist/app/bases/EntityBase' {
 	import { Model } from 'objection';
 	export abstract class EntityBase extends Model {
 	    /**
@@ -25,12 +26,12 @@ declare module 'back-lib-persistence/bases/EntityBase' {
 	}
 
 }
-declare module 'back-lib-persistence/connector/IDatabaseConnector' {
+declare module 'back-lib-persistence/dist/app/connector/IDatabaseConnector' {
 	/// <reference types="knex" />
 	import * as knex from 'knex';
 	import { QueryBuilder } from 'objection';
 	import { AtomicSession } from 'back-lib-common-contracts';
-	import { EntityBase } from 'back-lib-persistence/bases/EntityBase';
+	import { EntityBase } from 'back-lib-persistence/dist/app/bases/EntityBase';
 	export interface KnexConnection extends knex {
 	    /**
 	     * Connection name.
@@ -149,10 +150,10 @@ declare module 'back-lib-persistence/connector/IDatabaseConnector' {
 	}
 
 }
-declare module 'back-lib-persistence/atom/AtomicSessionFlow' {
+declare module 'back-lib-persistence/dist/app/atom/AtomicSessionFlow' {
 	import { AtomicSession } from 'back-lib-common-contracts';
-	import { IDatabaseConnector } from 'back-lib-persistence/connector/IDatabaseConnector';
-	export type SessionTask = (session: AtomicSession, previousOutputs?: any[]) => Promise<any>;
+	import { IDatabaseConnector } from 'back-lib-persistence/dist/app/connector/IDatabaseConnector';
+	export type SessionTask = (session: AtomicSession, previousOutput?: any) => Promise<any>;
 	/**
 	 * Provides method to execute queries on many database connections, but still make
 	 * sure those queries are wrapped in transactions.
@@ -182,9 +183,9 @@ declare module 'back-lib-persistence/atom/AtomicSessionFlow' {
 	    	    	    	    	    	    	}
 
 }
-declare module 'back-lib-persistence/atom/AtomicSessionFactory' {
-	import { IDatabaseConnector } from 'back-lib-persistence/connector/IDatabaseConnector';
-	import { AtomicSessionFlow } from 'back-lib-persistence/atom/AtomicSessionFlow';
+declare module 'back-lib-persistence/dist/app/atom/AtomicSessionFactory' {
+	import { IDatabaseConnector } from 'back-lib-persistence/dist/app/connector/IDatabaseConnector';
+	import { AtomicSessionFlow } from 'back-lib-persistence/dist/app/atom/AtomicSessionFlow';
 	/**
 	 * Provides methods to create atomic sessions.
 	 */
@@ -199,10 +200,11 @@ declare module 'back-lib-persistence/atom/AtomicSessionFactory' {
 	}
 
 }
-declare module 'back-lib-persistence/bases/RepositoryBase' {
+declare module 'back-lib-persistence/dist/app/bases/RepositoryBase' {
+	import * as moment from 'moment';
 	import { PagedArray, IRepository, AtomicSession } from 'back-lib-common-contracts';
-	import { IDatabaseConnector, QueryCallback } from 'back-lib-persistence/connector/IDatabaseConnector';
-	import { EntityBase } from 'back-lib-persistence/bases/EntityBase';
+	import { IDatabaseConnector, QueryCallback } from 'back-lib-persistence/dist/app/connector/IDatabaseConnector';
+	import { EntityBase } from 'back-lib-persistence/dist/app/bases/EntityBase';
 	export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends IModelDTO> implements IRepository<TModel> {
 	    protected _dbConnector: IDatabaseConnector;
 	    isSoftDeletable: boolean;
@@ -211,7 +213,7 @@ declare module 'back-lib-persistence/bases/RepositoryBase' {
 	    /**
 	     * Gets current date time in UTC.
 	     */
-	    protected readonly utcNow: string;
+	    protected readonly utcNow: moment.Moment;
 	    /**
 	     * @see IRepository.countAll
 	     */
@@ -261,10 +263,10 @@ declare module 'back-lib-persistence/bases/RepositoryBase' {
 	}
 
 }
-declare module 'back-lib-persistence/connector/KnexDatabaseConnector' {
+declare module 'back-lib-persistence/dist/app/connector/KnexDatabaseConnector' {
 	import { AtomicSession } from 'back-lib-common-contracts';
-	import { EntityBase } from 'back-lib-persistence/bases/EntityBase';
-	import { IDatabaseConnector, IConnectionDetail, QueryCallback, KnexConnection } from 'back-lib-persistence/connector/IDatabaseConnector';
+	import { EntityBase } from 'back-lib-persistence/dist/app/bases/EntityBase';
+	import { IDatabaseConnector, IConnectionDetail, QueryCallback, KnexConnection } from 'back-lib-persistence/dist/app/connector/IDatabaseConnector';
 	/**
 	 * Provides settings from package
 	 */
@@ -290,13 +292,13 @@ declare module 'back-lib-persistence/connector/KnexDatabaseConnector' {
 
 }
 declare module 'back-lib-persistence' {
-	import 'back-lib-persistence/convert-utc';
-	export * from 'back-lib-persistence/atom/AtomicSessionFactory';
-	export * from 'back-lib-persistence/atom/AtomicSessionFlow';
-	export * from 'back-lib-persistence/bases/EntityBase';
-	export * from 'back-lib-persistence/bases/RepositoryBase';
-	export * from 'back-lib-persistence/connector/IDatabaseConnector';
-	export * from 'back-lib-persistence/connector/KnexDatabaseConnector';
-	export * from 'back-lib-persistence/Types';
+	import 'back-lib-persistence/dist/app/convert-utc';
+	export * from 'back-lib-persistence/dist/app/atom/AtomicSessionFactory';
+	export * from 'back-lib-persistence/dist/app/atom/AtomicSessionFlow';
+	export * from 'back-lib-persistence/dist/app/bases/EntityBase';
+	export * from 'back-lib-persistence/dist/app/bases/RepositoryBase';
+	export * from 'back-lib-persistence/dist/app/connector/IDatabaseConnector';
+	export * from 'back-lib-persistence/dist/app/connector/KnexDatabaseConnector';
+	export * from 'back-lib-persistence/dist/app/Types';
 
 }

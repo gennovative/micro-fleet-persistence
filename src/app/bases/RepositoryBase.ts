@@ -26,10 +26,9 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 	/**
 	 * Gets current date time in UTC.
 	 */
-	protected get utcNow(): string {
-		return moment(new Date()).utc().format();
+	protected get utcNow(): moment.Moment {
+		return moment(new Date()).utc();
 	}
-
 
 	/**
 	 * @see IRepository.countAll
@@ -49,20 +48,23 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 	 * @see IRepository.create
 	 */
 	public async create(model: TModel, atomicSession?: AtomicSession): Promise<TModel> {
-		/* istanbul ignore else */
-		if (this.isAuditable) {
-			model['createdAt'] = this.utcNow;
-			model['updatedAt'] = this.utcNow;
-		}
-
 		let entity = this.toEntity(model, false),
 			newEnt: TEntity;
+
+		/* istanbul ignore else */
+		if (this.isAuditable) {
+			let now = this.utcNow;
+			model['createdAt'] = model['updatedAt'] = now.toDate();
+			entity['createdAt'] = entity['updatedAt'] = now.format();
+		}
 
 		newEnt = await this.executeCommand(query => {
 			return query.insert(entity);
 		}, atomicSession);
 
-		return this.toDTO(newEnt, false);
+		let newDto = this.toDTO(newEnt, false);
+		newDto['createdAt'] = newDto['updatedAt'] = model['createdAt'];
+		return newDto;
 	}
 
 	/**
@@ -74,7 +76,7 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 		if (this.isSoftDeletable) {
 			affectedRows = await this.patch(<any>{
 				id,
-				deletedAt: this.utcNow
+				deletedAt: this.utcNow.format()
 			}, atomicSession);
 		} else {
 			affectedRows = await this.executeCommand(query => {
@@ -121,14 +123,16 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 	public async patch(model: Partial<TModel>, atomicSession?: AtomicSession): Promise<number> {
 		Guard.assertArgDefined('model.id', model.id);
 
-		/* istanbul ignore else */
-		if (this.isAuditable) {
-			let modelAlias: any = model;
-			modelAlias['updatedAt'] = this.utcNow;
-		}
-
 		let entity = this.toEntity(model, true),
 			affectedRows: number;
+
+		/* istanbul ignore else */
+		if (this.isAuditable) {
+			let modelAlias: any = model,
+				now = this.utcNow;
+			modelAlias['updatedAt'] = now.toDate();
+			entity['createdAt'] = now.format();
+		}
 
 		affectedRows = await this.executeCommand(query => {
 			return query.where('id', entity.id).patch(entity);
@@ -142,13 +146,15 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 	public async update(model: TModel, atomicSession?: AtomicSession): Promise<number> {
 		Guard.assertArgDefined('model.id', model.id);
 
-		/* istanbul ignore else */
-		if (this.isAuditable) {
-			model['updatedAt'] = this.utcNow;
-		}
-
 		let entity = this.toEntity(model, false),
 			affectedRows: number;
+
+		/* istanbul ignore else */
+		if (this.isAuditable) {
+			let now = this.utcNow;
+			model['updatedAt'] = now.toDate();
+			entity['updatedAt'] = now.format();
+		}
 
 		affectedRows = await this.executeCommand(query => {
 			return query.where('id', entity.id).update(entity);

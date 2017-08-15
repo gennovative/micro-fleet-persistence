@@ -5,7 +5,7 @@ import { AtomicSession } from 'back-lib-common-contracts';
 import { IDatabaseConnector, KnexConnection } from '../connector/IDatabaseConnector';
 
 
-export type SessionTask = (session: AtomicSession, previousOutputs?: any[]) => Promise<any>;
+export type SessionTask = (session: AtomicSession, previousOutput?: any) => Promise<any>;
 
 /**
  * Provides method to execute queries on many database connections, but still make
