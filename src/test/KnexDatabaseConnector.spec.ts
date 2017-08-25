@@ -1,9 +1,10 @@
 import * as chai from 'chai';
 import * as spies from 'chai-spies';
 import * as _ from 'lodash';
+import { DbClient } from 'back-lib-common-constants';
 import { MinorException } from 'back-lib-common-util';
 
-import { KnexDatabaseConnector, DbClient, EntityBase } from '../app';
+import { KnexDatabaseConnector, EntityBase } from '../app';
 import DB_DETAILS from './database-details';
 
 chai.use(spies);
@@ -11,7 +12,7 @@ chai.use(spies);
 const expect = chai.expect,
 	CONN_FILE = `${process.cwd()}/database-adapter-test.sqlite`,
 	CONN_STRING = 'msql://localhost@user:pass',
-	DB_TABLE = 'userdata';
+	DB_TABLE = 'unittestOne.userdata';
 
 
 class DummyEntity extends EntityBase {
@@ -47,7 +48,7 @@ describe('KnexDatabaseConnector', () => {
 			// Act
 			dbConnector.addConnection({
 				clientName: DbClient.SQLITE3,
-				fileName: CONN_FILE
+				filePath: CONN_FILE
 			});
 
 			// Assert
@@ -139,7 +140,7 @@ describe('KnexDatabaseConnector', () => {
 
 			dbConnector.addConnection({
 				clientName: DbClient.SQLITE3,
-				fileName: CONN_FILE
+				filePath: CONN_FILE
 			});
 
 			// Act
@@ -162,12 +163,12 @@ describe('KnexDatabaseConnector', () => {
 
 			dbConnector.addConnection({
 				clientName: DbClient.SQLITE3,
-				fileName: CONN_FILE
+				filePath: CONN_FILE
 			});
 
 			// dbConnector.addConnection({
 			// 	clientName: DbClient.SQLITE3,
-			// 	fileName: CONN_FILE
+			// 	filePath: CONN_FILE
 			// });
 
 			dbConnector.addConnection(DB_DETAILS);
@@ -190,12 +191,12 @@ describe('KnexDatabaseConnector', () => {
 
 			dbConnector.addConnection({
 				clientName: DbClient.SQLITE3,
-				fileName: CONN_FILE
+				filePath: CONN_FILE
 			}, 'first');
 
 			// dbConnector.addConnection({
 			// 	clientName: DbClient.SQLITE3,
-			// 	fileName: CONN_FILE
+			// 	filePath: CONN_FILE
 			// }, 'second');
 
 			dbConnector.addConnection(DB_DETAILS, 'second');
@@ -220,12 +221,12 @@ describe('KnexDatabaseConnector', () => {
 
 			dbConnector.addConnection({
 				clientName: DbClient.SQLITE3,
-				fileName: CONN_FILE
+				filePath: CONN_FILE
 			});
 
 			// dbConnector.addConnection({
 			// 	clientName: DbClient.SQLITE3,
-			// 	fileName: CONN_FILE
+			// 	filePath: CONN_FILE
 			// });
 
 			dbConnector.addConnection(DB_DETAILS);

@@ -74,7 +74,7 @@ class AtomicSessionFlow {
         return this;
     }
     initSessions(names) {
-        return this._initPromise = new Promise(resolveInit => {
+        return this._initPromise = new Promise((resolveInit, rejectInit) => {
             let transPromises = [], conns = this._dbConnector.connections, len = conns.length, i = 0;
             // Start a new transaction for each connection.
             for (let knexConn of conns) {
@@ -93,6 +93,9 @@ class AtomicSessionFlow {
                 });
                 transPromises.push(transPro);
             } // END for
+            if (!transPromises.length) {
+                rejectInit(new back_lib_common_util_1.MinorException('No transaction was created!'));
+            }
         });
     }
     doTask(prevOutputs) {

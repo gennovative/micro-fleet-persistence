@@ -22,11 +22,18 @@ const isEmpty = require('lodash/isEmpty');
 const moment = require("moment");
 const back_lib_common_util_1 = require("back-lib-common-util");
 const back_lib_common_contracts_1 = require("back-lib-common-contracts");
+const AtomicSessionFactory_1 = require("../atom/AtomicSessionFactory");
 let RepositoryBase = class RepositoryBase {
     constructor(_dbConnector) {
         this._dbConnector = _dbConnector;
+        back_lib_common_util_1.Guard.assertArgDefined('_dbConnector', _dbConnector);
         this.isSoftDeletable = true;
         this.isAuditable = true;
+        this._atomFac = new AtomicSessionFactory_1.AtomicSessionFactory(_dbConnector);
+        this._useCompositePk = this.idProp.length > 1;
+    }
+    get useCompositePk() {
+        return this._useCompositePk;
     }
     /**
      * Gets current date time in UTC.
@@ -37,11 +44,12 @@ let RepositoryBase = class RepositoryBase {
     /**
      * @see IRepository.countAll
      */
-    countAll(atomicSession) {
+    countAll(opts = {}) {
         return __awaiter(this, void 0, void 0, function* () {
             let result = yield this.executeQuery(query => {
-                return query.count('id as total');
-            }, atomicSession);
+                let q = query.count('id as total');
+                return (this.useCompositePk) ? q.where('tenant_id', opts.tenantId) : q;
+            }, opts.atomicSession);
             // In case with Postgres, `count` returns a bigint type which will be a String 
             // and not a Number.
             /* istanbul ignore next */
@@ -51,63 +59,96 @@ let RepositoryBase = class RepositoryBase {
     /**
      * @see IRepository.create
      */
-    create(model, atomicSession) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let entity = this.toEntity(model, false), newEnt;
-            /* istanbul ignore else */
-            if (this.isAuditable) {
-                let now = this.utcNow;
-                model['createdAt'] = model['updatedAt'] = now.toDate();
-                entity['createdAt'] = entity['updatedAt'] = now.format();
-            }
-            newEnt = yield this.executeCommand(query => {
-                return query.insert(entity);
-            }, atomicSession);
-            let newDto = this.toDTO(newEnt, false);
-            newDto['createdAt'] = newDto['updatedAt'] = model['createdAt'];
-            return newDto;
-        });
+    create(model, opts = {}) {
+        if (Array.isArray(model)) {
+            return this.execBatch(model, this.create, opts);
+        }
+        let entity = this.toEntity(model, false), now = this.utcNow;
+        /* istanbul ignore else */
+        if (this.isAuditable) {
+            model['createdAt'] = model['updatedAt'] = now.toDate();
+            entity['createdAt'] = entity['updatedAt'] = now.format();
+        }
+        return this.executeCommand(query => query.insert(entity), opts.atomicSession)
+            .then(() => model);
     }
     /**
      * @see IRepository.delete
      */
-    delete(id, atomicSession) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let affectedRows;
-            if (this.isSoftDeletable) {
-                affectedRows = yield this.patch({
-                    id,
-                    deletedAt: this.utcNow.format()
-                }, atomicSession);
+    delete(pk, opts = {}) {
+        let delta, deletedAt = this.utcNow.format();
+        if (this.useCompositePk) {
+            delta = Object.assign(pk, { deletedAt });
+        }
+        else if (Array.isArray(pk)) {
+            delta = pk.map(k => ({
+                id: k,
+                deletedAt
+            }));
+        }
+        else {
+            delta = {
+                id: pk,
+                deletedAt
+            };
+        }
+        return this.patch(delta, opts)
+            .then((r) => {
+            // If totally failed
+            if (!r) {
+                return 0;
             }
-            else {
-                affectedRows = yield this.executeCommand(query => {
-                    return query.deleteById(id);
-                }, atomicSession);
+            // For single item:
+            if (!Array.isArray(r)) {
+                return 1;
             }
-            return affectedRows;
+            // For batch:
+            // If batch succeeds entirely, expect "r" = [1, 1, 1, 1...]
+            // If batch succeeds partially, expect "r" = [1, null, 1, null...]
+            return r.reduce((prev, curr) => curr ? prev + 1 : prev, 0);
         });
     }
     /**
-     * @see IRepository.find
+     * @see IRepository.deleteHard
      */
-    find(id, atomicSession) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let foundEnt = yield this.executeQuery(query => {
-                return query.findById(id);
-            }, atomicSession);
-            return this.toDTO(foundEnt, false);
+    deleteHard(pk, opts = {}) {
+        if (Array.isArray(pk)) {
+            return this.execBatch(pk, this.deleteHard, opts)
+                .then((r) => {
+                // If batch succeeds entirely, expect "r" = [1, 1, 1, 1...]
+                // If batch succeeds partially, expect "r" = [1, null, 1, null...]
+                return r.reduce((prev, curr) => curr ? prev + 1 : prev, 0);
+            });
+        }
+        return this.executeCommand(query => {
+            let q = query.deleteById(this.toArr(pk));
+            console.log(`HARD DELETE (${pk}):`, q.toSql());
+            return q;
+        }, opts.atomicSession);
+    }
+    /**
+     * @see IRepository.findByPk
+     */
+    findByPk(pk, opts = {}) {
+        return this.executeQuery(query => {
+            let q = query.findById(this.toArr(pk));
+            console.log(`findByPk (${pk}):`, q.toSql());
+            return q;
+        }, opts.atomicSession)
+            .then(foundEnt => {
+            return foundEnt ? this.toDTO(foundEnt, false) : null;
         });
     }
     /**
      * @see IRepository.page
      */
-    page(pageIndex, pageSize, atomicSession) {
+    page(pageIndex, pageSize, opts = {}) {
         return __awaiter(this, void 0, void 0, function* () {
             let foundList, dtoList, affectedRows;
             foundList = yield this.executeQuery(query => {
-                return query.page(pageIndex, pageSize);
-            }, atomicSession);
+                let q = query.page(pageIndex, pageSize);
+                return (this.useCompositePk) ? q.where('tenant_id', opts.tenantId) : q;
+            }, opts.atomicSession);
             if (!foundList || isEmpty(foundList.results)) {
                 return null;
             }
@@ -118,40 +159,48 @@ let RepositoryBase = class RepositoryBase {
     /**
      * @see IRepository.patch
      */
-    patch(model, atomicSession) {
-        return __awaiter(this, void 0, void 0, function* () {
-            back_lib_common_util_1.Guard.assertArgDefined('model.id', model.id);
-            let entity = this.toEntity(model, true), affectedRows;
-            /* istanbul ignore else */
-            if (this.isAuditable) {
-                let modelAlias = model, now = this.utcNow;
-                modelAlias['updatedAt'] = now.toDate();
-                entity['createdAt'] = now.format();
-            }
-            affectedRows = yield this.executeCommand(query => {
-                return query.where('id', entity.id).patch(entity);
-            }, atomicSession);
-            return affectedRows;
-        });
+    patch(model, opts = {}) {
+        if (Array.isArray(model)) {
+            return this.execBatch(model, this.patch, opts);
+        }
+        let entity = this.toEntity(model, true), affectedRows;
+        /* istanbul ignore else */
+        if (this.isAuditable) {
+            let modelAlias = model, now = this.utcNow;
+            modelAlias['updatedAt'] = now.toDate();
+            entity['createdAt'] = now.format();
+        }
+        return this.executeCommand(query => {
+            let q = query.patch(entity);
+            console.log('PATCH: (%s)', model, q.toSql());
+            return (this.useCompositePk)
+                ? q.whereComposite(this.idCol, '=', this.toArr(entity))
+                : q.where('id', entity.id);
+        }, opts.atomicSession)
+            .then(count => count ? model : null);
     }
     /**
      * @see IRepository.update
      */
-    update(model, atomicSession) {
-        return __awaiter(this, void 0, void 0, function* () {
-            back_lib_common_util_1.Guard.assertArgDefined('model.id', model.id);
-            let entity = this.toEntity(model, false), affectedRows;
-            /* istanbul ignore else */
-            if (this.isAuditable) {
-                let now = this.utcNow;
-                model['updatedAt'] = now.toDate();
-                entity['updatedAt'] = now.format();
-            }
-            affectedRows = yield this.executeCommand(query => {
-                return query.where('id', entity.id).update(entity);
-            }, atomicSession);
-            return affectedRows;
-        });
+    update(model, opts = {}) {
+        if (Array.isArray(model)) {
+            return this.execBatch(model, this.update, opts);
+        }
+        let entity = this.toEntity(model, false), affectedRows;
+        /* istanbul ignore else */
+        if (this.isAuditable) {
+            let now = this.utcNow;
+            model['updatedAt'] = now.toDate();
+            entity['updatedAt'] = now.format();
+        }
+        return this.executeCommand(query => {
+            let q = query.update(entity);
+            console.log(`UPDATE: (${model})`, q.toSql());
+            return (this.useCompositePk)
+                ? q.whereComposite(this.idCol, '=', this.toArr(entity))
+                : q.where('id', entity.id);
+        }, opts.atomicSession)
+            .then(count => count ? model : null);
     }
     /**
      * Executing an query that does something and doesn't expect return value.
@@ -185,6 +234,25 @@ let RepositoryBase = class RepositoryBase {
         let queryJobs = this.prepare(callback, atomicSession, name);
         // Get value from first connection
         return queryJobs[0];
+    }
+    /**
+     * Execute batch operation in transaction.
+     */
+    execBatch(inputs, func, opts) {
+        // Utilize the provided transaction
+        if (opts.atomicSession) {
+            return Promise.all(inputs.map(ip => func.call(this, ip, { atomicSession: opts.atomicSession })));
+        }
+        let flow = this._atomFac.startSession();
+        flow.pipe(s => Promise.all(inputs.map(ip => func.call(this, ip, { atomicSession: s }))));
+        return flow.closePipe();
+    }
+    toArr(pk) {
+        // if pk is BigSInt
+        if (typeof pk === 'string') {
+            return [pk];
+        }
+        return this.idProp.map(c => pk[c]);
     }
 };
 RepositoryBase = __decorate([

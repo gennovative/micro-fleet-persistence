@@ -10,9 +10,21 @@ export abstract class EntityBase extends Model {
 	/**
 	 * @abstract
 	 */
-	static get tableName(): string {
+	public static get tableName(): string {
 		throw 'This method must be implemented by derived class!';
 	}
+
+	/**
+	 * Should be overiden (['id', 'tenant_id']) for composite PK.
+	 */
+	public static readonly idColumn = ['id'];
+	
+	/**
+	 * Same with `idColumn`, but transform snakeCase to camelCase.
+	 * Should be overiden (['id', 'tenantId']) for composite PK.
+	 */
+	public static readonly idProp = ['id'];
+
 
 	public id: BigSInt = undefined;
 
@@ -24,6 +36,7 @@ export abstract class EntityBase extends Model {
 
 		return mapKeys(json, (value, key) => {
 			// Maps from "camelCase" to "snake_case" except special keyword.
+			/* istanbul ignore if */
 			if (key.indexOf('#') == 0) {
 				return key;
 			}

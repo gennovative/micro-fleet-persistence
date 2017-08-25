@@ -1,6 +1,7 @@
 import * as knex from 'knex';
 import { QueryBuilder } from 'objection';
-import { AtomicSession } from 'back-lib-common-contracts';
+import { DbClient } from 'back-lib-common-constants';
+import { AtomicSession, IConnectionDetail } from 'back-lib-common-contracts';
 
 import { EntityBase } from '../bases/EntityBase';
 
@@ -10,74 +11,6 @@ export interface KnexConnection extends knex {
 	 * Connection name.
 	 */
 	customName: string;
-}
-
-/**
- * Db driver names for `IConnectionDetail.clientName` property.
- */
-export class DbClient {
-	/**
-	 * Microsoft SQL Server
-	 */
-	public static readonly MSSQL = 'mssql';
-	
-	/**
-	 * MySQL
-	 */
-	public static readonly MYSQL = 'mysql';
-	
-	/**
-	 * PostgreSQL
-	 */
-	public static readonly POSTGRESQL = 'pg';
-	
-	/**
-	 * SQLite 3
-	 */
-	public static readonly SQLITE3 = 'sqlite3';
-}
-
-/**
- * Stores a database connection detail.
- */
-export interface IConnectionDetail {
-	/**
-	 * Database driver name, should use constants in class DbClient. 
-	 * Eg: DbClient.SQLITE3, DbClient.POSTGRESQL, ...
-	 */
-	clientName: string;
-
-	/**
-	 * Connection string for specified `clientName`.
-	 */
-	connectionString?: string;
-
-	/**
-	 * Absolute path to database file name.
-	 */
-	fileName?: string;
-
-	host?: {
-		/**
-		 * IP Address or Host name.
-		 */
-		address: string,
-
-		/**
-		 * Username to login database.
-		 */
-		user: string,
-
-		/**
-		 * Password to login database.
-		 */
-		password: string,
-
-		/**
-		 * Database name.
-		 */
-		database: string
-	};
 }
 
 /**

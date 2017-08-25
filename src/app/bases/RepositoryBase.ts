@@ -2,26 +2,38 @@ const every = require('lodash/every');
 const isEmpty = require('lodash/isEmpty');
 import * as moment from 'moment';
 import { injectable, Guard, MinorException } from 'back-lib-common-util';
-import { PagedArray, IRepository, AtomicSession } from 'back-lib-common-contracts';
+import { PagedArray, IRepository, RepositoryOptions, AtomicSession } from 'back-lib-common-contracts';
 
+import { AtomicSessionFactory } from '../atom/AtomicSessionFactory';
 import { IDatabaseConnector, QueryCallback } from '../connector/IDatabaseConnector';
 import { EntityBase } from './EntityBase';
 
 
 @injectable()
-export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends IModelDTO>
-	implements IRepository<TModel> {
+export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends IModelDTO, TPk = BigSInt>
+	implements IRepository<TModel, TPk> {
 
-	public isSoftDeletable: boolean;
-	public isAuditable: boolean;
+	public readonly isSoftDeletable: boolean;
+	public readonly isAuditable: boolean;
+
+	private _atomFac: AtomicSessionFactory;
+	private _useCompositePk: boolean;
+
 
 	constructor(
 		protected _dbConnector: IDatabaseConnector
 	) {
+		Guard.assertArgDefined('_dbConnector', _dbConnector);
 		this.isSoftDeletable = true;
 		this.isAuditable = true;
+		this._atomFac = new AtomicSessionFactory(_dbConnector);
+		this._useCompositePk = this.idProp.length > 1;
 	}
 
+
+	public get useCompositePk(): boolean {
+		return this._useCompositePk;
+	}
 
 	/**
 	 * Gets current date time in UTC.
@@ -33,10 +45,11 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 	/**
 	 * @see IRepository.countAll
 	 */
-	public async countAll(atomicSession?: AtomicSession): Promise<number> {
+	public async countAll(opts: RepositoryOptions = {}): Promise<number> {
 		let result = await this.executeQuery(query => {
-				return query.count('id as total');
-			}, atomicSession);
+				let q = query.count('id as total');
+				return (this.useCompositePk) ? q.where('tenant_id', opts.tenantId) : q;
+			}, opts.atomicSession);
 
 		// In case with Postgres, `count` returns a bigint type which will be a String 
 		// and not a Number.
@@ -47,68 +60,105 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 	/**
 	 * @see IRepository.create
 	 */
-	public async create(model: TModel, atomicSession?: AtomicSession): Promise<TModel> {
+	public create(model: TModel | TModel[], opts: RepositoryOptions = {}): Promise<TModel & TModel[]> {
+		if (Array.isArray(model)) {
+			return this.execBatch(model, this.create, opts);
+		}
+
 		let entity = this.toEntity(model, false),
-			newEnt: TEntity;
+			now = this.utcNow;
 
 		/* istanbul ignore else */
 		if (this.isAuditable) {
-			let now = this.utcNow;
 			model['createdAt'] = model['updatedAt'] = now.toDate();
 			entity['createdAt'] = entity['updatedAt'] = now.format();
 		}
 
-		newEnt = await this.executeCommand(query => {
-			return query.insert(entity);
-		}, atomicSession);
-
-		let newDto = this.toDTO(newEnt, false);
-		newDto['createdAt'] = newDto['updatedAt'] = model['createdAt'];
-		return newDto;
+		return this.executeCommand(query => query.insert(entity), opts.atomicSession)
+			.then(() => <any>model);
 	}
 
 	/**
 	 * @see IRepository.delete
 	 */
-	public async delete(id: BigSInt, atomicSession?: AtomicSession): Promise<number> {
-		let affectedRows: number;
-
-		if (this.isSoftDeletable) {
-			affectedRows = await this.patch(<any>{
-				id,
-				deletedAt: this.utcNow.format()
-			}, atomicSession);
+	public delete(pk: TPk | TPk[], opts: RepositoryOptions = {}): Promise<number> {
+		let delta: any,
+			deletedAt = this.utcNow.format();
+		if (this.useCompositePk) {
+			delta = Object.assign(pk, { deletedAt });
+		} else if (Array.isArray(pk)) {
+			delta = pk.map(k => ({
+				id: k,
+				deletedAt
+			}));
 		} else {
-			affectedRows = await this.executeCommand(query => {
-				return query.deleteById(id);
-			}, atomicSession);
+			delta = {
+				id: pk,
+				deletedAt
+			};
 		}
 
-		return affectedRows;
+		return this.patch(delta, opts)
+			.then((r: Partial<TModel> | Partial<TModel>[]) => {
+				// If totally failed
+				if (!r) { return 0; }
+
+				// For single item:
+				if (!Array.isArray(r)) { return 1; }
+
+				// For batch:
+				// If batch succeeds entirely, expect "r" = [1, 1, 1, 1...]
+				// If batch succeeds partially, expect "r" = [1, null, 1, null...]
+				return r.reduce((prev, curr) => curr ? prev + 1 : prev, 0);
+			});
 	}
 
 	/**
-	 * @see IRepository.find
+	 * @see IRepository.deleteHard
 	 */
-	public async find(id: BigSInt, atomicSession?: AtomicSession): Promise<TModel> {
-		let foundEnt: TEntity = await this.executeQuery(query => {
-				return query.findById(id);
-			}, atomicSession);
+	public deleteHard(pk: TPk | TPk[], opts: RepositoryOptions = {}): Promise<number> {
+		if (Array.isArray(pk)) {
+			return this.execBatch(pk, this.deleteHard, opts)
+				.then((r: number[]) => {
+					// If batch succeeds entirely, expect "r" = [1, 1, 1, 1...]
+					// If batch succeeds partially, expect "r" = [1, null, 1, null...]
+					return r.reduce((prev, curr) => curr ? prev + 1 : prev, 0);
+				});
+		}
 
-		return this.toDTO(foundEnt, false);
+		return this.executeCommand(query => {
+				let q = query.deleteById(this.toArr(pk));
+				console.log(`HARD DELETE (${pk}):`, q.toSql());
+				return q;
+			}, opts.atomicSession);
+	}
+
+	/**
+	 * @see IRepository.findByPk
+	 */
+	public findByPk(pk: TPk, opts: RepositoryOptions = {}): Promise<TModel> {
+		return this.executeQuery(query => {
+				let q = query.findById(this.toArr(pk));
+				console.log(`findByPk (${pk}):`, q.toSql());
+				return q;
+			}, opts.atomicSession)
+			.then(foundEnt => {
+				return foundEnt ? this.toDTO(foundEnt, false) : null;
+			});
 	}
 
 	/**
 	 * @see IRepository.page
 	 */
-	public async page(pageIndex: number, pageSize: number, atomicSession?: AtomicSession): Promise<PagedArray<TModel>> {
+	public async page(pageIndex: number, pageSize: number, opts: RepositoryOptions = {}): Promise<PagedArray<TModel>> {
 		let foundList: { total: number, results: Array<TEntity> },
 			dtoList: TModel[],
 			affectedRows: number;
 
 		foundList = await this.executeQuery(query => {
-			return query.page(pageIndex, pageSize);
-		}, atomicSession);
+				let q = query.page(pageIndex, pageSize);
+				return (this.useCompositePk) ? q.where('tenant_id', opts.tenantId) : q;
+			}, opts.atomicSession);
 
 		if (!foundList || isEmpty(foundList.results)) {
 			return null;
@@ -120,8 +170,10 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 	/**
 	 * @see IRepository.patch
 	 */
-	public async patch(model: Partial<TModel>, atomicSession?: AtomicSession): Promise<number> {
-		Guard.assertArgDefined('model.id', model.id);
+	public patch(model: Partial<TModel> | Partial<TModel>[], opts: RepositoryOptions = {}): Promise<Partial<TModel> & Partial<TModel>[]> {
+		if (Array.isArray(model)) {
+			return this.execBatch(model, this.patch, opts);
+		}
 
 		let entity = this.toEntity(model, true),
 			affectedRows: number;
@@ -134,17 +186,24 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 			entity['createdAt'] = now.format();
 		}
 
-		affectedRows = await this.executeCommand(query => {
-			return query.where('id', entity.id).patch(entity);
-		}, atomicSession);
-		return affectedRows;
+		return this.executeCommand(query => {
+				let q = query.patch(entity);
+				console.log('PATCH: (%s)', model, q.toSql());
+				return (this.useCompositePk)
+					? q.whereComposite(this.idCol, '=', this.toArr(entity)) 
+					: q.where('id', entity.id);
+			}, opts.atomicSession)
+				// `query.patch` returns number of affected rows, but we want to return the updated model.
+			.then(count => count ? <any>model : null);
 	}
 
 	/**
 	 * @see IRepository.update
 	 */
-	public async update(model: TModel, atomicSession?: AtomicSession): Promise<number> {
-		Guard.assertArgDefined('model.id', model.id);
+	public update(model: TModel | TModel[], opts: RepositoryOptions = {}): Promise<TModel & TModel[]> {
+		if (Array.isArray(model)) {
+			return this.execBatch(model, this.update, opts);
+		}
 
 		let entity = this.toEntity(model, false),
 			affectedRows: number;
@@ -156,11 +215,15 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 			entity['updatedAt'] = now.format();
 		}
 
-		affectedRows = await this.executeCommand(query => {
-			return query.where('id', entity.id).update(entity);
-		}, atomicSession);
-
-		return affectedRows;
+		return this.executeCommand(query => {
+				let q = query.update(entity);
+				console.log(`UPDATE: (${model})`, q.toSql());
+				return (this.useCompositePk)
+					? q.whereComposite(this.idCol, '=', this.toArr(entity)) 
+					: q.where('id', entity.id);
+			}, opts.atomicSession)
+				// `query.update` returns number of affected rows, but we want to return the updated model.
+			.then(count => count ? <any>model : null);
 	}
 
 	/**
@@ -199,6 +262,42 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 		// Get value from first connection
 		return queryJobs[0];
 	}
+
+	/**
+	 * Execute batch operation in transaction.
+	 */
+	protected execBatch(inputs: any[], func: (m: any, opts?: RepositoryOptions) => any, opts?: RepositoryOptions): Promise<any> {
+		// Utilize the provided transaction
+		if (opts.atomicSession) {
+			return Promise.all(
+				inputs.map(ip => func.call(this, ip, { atomicSession: opts.atomicSession }))
+			);
+		}
+
+		let flow = this._atomFac.startSession();
+		flow.pipe(s => Promise.all(
+			inputs.map(ip => func.call(this, ip, { atomicSession: s }))
+		));
+		return flow.closePipe();
+	}
+
+	protected toArr(pk: TPk | TEntity | Partial<TEntity>): any[] {
+		// if pk is BigSInt
+		if (typeof pk === 'string') {
+			return [pk];
+		}
+		return this.idProp.map(c => pk[c]);
+	}
+
+	/**
+	 * Gets array of ID column(s) that make up a composite PK.
+	 */
+	protected abstract get idCol(): string[];
+
+	/**
+	 * Gets array of ID property(ies) that make up a composite PK.
+	 */
+	protected abstract get idProp(): string[];
 
 	/**
 	 * @see IDatabaseConnector.query

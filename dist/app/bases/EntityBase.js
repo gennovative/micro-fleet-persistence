@@ -23,6 +23,7 @@ class EntityBase extends objection_1.Model {
         json = super.$formatDatabaseJson(json);
         return mapKeys(json, (value, key) => {
             // Maps from "camelCase" to "snake_case" except special keyword.
+            /* istanbul ignore if */
             if (key.indexOf('#') == 0) {
                 return key;
             }
@@ -40,6 +41,15 @@ class EntityBase extends objection_1.Model {
         return super.$parseDatabaseJson(json);
     }
 }
+/**
+ * Should be overiden (['id', 'tenant_id']) for composite PK.
+ */
+EntityBase.idColumn = ['id'];
+/**
+ * Same with `idColumn`, but transform snakeCase to camelCase.
+ * Should be overiden (['id', 'tenantId']) for composite PK.
+ */
+EntityBase.idProp = ['id'];
 exports.EntityBase = EntityBase;
 EntityBase.knex(null);
 

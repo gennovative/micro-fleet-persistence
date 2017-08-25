@@ -21,6 +21,14 @@ Provides base repository class and database connector that helps connect to data
 
 # Versions
 
+## 2.0.0
+
+- [Breaking change] **RepositoryBase** now supports batch operations and multi-tenancy.
+- **RepositoryBase** unit tests provide generated IDs instead of auto-increment database IDs.
+- **DatabaseAddOn**: moved from `back-lib-foundation`.
+- Moved **IConnectionDetail** to `back-lib-common-contracts`.
+- **AtomicSessionFlow** rejects with error when no named connection is found.
+
 ## 1.0.0
 
 - Converted **DatabaseAdapter** into **KnexDatabaseConnector** which supports executing same query on multiple database connections at the same time.

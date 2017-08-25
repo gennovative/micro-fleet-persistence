@@ -1,4 +1,4 @@
-/* istanbul ignore else */
+/* istanbul ignore next */
 if (!Reflect || typeof Reflect['hasOwnMetadata'] !== 'function') {
 	require('reflect-metadata');
 }
@@ -9,4 +9,5 @@ export * from './bases/EntityBase';
 export * from './bases/RepositoryBase';
 export * from './connector/IDatabaseConnector';
 export * from './connector/KnexDatabaseConnector';
+export * from './DatabaseAddOn';
 export * from './Types';

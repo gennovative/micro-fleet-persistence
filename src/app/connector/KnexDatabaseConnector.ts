@@ -3,10 +3,10 @@ import { Model, QueryBuilder, transaction } from 'objection';
 const isEmpty = require('lodash/isEmpty');
 
 import { injectable, Guard, MinorException } from 'back-lib-common-util';
-import { AtomicSession } from 'back-lib-common-contracts';
+import { AtomicSession, IConnectionDetail } from 'back-lib-common-contracts';
 
 import { EntityBase } from '../bases/EntityBase';
-import { IDatabaseConnector, IConnectionDetail, QueryCallback, KnexConnection } from './IDatabaseConnector';
+import { IDatabaseConnector, QueryCallback, KnexConnection } from './IDatabaseConnector';
 
 
 /**
@@ -72,8 +72,8 @@ export class KnexDatabaseConnector implements IDatabaseConnector {
 
 	private buildConnSettings(detail: IConnectionDetail): any {
 		// 1st priority: connect to a local file.
-		if (detail.fileName) {
-			return { filename: detail.fileName };
+		if (detail.filePath) {
+			return { filename: detail.filePath };
 		}
 
 		// 2nd priority: connect with a connection string.
