@@ -97,6 +97,7 @@ declare module 'back-lib-persistence/dist/app/connector/IDatabaseConnector' {
 }
 declare module 'back-lib-persistence/dist/app/Types' {
 	export class Types {
+	    static readonly DB_ADDON: symbol;
 	    static readonly DB_CONNECTOR: symbol;
 	    static readonly ATOMIC_SESSION_FACTORY: symbol;
 	}
@@ -105,12 +106,10 @@ declare module 'back-lib-persistence/dist/app/Types' {
 declare module 'back-lib-persistence/dist/app/DatabaseAddOn' {
 	import { IConfigurationProvider } from 'back-lib-common-contracts';
 	import { IDatabaseConnector } from 'back-lib-persistence/dist/app/connector/IDatabaseConnector';
-	export interface IDatabaseAddOn extends IServiceAddOn {
-	}
 	/**
 	 * Initializes database connections.
 	 */
-	export class DatabaseAddOn implements IDatabaseAddOn {
+	export class DatabaseAddOn implements IServiceAddOn {
 	    	    	    constructor(_configProvider: IConfigurationProvider, _dbConnector: IDatabaseConnector);
 	    /**
 	     * @see IServiceAddOn.init
