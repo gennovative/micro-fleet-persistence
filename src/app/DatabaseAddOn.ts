@@ -6,14 +6,11 @@ import { IDatabaseConnector } from './connector/IDatabaseConnector';
 import { Types as T } from './Types';
 
 
-export interface IDatabaseAddOn extends IServiceAddOn {
-}
-
 /**
  * Initializes database connections.
  */
 @injectable()
-export class DatabaseAddOn implements IDatabaseAddOn {
+export class DatabaseAddOn implements IServiceAddOn {
 	
 	constructor(
 		@inject(ConT.CONFIG_PROVIDER) private _configProvider: IConfigurationProvider,
