@@ -62,8 +62,8 @@ let KnexDatabaseConnector = class KnexDatabaseConnector {
     }
     buildConnSettings(detail) {
         // 1st priority: connect to a local file.
-        if (detail.fileName) {
-            return { filename: detail.fileName };
+        if (detail.filePath) {
+            return { filename: detail.filePath };
         }
         // 2nd priority: connect with a connection string.
         if (detail.connectionString) {

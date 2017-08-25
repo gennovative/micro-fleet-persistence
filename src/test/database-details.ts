@@ -1,4 +1,4 @@
-import { DbClient } from '../app';
+import { DbClient } from 'back-lib-common-constants';
 
 export default {
 	clientName: DbClient.POSTGRESQL,
@@ -6,6 +6,6 @@ export default {
 		address: 'localhost',
 		user: 'postgres',
 		password: 'postgres',
-		database: 'unittest'
+		database: 'unittestOne'
 	}
 };

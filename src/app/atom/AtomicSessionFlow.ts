@@ -84,7 +84,7 @@ export class AtomicSessionFlow {
 
 
 	private initSessions(names: string[]): Promise<any[]> {
-		return this._initPromise = new Promise<any[]>(resolveInit => {
+		return this._initPromise = new Promise<any[]>((resolveInit, rejectInit) => {
 			let transPromises = [],
 				conns: KnexConnection[] = this._dbConnector.connections,
 				len = conns.length,
@@ -110,6 +110,9 @@ export class AtomicSessionFlow {
 				});
 				transPromises.push(transPro);
 			} // END for
+			if (!transPromises.length) {
+				rejectInit(new MinorException('No transaction was created!'));
+			}
 		});
 	}
 

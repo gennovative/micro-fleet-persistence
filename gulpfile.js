@@ -160,7 +160,6 @@ gulp.task('definition', ['compile'], (done) => {
 			.pipe(replace(/([\t\f\v]*)private(.*);[\r\n]*/g, ''))
 			.pipe(replace(/\/src\//g, '/dist/'))
 			.pipe(replace(/\/dist\/app\/index'/g, "'"))
-			.pipe(replace(/\/index'/g, "'"))
 			.pipe(through.obj(function(file, enc, cb) {
 				del.sync([DEF_FILE]);
 				this.push(file);
