@@ -1,12 +1,5 @@
 /// <reference path="./global.d.ts" />
 
-declare module 'back-lib-persistence/dist/app/Types' {
-	export class Types {
-	    static readonly DB_CONNECTOR: symbol;
-	    static readonly ATOMIC_SESSION_FACTORY: symbol;
-	}
-
-}
 declare module 'back-lib-persistence/dist/app/bases/EntityBase' {
 	import { Model } from 'objection';
 	export abstract class EntityBase extends Model {
@@ -14,6 +7,15 @@ declare module 'back-lib-persistence/dist/app/bases/EntityBase' {
 	     * @abstract
 	     */
 	    static readonly tableName: string;
+	    /**
+	     * Should be overiden (['id', 'tenant_id']) for composite PK.
+	     */
+	    static readonly idColumn: string[];
+	    /**
+	     * Same with `idColumn`, but transform snakeCase to camelCase.
+	     * Should be overiden (['id', 'tenantId']) for composite PK.
+	     */
+	    static readonly idProp: string[];
 	    id: BigSInt;
 	    /**
 	     * This is called when an object is serialized to database format.
@@ -30,70 +32,13 @@ declare module 'back-lib-persistence/dist/app/connector/IDatabaseConnector' {
 	/// <reference types="knex" />
 	import * as knex from 'knex';
 	import { QueryBuilder } from 'objection';
-	import { AtomicSession } from 'back-lib-common-contracts';
+	import { AtomicSession, IConnectionDetail } from 'back-lib-common-contracts';
 	import { EntityBase } from 'back-lib-persistence/dist/app/bases/EntityBase';
 	export interface KnexConnection extends knex {
 	    /**
 	     * Connection name.
 	     */
 	    customName: string;
-	}
-	/**
-	 * Db driver names for `IConnectionDetail.clientName` property.
-	 */
-	export class DbClient {
-	    /**
-	     * Microsoft SQL Server
-	     */
-	    static readonly MSSQL: string;
-	    /**
-	     * MySQL
-	     */
-	    static readonly MYSQL: string;
-	    /**
-	     * PostgreSQL
-	     */
-	    static readonly POSTGRESQL: string;
-	    /**
-	     * SQLite 3
-	     */
-	    static readonly SQLITE3: string;
-	}
-	/**
-	 * Stores a database connection detail.
-	 */
-	export interface IConnectionDetail {
-	    /**
-	     * Database driver name, should use constants in class DbClient.
-	     * Eg: DbClient.SQLITE3, DbClient.POSTGRESQL, ...
-	     */
-	    clientName: string;
-	    /**
-	     * Connection string for specified `clientName`.
-	     */
-	    connectionString?: string;
-	    /**
-	     * Absolute path to database file name.
-	     */
-	    fileName?: string;
-	    host?: {
-	        /**
-	         * IP Address or Host name.
-	         */
-	        address: string;
-	        /**
-	         * Username to login database.
-	         */
-	        user: string;
-	        /**
-	         * Password to login database.
-	         */
-	        password: string;
-	        /**
-	         * Database name.
-	         */
-	        database: string;
-	    };
 	}
 	/**
 	 * Invoked when a request for getting query is replied.
@@ -150,6 +95,38 @@ declare module 'back-lib-persistence/dist/app/connector/IDatabaseConnector' {
 	}
 
 }
+declare module 'back-lib-persistence/dist/app/Types' {
+	export class Types {
+	    static readonly DB_CONNECTOR: symbol;
+	    static readonly ATOMIC_SESSION_FACTORY: symbol;
+	}
+
+}
+declare module 'back-lib-persistence/dist/app/DatabaseAddOn' {
+	import { IConfigurationProvider } from 'back-lib-common-contracts';
+	import { IDatabaseConnector } from 'back-lib-persistence/dist/app/connector/IDatabaseConnector';
+	export interface IDatabaseAddOn extends IServiceAddOn {
+	}
+	/**
+	 * Initializes database connections.
+	 */
+	export class DatabaseAddOn implements IDatabaseAddOn {
+	    	    	    constructor(_configProvider: IConfigurationProvider, _dbConnector: IDatabaseConnector);
+	    /**
+	     * @see IServiceAddOn.init
+	     */
+	    init(): Promise<void>;
+	    /**
+	     * @see IServiceAddOn.deadLetter
+	     */
+	    deadLetter(): Promise<void>;
+	    /**
+	     * @see IServiceAddOn.dispose
+	     */
+	    dispose(): Promise<void>;
+	    	    	}
+
+}
 declare module 'back-lib-persistence/dist/app/atom/AtomicSessionFlow' {
 	import { AtomicSession } from 'back-lib-common-contracts';
 	import { IDatabaseConnector } from 'back-lib-persistence/dist/app/connector/IDatabaseConnector';
@@ -202,14 +179,15 @@ declare module 'back-lib-persistence/dist/app/atom/AtomicSessionFactory' {
 }
 declare module 'back-lib-persistence/dist/app/bases/RepositoryBase' {
 	import * as moment from 'moment';
-	import { PagedArray, IRepository, AtomicSession } from 'back-lib-common-contracts';
+	import { PagedArray, IRepository, RepositoryOptions, AtomicSession } from 'back-lib-common-contracts';
 	import { IDatabaseConnector, QueryCallback } from 'back-lib-persistence/dist/app/connector/IDatabaseConnector';
 	import { EntityBase } from 'back-lib-persistence/dist/app/bases/EntityBase';
-	export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends IModelDTO> implements IRepository<TModel> {
+	export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends IModelDTO, TPk = BigSInt> implements IRepository<TModel, TPk> {
 	    protected _dbConnector: IDatabaseConnector;
-	    isSoftDeletable: boolean;
-	    isAuditable: boolean;
-	    constructor(_dbConnector: IDatabaseConnector);
+	    readonly isSoftDeletable: boolean;
+	    readonly isAuditable: boolean;
+	    	    	    constructor(_dbConnector: IDatabaseConnector);
+	    readonly useCompositePk: boolean;
 	    /**
 	     * Gets current date time in UTC.
 	     */
@@ -217,31 +195,35 @@ declare module 'back-lib-persistence/dist/app/bases/RepositoryBase' {
 	    /**
 	     * @see IRepository.countAll
 	     */
-	    countAll(atomicSession?: AtomicSession): Promise<number>;
+	    countAll(opts?: RepositoryOptions): Promise<number>;
 	    /**
 	     * @see IRepository.create
 	     */
-	    create(model: TModel, atomicSession?: AtomicSession): Promise<TModel>;
+	    create(model: TModel | TModel[], opts?: RepositoryOptions): Promise<TModel & TModel[]>;
 	    /**
 	     * @see IRepository.delete
 	     */
-	    delete(id: BigSInt, atomicSession?: AtomicSession): Promise<number>;
+	    delete(pk: TPk | TPk[], opts?: RepositoryOptions): Promise<number>;
 	    /**
-	     * @see IRepository.find
+	     * @see IRepository.deleteHard
 	     */
-	    find(id: BigSInt, atomicSession?: AtomicSession): Promise<TModel>;
+	    deleteHard(pk: TPk | TPk[], opts?: RepositoryOptions): Promise<number>;
+	    /**
+	     * @see IRepository.findByPk
+	     */
+	    findByPk(pk: TPk, opts?: RepositoryOptions): Promise<TModel>;
 	    /**
 	     * @see IRepository.page
 	     */
-	    page(pageIndex: number, pageSize: number, atomicSession?: AtomicSession): Promise<PagedArray<TModel>>;
+	    page(pageIndex: number, pageSize: number, opts?: RepositoryOptions): Promise<PagedArray<TModel>>;
 	    /**
 	     * @see IRepository.patch
 	     */
-	    patch(model: Partial<TModel>, atomicSession?: AtomicSession): Promise<number>;
+	    patch(model: Partial<TModel> | Partial<TModel>[], opts?: RepositoryOptions): Promise<Partial<TModel> & Partial<TModel>[]>;
 	    /**
 	     * @see IRepository.update
 	     */
-	    update(model: TModel, atomicSession?: AtomicSession): Promise<number>;
+	    update(model: TModel | TModel[], opts?: RepositoryOptions): Promise<TModel & TModel[]>;
 	    /**
 	     * Executing an query that does something and doesn't expect return value.
 	     * This kind of query is executed on all added connections.
@@ -255,6 +237,19 @@ declare module 'back-lib-persistence/dist/app/bases/RepositoryBase' {
 	     */
 	    protected executeQuery(callback: QueryCallback<TEntity>, atomicSession?: AtomicSession, name?: string): Promise<any>;
 	    /**
+	     * Execute batch operation in transaction.
+	     */
+	    protected execBatch(inputs: any[], func: (m: any, opts?: RepositoryOptions) => any, opts?: RepositoryOptions): Promise<any>;
+	    protected toArr(pk: TPk | TEntity | Partial<TEntity>): any[];
+	    /**
+	     * Gets array of ID column(s) that make up a composite PK.
+	     */
+	    protected readonly abstract idCol: string[];
+	    /**
+	     * Gets array of ID property(ies) that make up a composite PK.
+	     */
+	    protected readonly abstract idProp: string[];
+	    /**
 	     * @see IDatabaseConnector.query
 	     */
 	    protected abstract prepare(callback: QueryCallback<TEntity>, atomicSession?: AtomicSession, ...names: string[]): Promise<any>[];
@@ -264,9 +259,9 @@ declare module 'back-lib-persistence/dist/app/bases/RepositoryBase' {
 
 }
 declare module 'back-lib-persistence/dist/app/connector/KnexDatabaseConnector' {
-	import { AtomicSession } from 'back-lib-common-contracts';
+	import { AtomicSession, IConnectionDetail } from 'back-lib-common-contracts';
 	import { EntityBase } from 'back-lib-persistence/dist/app/bases/EntityBase';
-	import { IDatabaseConnector, IConnectionDetail, QueryCallback, KnexConnection } from 'back-lib-persistence/dist/app/connector/IDatabaseConnector';
+	import { IDatabaseConnector, QueryCallback, KnexConnection } from 'back-lib-persistence/dist/app/connector/IDatabaseConnector';
 	/**
 	 * Provides settings from package
 	 */
@@ -299,6 +294,7 @@ declare module 'back-lib-persistence' {
 	export * from 'back-lib-persistence/dist/app/bases/RepositoryBase';
 	export * from 'back-lib-persistence/dist/app/connector/IDatabaseConnector';
 	export * from 'back-lib-persistence/dist/app/connector/KnexDatabaseConnector';
+	export * from 'back-lib-persistence/dist/app/DatabaseAddOn';
 	export * from 'back-lib-persistence/dist/app/Types';
 
 }
