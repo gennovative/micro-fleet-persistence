@@ -25,6 +25,7 @@
     "@types/lodash": "^4.14.52",
     "@types/mocha": "^2.2.41",
     "@types/node": "^7.0.38",
+    "back-lib-id-generator": "git+ssh://git@bitbucket.org/firstinteractive/back-lib-id-generator.git#0.1.0",
     "chai": "^4.1.0",
     "chai-spies": "git://github.com/chaijs/chai-spies.git#b11aeebf",
     "del": "^3.0.0",

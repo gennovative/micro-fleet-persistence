@@ -1,8 +1,9 @@
 import { expect } from 'chai';
 
 import { DbClient } from 'back-lib-common-constants';
-import { InvalidArgumentException, MinorException, BigIdGenerator } from 'back-lib-common-util';
+import { InvalidArgumentException, MinorException } from 'back-lib-common-util';
 import { PagedArray, ModelAutoMapper, AtomicSession } from 'back-lib-common-contracts';
+import { IdGenerator } from 'back-lib-id-generator';
 
 import { RepositoryBase, EntityBase, QueryCallback, IDatabaseConnector,
 		KnexDatabaseConnector, AtomicSessionFactory, AtomicSessionFlow } from '../app';
@@ -46,6 +47,7 @@ class UserEntity extends EntityBase {
 	}
 
 	public static readonly idColumn = ['id'];
+	public static readonly uniqColumn = ['name', 'age'];
 
 	public static translator: ModelAutoMapper<UserEntity> = new ModelAutoMapper(UserEntity);
 
@@ -56,23 +58,20 @@ class UserEntity extends EntityBase {
 	public deletedAt: number = undefined;
 }
 
-class UserRepo extends RepositoryBase<UserEntity, UserDTO> {
+type NameAgeUk = {
+	name?: string,
+	age?: number
+};
+
+class UserRepo extends RepositoryBase<UserEntity, UserDTO, BigSInt, NameAgeUk> {
 	
 	private _sessionFactory: AtomicSessionFactory;
 
 	constructor(
 		dbConnector: IDatabaseConnector
 	) {
-		super(dbConnector);
+		super(UserEntity, dbConnector);
 		this._sessionFactory = new AtomicSessionFactory(dbConnector);
-	}
-
-	protected get idCol(): string[] {
-		return UserEntity.idColumn;
-	}
-
-	protected get idProp(): string[] {
-		return UserEntity.idProp;
 	}
 
 	public createCoupleWithTransaction(adam: UserDTO, eva: UserDTO): Promise<UserDTO[]> {
@@ -161,65 +160,37 @@ class UserRepo extends RepositoryBase<UserEntity, UserDTO> {
 	}
 
 	public async findOnFirstConn(id: BigSInt): Promise<UserDTO> {
-		let foundEnt: UserEntity = await this.executeQuery(query => {
+		let foundEnt: UserEntity = await this._processor.executeQuery(query => {
 				return query.findById(id);
 			}, null, '0'); // Executing on first connection only.
 
-		return this.toDTO(foundEnt, false);
+		return this._processor.toDTO(foundEnt, false);
 	}
 
 	public async findOnSecondConn(id: BigSInt): Promise<UserDTO> {
-		let foundEnt: UserEntity = await this.executeQuery(query => {
+		let foundEnt: UserEntity = await this._processor.executeQuery(query => {
 				return query.findById(id);
 			}, null, 'sec'); // Executing on second connection (named 'sec').
 
-		return this.toDTO(foundEnt, false);
+		return this._processor.toDTO(foundEnt, false);
 	}
 
 	public async deleteOnSecondConn(id: BigSInt): Promise<UserDTO> {
-		let affectedRows = await this.executeCommand(query => {
+		let affectedRows = await this._processor.executeCommand(query => {
 				return query.deleteById(id);
 			}, null, 'sec');
 		return affectedRows;
 	}
 
 	public deleteAll(): Promise<void> {
-		return this.executeCommand(query => query.delete());
-	}
-
-	/**
-	 * @override
-	 */
-	protected prepare<UserEntity>(callback: QueryCallback<UserEntity>, atomicSession?: AtomicSession, ...names: string[]): Promise<any>[] {
-		return this._dbConnector.prepare(UserEntity, <any>callback, atomicSession, ...names);
-	}
-
-	/**
-	 * @override
-	 */
-	protected toEntity(from: UserDTO | UserDTO[], isPartial: boolean): UserEntity & UserEntity[] {
-		if (isPartial) {
-			return <any>UserEntity.translator.partial(from);
-		}
-		return <any>UserEntity.translator.whole(from);
-	}
-
-	/**
-	 * @override
-	 */
-	protected toDTO(from: UserEntity | UserEntity[], isPartial: boolean): UserDTO & UserDTO[] {
-		if (isPartial) {
-			return <any>UserDTO.translator.partial(from, { enableValidation: false });
-		}
-		// Disable validation because it's unnecessary.
-		return <any>UserDTO.translator.whole(from, { enableValidation: false });
+		return this._processor.executeCommand(query => query.delete());
 	}
 }
 
 let cachedDTO: UserDTO,
 	dbConnector: IDatabaseConnector,
 	usrRepo: UserRepo,
-	idGen = new BigIdGenerator();
+	idGen = new IdGenerator();
 
 // These test suites make real changes to SqlLite file or PostgreSQl server.
 describe('RepositoryBase', function() {
@@ -259,11 +230,11 @@ describe('RepositoryBase', function() {
 			// Arrange
 			let modelOne = new UserDTO(),
 				modelTwo = new UserDTO();
-			modelOne.id = idGen.next().toString();
+			modelOne.id = idGen.nextBigInt().toString();
 			modelOne.name = 'One';
 			modelOne.age = 11;
 
-			modelTwo.id = idGen.next().toString();
+			modelTwo.id = idGen.nextBigInt().toString();
 			modelTwo.name = 'Two';
 			modelTwo.age = 22;
 
@@ -304,11 +275,11 @@ describe('RepositoryBase', function() {
 
 			let modelOne = new UserDTO(),
 				modelTwo = new UserDTO();
-			modelOne.id = idGen.next().toString();
+			modelOne.id = idGen.nextBigInt().toString();
 			modelOne.name = 'One';
 			modelOne.age = 11;
 
-			modelTwo.id = idGen.next().toString();
+			modelTwo.id = idGen.nextBigInt().toString();
 			modelTwo.name = null; // fail
 			modelTwo.age = 22;
 
@@ -330,11 +301,11 @@ describe('RepositoryBase', function() {
 			// Arrange
 			let modelOne = new UserDTO(),
 				modelTwo = new UserDTO();
-			modelOne.id = idGen.next().toString();
+			modelOne.id = idGen.nextBigInt().toString();
 			modelOne.name = 'One';
 			modelOne.age = 11;
 
-			modelTwo.id = idGen.next().toString();
+			modelTwo.id = idGen.nextBigInt().toString();
 			modelTwo.name = 'Two';
 			modelTwo.age = 22;
 
@@ -365,11 +336,11 @@ describe('RepositoryBase', function() {
 			// Arrange
 			let modelOne = new UserDTO(),
 				modelTwo = new UserDTO();
-			modelOne.id = idGen.next().toString();
+			modelOne.id = idGen.nextBigInt().toString();
 			modelOne.name = 'One';
 			modelOne.age = 11;
 
-			modelTwo.id = idGen.next().toString();
+			modelTwo.id = idGen.nextBigInt().toString();
 			modelTwo.name = 'Two';
 			modelTwo.age = 22;
 
@@ -393,7 +364,7 @@ describe('RepositoryBase', function() {
 		it('should throw error if executing on non-existing named connection', async () => {
 			// Arrange
 			let adam = new UserDTO();
-			adam.id = idGen.next().toString();
+			adam.id = idGen.nextBigInt().toString();
 			adam.name = 'One';
 			adam.age = 11;
 
@@ -410,7 +381,7 @@ describe('RepositoryBase', function() {
 		it('should execute on named connection(s) only', async () => {
 			// Arrange
 			let adam = new UserDTO();
-			adam.id = idGen.next().toString();
+			adam.id = idGen.nextBigInt().toString();
 			adam.name = 'One';
 			adam.age = 11;
 
@@ -443,11 +414,11 @@ describe('RepositoryBase', function() {
 
 			let modelOne = new UserDTO(),
 				modelTwo = new UserDTO();
-			modelOne.id = idGen.next().toString();
+			modelOne.id = idGen.nextBigInt().toString();
 			modelOne.name = 'One';
 			modelOne.age = 11;
 
-			modelTwo.id = idGen.next().toString();
+			modelTwo.id = idGen.nextBigInt().toString();
 			modelTwo.name = 'Two';
 			modelTwo.age = 22;
 
@@ -484,9 +455,9 @@ describe('RepositoryBase', function() {
 		it('should insert a row to database without transaction', async () => {
 			// Arrange
 			let model = new UserDTO();
-			model.id = idGen.next().toString();
+			model.id = idGen.nextBigInt().toString();
 			model.name = 'Hiri';
-			model.age = 29;
+			model.age = 39;
 
 			// Act
 			let createdDTO: UserDTO = cachedDTO = await usrRepo.create(model);
@@ -501,9 +472,9 @@ describe('RepositoryBase', function() {
 		it('should throw error if not success on all connections', async () => {
 			// Arrange
 			let model = new UserDTO();
-			model.id = idGen.next().toString();
+			model.id = idGen.nextBigInt().toString();
 			model.name = 'Hiri';
-			model.age = 29;
+			model.age = 49;
 
 			dbConnector.addConnection({
 				clientName: DbClient.SQLITE3,
@@ -520,7 +491,32 @@ describe('RepositoryBase', function() {
 		});
 	}); // END describe 'create'
 
-	describe('find', () => {
+	describe('exists', () => {
+		it('should return `true` if found', async () => {
+			// Act
+			let isExisting: boolean = await usrRepo.exists({ 
+				name: cachedDTO.name,
+				age: 123
+			}, {
+				includeDeleted: true
+			});
+
+			// Assert
+			expect(isExisting).to.be.true;
+		});
+
+		it('should return `false` if not found', async () => {
+			// Act
+			let isExisting: boolean = await usrRepo.exists({
+				name: IMPOSSIBLE_ID
+			});
+
+			// Assert
+			expect(isExisting).to.be.false;
+		});
+	}); // END describe 'exists'
+
+	describe('findByPk', () => {
 		it('should return an model instance if found', async () => {
 			// Act
 			let foundDTO: UserDTO = await usrRepo.findByPk(cachedDTO.id);
@@ -539,7 +535,7 @@ describe('RepositoryBase', function() {
 			// Assert
 			expect(model).to.be.null;
 		});
-	}); // END describe 'find'
+	}); // END describe 'findByPk'
 
 	describe('patch', () => {
 		it('should return an object with updated properties if found', async () => {
@@ -553,7 +549,6 @@ describe('RepositoryBase', function() {
 			// Assert
 			expect(partial.id).to.equal(cachedDTO.id);
 			expect(partial.age).to.equal(newAge);
-			expect(partial['updatedAt']).to.exist;
 			expect(refetchedDTO).to.be.not.null;
 			expect(refetchedDTO.id).to.equal(cachedDTO.id);
 			expect(refetchedDTO.name).to.equal(cachedDTO.name);
@@ -590,7 +585,6 @@ describe('RepositoryBase', function() {
 			expect(modified).to.exist;
 			expect(modified.id).to.equal(cachedDTO.id);
 			expect(modified.name).to.equal(newName);
-			expect(modified['updatedAt']).to.exist;
 			expect(refetchedDTO).to.be.not.null;
 			expect(refetchedDTO.id).to.equal(cachedDTO.id);
 			expect(refetchedDTO.name).to.equal(newName);
@@ -617,16 +611,8 @@ describe('RepositoryBase', function() {
 
 	describe('delete (soft)', () => {
 		it('should return a possitive number and the record is still in database', async () => {
-			// Arrange
-			let model = new UserDTO();
-			model.id = idGen.next().toString();
-			model.name = 'Hiri';
-			model.age = 29;
-
-			cachedDTO = await usrRepo.create(model);
-
 			// Act
-			let affectedRows: number = await usrRepo.delete(cachedDTO.id),
+			let affectedRows: number = await usrRepo.deleteSoft(cachedDTO.id),
 				refetchedDTO: UserDTO = await usrRepo.findByPk(cachedDTO.id);
 
 			// Assert
@@ -638,10 +624,42 @@ describe('RepositoryBase', function() {
 
 		it('should return 0 if no affected records', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.delete(IMPOSSIBLE_ID);
+			let affectedRows: number = await usrRepo.deleteSoft(IMPOSSIBLE_ID);
 
 			// Assert
 			expect(affectedRows).to.be.equal(0);
+		});
+	});
+
+	describe('recover', () => {
+		it('should return a possitive number if success', async () => {
+			// Act
+			let affectedRows: number = await usrRepo.recover(cachedDTO.id),
+				refetchedDTO: UserDTO = await usrRepo.findByPk(cachedDTO.id);
+
+			// Assert
+			expect(affectedRows).to.be.greaterThan(0);
+			expect(refetchedDTO).to.exist;
+			expect(refetchedDTO.deletedAt).to.be.null;
+		});
+
+		it('should return 0 if no affected records', async () => {
+			// Act
+			let affectedRows: number = await usrRepo.recover(IMPOSSIBLE_ID);
+
+			// Assert
+			expect(affectedRows).to.be.equal(0);
+		});
+
+		it('should throw error if there is an active record with same unique keys', async () => {
+			// Act
+			try {
+				let affectedRows: number = await usrRepo.recover(cachedDTO.id);
+				expect(affectedRows).not.to.exist;
+			} catch (ex) {
+				expect(ex).to.be.instanceOf(MinorException);
+				expect(ex.message).to.equal('DUPLICATE_UNIQUE_KEY');
+			}
 		});
 	});
 
@@ -679,7 +697,9 @@ describe('RepositoryBase', function() {
 			await usrRepo.deleteAll();
 
 			// Act
-			let models: PagedArray<UserDTO> = await usrRepo.page(PAGE, SIZE);
+			let models: PagedArray<UserDTO> = await usrRepo.page(PAGE, SIZE, {
+				includeDeleted: true
+			});
 
 			// Assert
 			expect(models).to.be.null;
@@ -697,7 +717,7 @@ describe('RepositoryBase', function() {
 
 			for (let i = 0; i < TOTAL; i++) {
 				model = new UserDTO();
-				model.id = idGen.next().toString();
+				model.id = idGen.nextBigInt().toString();
 				model.name = 'Hiri' + i;
 				model.age = Math.ceil(29 * Math.random());
 				await usrRepo.create(model);
@@ -727,7 +747,7 @@ describe('RepositoryBase', function() {
 			await usrRepo.deleteAll();
 
 			// Act
-			let count = await usrRepo.countAll();
+			let count = await usrRepo.countAll({ includeDeleted: true });
 
 			// Assert
 			expect(count).to.equal(0);

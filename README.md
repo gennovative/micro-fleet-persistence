@@ -21,6 +21,9 @@ Provides base repository class and database connector that helps connect to data
 
 # Versions
 
+## 2.1.0 (Coming soon)
+- **RepositoryBase** will supports version controlling.
+
 ## 2.0.0
 
 - [Breaking change] **RepositoryBase** now supports batch operations and multi-tenancy.
