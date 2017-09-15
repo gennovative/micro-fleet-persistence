@@ -1,8 +1,7 @@
 import { Model } from 'objection';
 const mapKeys = require('lodash/mapKeys');
-const memoize = require('lodash/memoize');
-const snakeCase = memoize(require('lodash/snakeCase'));
-const camelCase = memoize(require('lodash/camelCase'));
+const snakeCase = global['snakeCase'];
+const camelCase = global['camelCase'];
 
 
 export abstract class EntityBase extends Model {
@@ -15,15 +14,20 @@ export abstract class EntityBase extends Model {
 	}
 
 	/**
-	 * Should be overiden (['id', 'tenant_id']) for composite PK.
+	 * [ObjectionJS] Array of primary column names.
 	 */
 	public static readonly idColumn = ['id'];
-	
+
+	/**
+	 * An array of non-primary unique column names.
+	 */
+	public static readonly uniqColumn = [];
+
 	/**
 	 * Same with `idColumn`, but transform snakeCase to camelCase.
 	 * Should be overiden (['id', 'tenantId']) for composite PK.
 	 */
-	public static readonly idProp = ['id'];
+	public static readonly idProp = EntityBase.idColumn.map<string>(camelCase);
 
 
 	public id: BigSInt = undefined;

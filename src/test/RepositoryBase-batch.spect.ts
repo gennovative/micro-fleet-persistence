@@ -1,8 +1,9 @@
 import { expect } from 'chai';
 
 import { DbClient } from 'back-lib-common-constants';
-import { InvalidArgumentException, MinorException, BigIdGenerator } from 'back-lib-common-util';
-import { PagedArray, ModelAutoMapper, AtomicSession, IHardDelRepository } from 'back-lib-common-contracts';
+import { InvalidArgumentException, MinorException } from 'back-lib-common-util';
+import { PagedArray, ModelAutoMapper, AtomicSession, ISoftDelRepository } from 'back-lib-common-contracts';
+import { IdGenerator } from 'back-lib-id-generator';
 
 import { RepositoryBase, EntityBase, QueryCallback, IDatabaseConnector,
 		KnexDatabaseConnector, AtomicSessionFactory, AtomicSessionFlow } from '../app';
@@ -24,9 +25,9 @@ const CONN_FILE = `${process.cwd()}/database-adapter-test.sqlite`,
 const TYPE_USER_DTO = Symbol('UserDTO'),
 	TYPE_USER_ENT = Symbol('UserEntity');
 
-class UserDTO implements IModelDTO {
+class UserBatchDTO implements IModelDTO {
 
-	public static translator: ModelAutoMapper<UserDTO> = new ModelAutoMapper(UserDTO);
+	public static translator: ModelAutoMapper<UserBatchDTO> = new ModelAutoMapper(UserBatchDTO);
 
 	// NOTE: Class properties must be initialized, otherwise they
 	// will disappear in transpiled code.
@@ -37,7 +38,7 @@ class UserDTO implements IModelDTO {
 }
 
 
-class UserEntity extends EntityBase {
+class UserBatchEntity extends EntityBase {
 	/**
 	 * @override
 	 */
@@ -46,8 +47,9 @@ class UserEntity extends EntityBase {
 	}
 
 	public static readonly idColumn = ['id'];
+	public static readonly uniqColumn = ['name', 'age'];
 
-	public static translator: ModelAutoMapper<UserEntity> = new ModelAutoMapper(UserEntity);
+	public static translator: ModelAutoMapper<UserBatchEntity> = new ModelAutoMapper(UserBatchEntity);
 
 	// NOTE: Class properties must be initialized, otherwise they
 	// will disappear in transpiled code.
@@ -56,29 +58,33 @@ class UserEntity extends EntityBase {
 	public deletedAt: number = undefined;
 }
 
-class UserRepo 
-	extends RepositoryBase<UserEntity, UserDTO>
-	implements IHardDelRepository<UserDTO> {
+class UserBatchRepo 
+	extends RepositoryBase<UserBatchEntity, UserBatchDTO>
+	implements ISoftDelRepository<UserBatchDTO> {
 	
 	private _sessionFactory: AtomicSessionFactory;
 
 	constructor(
 		dbConnector: IDatabaseConnector
 	) {
-		super(dbConnector);
+		super(UserBatchEntity, dbConnector);
 		this._sessionFactory = new AtomicSessionFactory(dbConnector);
 	}
 
-	protected get idCol(): string[] {
-		return UserEntity.idColumn;
+	protected get pkCol(): string[] {
+		return UserBatchEntity.idColumn;
 	}
 
-	protected get idProp(): string[] {
-		return UserEntity.idProp;
+	protected get pkProp(): string[] {
+		return UserBatchEntity.idProp;
+	}
+
+	protected get ukCol(): string[] {
+		return UserBatchEntity.uniqColumn;
 	}
 
 
-	public createTwoCouplesWithTransaction(adams: UserDTO[], evas: UserDTO[]): Promise<UserDTO[]> {
+	public createTwoCouplesWithTransaction(adams: UserBatchDTO[], evas: UserBatchDTO[]): Promise<UserBatchDTO[]> {
 		return this._sessionFactory.startSession()
 			.pipe(atomicSession => {
 				console.log('Conn: ', atomicSession.knexConnection.customName);
@@ -98,8 +104,8 @@ class UserRepo
 	}
 
 	private _counter = 0;
-	public firstOutput: UserDTO[];
-	public failOnSecondTransaction(adams: UserDTO[], evas: UserDTO[]): Promise<UserDTO[]> {
+	public firstOutput: UserBatchDTO[];
+	public failOnSecondTransaction(adams: UserBatchDTO[], evas: UserBatchDTO[]): Promise<UserBatchDTO[]> {
 		return this._sessionFactory.startSession()
 			.pipe(atomicSession => this.create(adams, { atomicSession }))
 			.pipe((atomicSession, createdAdams) => {
@@ -130,13 +136,13 @@ class UserRepo
 			.closePipe();
 	}
 
-	public createAdamsOnSecondConn(adams: UserDTO[]): Promise<UserDTO[]> {
+	public createAdamsOnSecondConn(adams: UserBatchDTO[]): Promise<UserBatchDTO[]> {
 		return this._sessionFactory.startSession('sec')
 			.pipe(atomicSession => this.create(adams, { atomicSession }))
 			.closePipe();
 	}
 
-	public createSessionPipe(adams: UserDTO[], evas: UserDTO[]): AtomicSessionFlow {
+	public createSessionPipe(adams: UserBatchDTO[], evas: UserBatchDTO[]): AtomicSessionFlow {
 		return this._sessionFactory.startSession()
 			.pipe(atomicSession => this.create(adams, { atomicSession }))
 			.pipe((atomicSession, createdAdams) => {
@@ -152,7 +158,7 @@ class UserRepo
 			//.closePipe(); // Not closing pipe
 	}
 
-	public createEmptyPipe(adams: UserDTO[], eva: UserDTO[]): AtomicSessionFlow {
+	public createEmptyPipe(adams: UserBatchDTO[], eva: UserBatchDTO[]): AtomicSessionFlow {
 		return this._sessionFactory.startSession()
 			.pipe(session => {
 				return Promise.resolve('Nothing');
@@ -160,25 +166,25 @@ class UserRepo
 			//.closePipe(); // Not closing pipe
 	}
 
-	public async findOnFirstConn(id: BigSInt): Promise<UserDTO> {
-		let foundEnt: UserEntity = await this.executeQuery(query => {
+	public async findOnFirstConn(id: BigSInt): Promise<UserBatchDTO> {
+		let foundEnt: UserBatchEntity = await this._processor.executeQuery(query => {
 				return query.findById(id);
 			}, null, '0'); // Executing on first connection only.
 
-		return this.toDTO(foundEnt, false);
+		return this._processor.toDTO(foundEnt, false);
 	}
 
-	public async findOnSecondConn(id: BigSInt): Promise<UserDTO> {
-		let foundEnt: UserEntity = await this.executeQuery(query => {
+	public async findOnSecondConn(id: BigSInt): Promise<UserBatchDTO> {
+		let foundEnt: UserBatchEntity = await this._processor.executeQuery(query => {
 				return query.findById(id);
 			}, null, 'sec'); // Executing on second connection (named 'sec').
 
-		return this.toDTO(foundEnt, false);
+		return this._processor.toDTO(foundEnt, false);
 	}
 
 	public async deleteOnSecondConn(ids: BigSInt[]): Promise<number> {
 		let affectedRowArr = await Promise.all(ids.map(id => 
-			this.executeCommand(query => {
+			this._processor.executeCommand(query => {
 					return query.deleteById(id);
 				}, null, 'sec')
 		));
@@ -186,42 +192,14 @@ class UserRepo
 	}
 
 	public deleteAll(): Promise<void> {
-		return this.executeCommand(query => query.delete());
-	}
-
-	/**
-	 * @override
-	 */
-	protected prepare<UserEntity>(callback: QueryCallback<UserEntity>, atomicSession?: AtomicSession, ...names: string[]): Promise<any>[] {
-		return this._dbConnector.prepare(UserEntity, <any>callback, atomicSession, ...names);
-	}
-
-	/**
-	 * @override
-	 */
-	protected toEntity(from: UserDTO | UserDTO[], isPartial: boolean): UserEntity & UserEntity[] {
-		if (isPartial) {
-			return <any>UserEntity.translator.partial(from);
-		}
-		return <any>UserEntity.translator.whole(from);
-	}
-
-	/**
-	 * @override
-	 */
-	protected toDTO(from: UserEntity | UserEntity[], isPartial: boolean): UserDTO & UserDTO[] {
-		if (isPartial) {
-			return <any>UserDTO.translator.partial(from, { enableValidation: false });
-		}
-		// Disable validation because it's unnecessary.
-		return <any>UserDTO.translator.whole(from, { enableValidation: false });
+		return this._processor.executeCommand(query => query.delete());
 	}
 }
 
-let cachedDTOs: UserDTO[],
+let cachedDTOs: UserBatchDTO[],
 	dbConnector: IDatabaseConnector,
-	usrRepo: UserRepo,
-	idGen = new BigIdGenerator();
+	usrRepo: UserBatchRepo,
+	idGen = new IdGenerator();
 
 // These test suites make real changes to SqlLite file or PostgreSQl server.
 describe('RepositoryBase-batch', function() {
@@ -237,7 +215,7 @@ describe('RepositoryBase-batch', function() {
 
 		// // For PostgreSQL
 		dbConnector.addConnection(DB_DETAILS);
-		usrRepo = new UserRepo(dbConnector);
+		usrRepo = new UserBatchRepo(dbConnector);
 	});
 
 	afterEach('Tear down db adapter', async () => {
@@ -257,24 +235,24 @@ describe('RepositoryBase-batch', function() {
 
 		it('should insert four rows on each database', async () => {
 			// Arrange
-			let adamOne = new UserDTO(),
-				adamTwo = new UserDTO(),
-				evaOne = new UserDTO(),
-				evaTwo = new UserDTO();
+			let adamOne = new UserBatchDTO(),
+				adamTwo = new UserBatchDTO(),
+				evaOne = new UserBatchDTO(),
+				evaTwo = new UserBatchDTO();
 
-			adamOne.id = idGen.next().toString();
+			adamOne.id = idGen.nextBigInt().toString();
 			adamOne.name = 'Adam One';
 			adamOne.age = 11;
 
-			adamTwo.id = idGen.next().toString();
+			adamTwo.id = idGen.nextBigInt().toString();
 			adamTwo.name = 'Adam Two';
 			adamTwo.age = 22;
 
-			evaOne.id = idGen.next().toString();
+			evaOne.id = idGen.nextBigInt().toString();
 			evaOne.name = 'Eva One';
 			evaOne.age = 33;
 
-			evaTwo.id = idGen.next().toString();
+			evaTwo.id = idGen.nextBigInt().toString();
 			evaTwo.name = 'Eva Two';
 			evaTwo.age = 44;
 
@@ -307,24 +285,24 @@ describe('RepositoryBase-batch', function() {
 			} catch (ex) {
 			}
 
-			let adamOne = new UserDTO(),
-				adamTwo = new UserDTO(),
-				evaOne = new UserDTO(),
-				evaTwo = new UserDTO();
+			let adamOne = new UserBatchDTO(),
+				adamTwo = new UserBatchDTO(),
+				evaOne = new UserBatchDTO(),
+				evaTwo = new UserBatchDTO();
 
-			adamOne.id = idGen.next().toString();
+			adamOne.id = idGen.nextBigInt().toString();
 			adamOne.name = 'Adam One';
 			adamOne.age = 11;
 
-			adamTwo.id = idGen.next().toString();
+			adamTwo.id = idGen.nextBigInt().toString();
 			adamTwo.name = 'Adam Two';
 			adamTwo.age = 22;
 
-			evaOne.id = idGen.next().toString();
+			evaOne.id = idGen.nextBigInt().toString();
 			evaOne.name = 'Eva One';
 			evaOne.age = 33;
 
-			evaTwo.id = idGen.next().toString();
+			evaTwo.id = idGen.nextBigInt().toString();
 			evaTwo.name = null; // fail
 			evaTwo.age = 44;
 
@@ -347,24 +325,24 @@ describe('RepositoryBase-batch', function() {
 
 		it('should resolve same result if calling `closePipe` multiple times', async () => {
 			// Arrange
-			let adamOne = new UserDTO(),
-				adamTwo = new UserDTO(),
-				evaOne = new UserDTO(),
-				evaTwo = new UserDTO();
+			let adamOne = new UserBatchDTO(),
+				adamTwo = new UserBatchDTO(),
+				evaOne = new UserBatchDTO(),
+				evaTwo = new UserBatchDTO();
 
-			adamOne.id = idGen.next().toString();
+			adamOne.id = idGen.nextBigInt().toString();
 			adamOne.name = 'Adam One';
 			adamOne.age = 11;
 
-			adamTwo.id = idGen.next().toString();
+			adamTwo.id = idGen.nextBigInt().toString();
 			adamTwo.name = 'Adam Two';
 			adamTwo.age = 22;
 
-			evaOne.id = idGen.next().toString();
+			evaOne.id = idGen.nextBigInt().toString();
 			evaOne.name = 'Eva One';
 			evaOne.age = 33;
 
-			evaTwo.id = idGen.next().toString();
+			evaTwo.id = idGen.nextBigInt().toString();
 			evaTwo.name = 'Eva Two';
 			evaTwo.age = 44;
 
@@ -415,14 +393,14 @@ describe('RepositoryBase-batch', function() {
 
 		it('should execute on named connection(s) only', async () => {
 			// Arrange
-			let adamOne = new UserDTO(),
-				adamTwo = new UserDTO();
+			let adamOne = new UserBatchDTO(),
+				adamTwo = new UserBatchDTO();
 
-			adamOne.id = idGen.next().toString();
+			adamOne.id = idGen.nextBigInt().toString();
 			adamOne.name = 'Adam One';
 			adamOne.age = 11;
 
-			adamTwo.id = idGen.next().toString();
+			adamTwo.id = idGen.nextBigInt().toString();
 			adamTwo.name = 'Adam Two';
 			adamTwo.age = 22;
 
@@ -458,24 +436,24 @@ describe('RepositoryBase-batch', function() {
 			} catch (ex) {
 			}
 
-			let adamOne = new UserDTO(),
-				adamTwo = new UserDTO(),
-				evaOne = new UserDTO(),
-				evaTwo = new UserDTO();
+			let adamOne = new UserBatchDTO(),
+				adamTwo = new UserBatchDTO(),
+				evaOne = new UserBatchDTO(),
+				evaTwo = new UserBatchDTO();
 
-			adamOne.id = idGen.next().toString();
+			adamOne.id = idGen.nextBigInt().toString();
 			adamOne.name = 'Adam One';
 			adamOne.age = 11;
 
-			adamTwo.id = idGen.next().toString();
+			adamTwo.id = idGen.nextBigInt().toString();
 			adamTwo.name = 'Adam Two';
 			adamTwo.age = 22;
 
-			evaOne.id = idGen.next().toString();
+			evaOne.id = idGen.nextBigInt().toString();
 			evaOne.name = 'Eva One';
 			evaOne.age = 33;
 
-			evaTwo.id = idGen.next().toString();
+			evaTwo.id = idGen.nextBigInt().toString();
 			evaTwo.name = 'Eva Two';
 			evaTwo.age = 44;
 
@@ -512,20 +490,20 @@ describe('RepositoryBase-batch', function() {
 	describe('create without transaction', () => {
 		it('should insert a row to database without transaction', async () => {
 			// Arrange
-			let modelOne = new UserDTO();
-			modelOne.id = idGen.next().toString();
+			let modelOne = new UserBatchDTO();
+			modelOne.id = idGen.nextBigInt().toString();
 			modelOne.name = 'One';
 			modelOne.age = 29;
 
-			let modelTwo = new UserDTO();
-			modelTwo.id = idGen.next().toString();
+			let modelTwo = new UserBatchDTO();
+			modelTwo.id = idGen.nextBigInt().toString();
 			modelTwo.name = 'Two';
 			modelTwo.age = 92;
 
 			let sources = [modelOne, modelTwo];
 
 			// Act
-			let createdDTOs: UserDTO[] = cachedDTOs = await usrRepo.create([modelOne, modelTwo]);
+			let createdDTOs: UserBatchDTO[] = cachedDTOs = await usrRepo.create([modelOne, modelTwo]);
 
 			// Assert
 			expect(createdDTOs).to.be.not.null;
@@ -539,13 +517,13 @@ describe('RepositoryBase-batch', function() {
 
 		it('should throw error if not success on all connections', async () => {
 			// Arrange
-			let modelOne = new UserDTO();
-			modelOne.id = idGen.next().toString();
+			let modelOne = new UserBatchDTO();
+			modelOne.id = idGen.nextBigInt().toString();
 			modelOne.name = 'One';
 			modelOne.age = 29;
 
-			let modelTwo = new UserDTO();
-			modelTwo.id = idGen.next().toString();
+			let modelTwo = new UserBatchDTO();
+			modelTwo.id = idGen.nextBigInt().toString();
 			modelTwo.name = 'Two';
 			modelTwo.age = 92;
 
@@ -571,23 +549,21 @@ describe('RepositoryBase-batch', function() {
 				newAgeTwo = 54;
 
 			// Act
-			let partials: Partial<UserDTO>[] = await usrRepo.patch([
+			let partials: Partial<UserBatchDTO>[] = await usrRepo.patch([
 					{ id: cachedDTOs[0].id, age: newAgeOne},
 					{ id: cachedDTOs[1].id, age: newAgeTwo},
 				]),
-				refetchedOne: UserDTO = await usrRepo.findByPk(cachedDTOs[0].id),
-				refetchedTwo: UserDTO = await usrRepo.findByPk(cachedDTOs[1].id);
+				refetchedOne: UserBatchDTO = await usrRepo.findByPk(cachedDTOs[0].id),
+				refetchedTwo: UserBatchDTO = await usrRepo.findByPk(cachedDTOs[1].id);
 
 			// Assert
 			expect(partials).to.exist;
 			expect(partials.length).to.equal(2);
 			expect(partials[0].id).to.equal(cachedDTOs[0].id);
 			expect(partials[0].age).to.equal(newAgeOne);
-			expect(partials[0]['updatedAt']).to.exist;
 
 			expect(partials[1].id).to.equal(cachedDTOs[1].id);
 			expect(partials[1].age).to.equal(newAgeTwo);
-			expect(partials[1]['updatedAt']).to.exist;
 
 			expect(refetchedOne).to.be.not.null;
 			expect(refetchedOne.id).to.equal(cachedDTOs[0].id);
@@ -606,12 +582,12 @@ describe('RepositoryBase-batch', function() {
 				newAgeTwo = 54;
 
 			// Act
-			let partial: Partial<UserDTO>[] = await usrRepo.patch([
+			let partial: Partial<UserBatchDTO>[] = await usrRepo.patch([
 					{ id: IMPOSSIBLE_IDs[0], age: newAgeOne},
 					{ id: IMPOSSIBLE_IDs[1], age: newAgeTwo}
 				]),
-				refetchedOne: UserDTO = await usrRepo.findByPk(IMPOSSIBLE_IDs[0]),
-				refetchedTwo: UserDTO = await usrRepo.findByPk(IMPOSSIBLE_IDs[1]);
+				refetchedOne: UserBatchDTO = await usrRepo.findByPk(IMPOSSIBLE_IDs[0]),
+				refetchedTwo: UserBatchDTO = await usrRepo.findByPk(IMPOSSIBLE_IDs[1]);
 			
 			// Assert
 			expect(partial).to.exist;
@@ -629,15 +605,15 @@ describe('RepositoryBase-batch', function() {
 			// Arrange
 			let newNameOne = 'Brian',
 				newNameTwo = 'Rein',
-				updatedOne: UserDTO = Object.assign(new UserDTO, cachedDTOs[0]),
-				updatedTwo: UserDTO = Object.assign(new UserDTO, cachedDTOs[1]);
+				updatedOne: UserBatchDTO = Object.assign(new UserBatchDTO, cachedDTOs[0]),
+				updatedTwo: UserBatchDTO = Object.assign(new UserBatchDTO, cachedDTOs[1]);
 			updatedOne.name = newNameOne;
 			updatedTwo.name = newNameTwo;
 
 			// Act
-			let modified: UserDTO[] = await usrRepo.update([updatedOne, updatedTwo]),
-				refetchedOne: UserDTO = await usrRepo.findByPk(cachedDTOs[0].id),
-				refetchedTwo: UserDTO = await usrRepo.findByPk(cachedDTOs[1].id);
+			let modified: UserBatchDTO[] = await usrRepo.update([updatedOne, updatedTwo]),
+				refetchedOne: UserBatchDTO = await usrRepo.findByPk(cachedDTOs[0].id),
+				refetchedTwo: UserBatchDTO = await usrRepo.findByPk(cachedDTOs[1].id);
 
 			// Assert
 			expect(modified).to.exist;
@@ -645,11 +621,9 @@ describe('RepositoryBase-batch', function() {
 
 			expect(modified[0].id).to.equal(cachedDTOs[0].id);
 			expect(modified[0].name).to.equal(newNameOne);
-			expect(modified[0]['updatedAt']).to.equal(updatedOne['updatedAt']);
 
 			expect(modified[1].id).to.equal(cachedDTOs[1].id);
 			expect(modified[1].name).to.equal(newNameTwo);
-			expect(modified[1]['updatedAt']).to.equal(updatedTwo['updatedAt']);
 
 			expect(refetchedOne).to.exist;
 			expect(refetchedOne.id).to.equal(cachedDTOs[0].id);
@@ -666,8 +640,8 @@ describe('RepositoryBase-batch', function() {
 			// Arrange
 			let newNameOne = 'Brian',
 				newNameTwo = 'Rein',
-				updatedOne: UserDTO = Object.assign(new UserDTO, cachedDTOs[0]),
-				updatedTwo: UserDTO = Object.assign(new UserDTO, cachedDTOs[1]);
+				updatedOne: UserBatchDTO = Object.assign(new UserBatchDTO, cachedDTOs[0]),
+				updatedTwo: UserBatchDTO = Object.assign(new UserBatchDTO, cachedDTOs[1]);
 
 			updatedOne.id = IMPOSSIBLE_IDs[0];
 			updatedOne.name = newNameOne;
@@ -676,9 +650,9 @@ describe('RepositoryBase-batch', function() {
 			updatedTwo.name = newNameTwo;
 
 			// Act
-			let modified: UserDTO[] = await usrRepo.update([updatedOne, updatedTwo]),
-				refetchedOne: UserDTO = await usrRepo.findByPk(IMPOSSIBLE_IDs[0]),
-				refetchedTwo: UserDTO = await usrRepo.findByPk(IMPOSSIBLE_IDs[1]);
+			let modified: UserBatchDTO[] = await usrRepo.update([updatedOne, updatedTwo]),
+				refetchedOne: UserBatchDTO = await usrRepo.findByPk(IMPOSSIBLE_IDs[0]),
+				refetchedTwo: UserBatchDTO = await usrRepo.findByPk(IMPOSSIBLE_IDs[1]);
 
 			// Assert
 			expect(modified).to.exist;
@@ -693,25 +667,10 @@ describe('RepositoryBase-batch', function() {
 
 	describe('delete (soft)', () => {
 		it('should return a possitive number and the record is still in database', async () => {
-			// Arrange
-			let modelOne = new UserDTO();
-			modelOne.id = idGen.next().toString();
-			modelOne.name = 'One';
-			modelOne.age = 29;
-
-			let modelTwo = new UserDTO();
-			modelTwo.id = idGen.next().toString();
-			modelTwo.name = 'Two';
-			modelTwo.age = 92;
-
-			let sources = [modelOne, modelTwo];
-
-			// cachedDTOs = await usrRepo.create([modelOne, modelTwo]);
-
 			// Act
-			let affectedRows: number = await usrRepo.delete([cachedDTOs[0].id, cachedDTOs[1].id]),
-				refetchedOne: UserDTO = await usrRepo.findByPk(cachedDTOs[0].id),
-				refetchedTwo: UserDTO = await usrRepo.findByPk(cachedDTOs[1].id);
+			let affectedRows: number = await usrRepo.deleteSoft([cachedDTOs[0].id, cachedDTOs[1].id]),
+				refetchedOne: UserBatchDTO = await usrRepo.findByPk(cachedDTOs[0].id),
+				refetchedTwo: UserBatchDTO = await usrRepo.findByPk(cachedDTOs[1].id);
 
 			// Assert
 			expect(affectedRows).to.be.equal(2);
@@ -723,31 +682,48 @@ describe('RepositoryBase-batch', function() {
 		});
 
 		it('should return a number and the affected records', async () => {
-			// Arrange
-			let modelOne = new UserDTO();
-			modelOne.id = idGen.next().toString();
-			modelOne.name = 'One';
-			modelOne.age = 29;
-
-			let modelTwo = new UserDTO();
-			modelTwo.id = idGen.next().toString();
-			modelTwo.name = 'Two';
-			modelTwo.age = 92;
-
 			// Act
-			let affectedRows: number = await usrRepo.delete([cachedDTOs[0].id, IMPOSSIBLE_IDs[1]]);
+			let affectedRows: number = await usrRepo.deleteSoft([cachedDTOs[0].id, IMPOSSIBLE_IDs[1]]);
 
 			// Assert
 			expect(affectedRows).to.be.equal(1);
 		});
-	});
+	}); // END describe 'delete (soft)'
+
+	describe('recover', () => {
+		it('should return a possitive number if success', async () => {
+			// Act
+			let affectedRows: number = await usrRepo.recover([cachedDTOs[0].id, cachedDTOs[1].id]),
+				refetchedOne: UserBatchDTO = await usrRepo.findByPk(cachedDTOs[0].id),
+				refetchedTwo: UserBatchDTO = await usrRepo.findByPk(cachedDTOs[1].id);
+
+			// Assert
+			expect(affectedRows).to.be.equal(2);
+			// If soft `delete` is successful, we must be able to still find that entity with the id.
+			expect(refetchedOne).to.exist;
+			expect(refetchedOne.deletedAt).to.be.null;
+			expect(refetchedTwo).to.exist;
+			expect(refetchedTwo.deletedAt).to.be.null;
+		});
+
+		it('should return a number and the affected records', async () => {
+			// Arrage
+			await usrRepo.deleteSoft([cachedDTOs[0].id, cachedDTOs[1].id]);
+
+			// Act
+			let affectedRows: number = await usrRepo.recover([cachedDTOs[0].id, IMPOSSIBLE_IDs[1]]);
+
+			// Assert
+			expect(affectedRows).to.be.equal(1);
+		});
+	}); // END describe 'recover'
 
 	describe('delete (hard)', () => {
 		it('should return a possitive number if found', async () => {
 			// Act
 			let affectedRows: number = await usrRepo.deleteHard([cachedDTOs[0].id, cachedDTOs[1].id]),
-				refetchedOne: UserDTO = await usrRepo.findByPk(cachedDTOs[0].id),
-				refetchedTwo: UserDTO = await usrRepo.findByPk(cachedDTOs[1].id);
+				refetchedOne: UserBatchDTO = await usrRepo.findByPk(cachedDTOs[0].id),
+				refetchedTwo: UserBatchDTO = await usrRepo.findByPk(cachedDTOs[1].id);
 
 			// Assert
 			expect(affectedRows).to.be.equal(2);
@@ -759,8 +735,8 @@ describe('RepositoryBase-batch', function() {
 		it('should return 0 if not found', async () => {
 			// Act
 			let affectedRows: number = await usrRepo.deleteHard(IMPOSSIBLE_IDs),
-				refetchedOne: UserDTO = await usrRepo.findByPk(IMPOSSIBLE_IDs[0]),
-				refetchedTwo: UserDTO = await usrRepo.findByPk(IMPOSSIBLE_IDs[1]);
+				refetchedOne: UserBatchDTO = await usrRepo.findByPk(IMPOSSIBLE_IDs[0]),
+				refetchedTwo: UserBatchDTO = await usrRepo.findByPk(IMPOSSIBLE_IDs[1]);
 
 			// Assert
 			expect(affectedRows).to.equal(0);
@@ -768,5 +744,5 @@ describe('RepositoryBase-batch', function() {
 			expect(refetchedOne).to.be.null;
 			expect(refetchedTwo).to.be.null;
 		});
-	}); // END describe 'delete'
+	}); // END describe 'delete (hard)'
 });

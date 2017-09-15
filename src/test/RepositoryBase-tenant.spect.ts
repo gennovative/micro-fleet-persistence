@@ -1,11 +1,13 @@
 import { expect } from 'chai';
 
 import { DbClient } from 'back-lib-common-constants';
-import { InvalidArgumentException, MinorException, BigIdGenerator } from 'back-lib-common-util';
+import { InvalidArgumentException, MinorException } from 'back-lib-common-util';
 import { PagedArray, ModelAutoMapper, AtomicSession } from 'back-lib-common-contracts';
+import { IdGenerator } from 'back-lib-id-generator';
 
-import { RepositoryBase, EntityBase, QueryCallback, IDatabaseConnector,
-		KnexDatabaseConnector, AtomicSessionFactory, AtomicSessionFlow } from '../app';
+import { EntityBase, QueryCallback, IDatabaseConnector,
+	KnexDatabaseConnector, AtomicSessionFactory, AtomicSessionFlow,
+	RepositoryBase } from '../app';
 import DB_DETAILS from './database-details';
 
 
@@ -48,6 +50,7 @@ class UserTenantEntity extends EntityBase {
 
 	public static readonly idColumn = ['id', 'tenant_id'];
 	public static readonly idProp = ['id', 'tenantId'];
+	public static readonly uniqColumn = ['name'];
 
 	public static translator: ModelAutoMapper<UserTenantEntity> = new ModelAutoMapper(UserTenantEntity);
 
@@ -66,18 +69,11 @@ class UserTenantRepo extends RepositoryBase<UserTenantEntity, UserTenantDTO, Ten
 	constructor(
 		dbConnector: IDatabaseConnector
 	) {
-		super(dbConnector);
+		super(UserTenantEntity, dbConnector, {
+			isMultiTenancy: true
+		});
 		this._sessionFactory = new AtomicSessionFactory(dbConnector);
 	}
-
-	protected get idCol(): string[] {
-		return UserTenantEntity.idColumn;
-	}
-
-	protected get idProp(): string[] {
-		return UserTenantEntity.idProp;
-	}
-
 
 	public createCoupleWithTransaction(adam: UserTenantDTO, eva: UserTenantDTO): Promise<UserTenantDTO[]> {
 		return this._sessionFactory.startSession()
@@ -165,65 +161,37 @@ class UserTenantRepo extends RepositoryBase<UserTenantEntity, UserTenantDTO, Ten
 	}
 
 	public async findOnFirstConn(pk: TenantPk): Promise<UserTenantDTO> {
-		let foundEnt: UserTenantEntity = await this.executeQuery(query => {
-				return query.findById(this.toArr(pk));
+		let foundEnt: UserTenantEntity = await this._processor.executeQuery(query => {
+			return query.findById(this._processor.toArr(pk, UserTenantEntity.idProp));
 			}, null, '0'); // Executing on first connection only.
 
-		return this.toDTO(foundEnt, false);
+		return this._processor.toDTO(foundEnt, false);
 	}
 
 	public async findOnSecondConn(pk: TenantPk): Promise<UserTenantDTO> {
-		let foundEnt: UserTenantEntity = await this.executeQuery(query => {
-				return query.findById(this.toArr(pk));
+		let foundEnt: UserTenantEntity = await this._processor.executeQuery(query => {
+			return query.findById(this._processor.toArr(pk, UserTenantEntity.idProp));
 			}, null, 'sec'); // Executing on second connection (named 'sec').
 
-		return this.toDTO(foundEnt, false);
+		return this._processor.toDTO(foundEnt, false);
 	}
 
 	public async deleteOnSecondConn(pk: TenantPk): Promise<UserTenantDTO> {
-		let affectedRows = await this.executeCommand(query => {
-				return query.deleteById(this.toArr(pk));
+		let affectedRows = await this._processor.executeCommand(query => {
+			return query.deleteById(this._processor.toArr(pk, UserTenantEntity.idProp));
 			}, null, 'sec');
 		return affectedRows;
 	}
 
 	public deleteAll(): Promise<void> {
-		return this.executeCommand(query => query.delete());
-	}
-
-	/**
-	 * @override
-	 */
-	protected prepare<UserEntity>(callback: QueryCallback<UserEntity>, atomicSession?: AtomicSession, ...names: string[]): Promise<any>[] {
-		return this._dbConnector.prepare(UserTenantEntity, <any>callback, atomicSession, ...names);
-	}
-
-	/**
-	 * @override
-	 */
-	protected toEntity(from: UserTenantDTO | UserTenantDTO[], isPartial: boolean): UserTenantEntity & UserTenantEntity[] {
-		if (isPartial) {
-			return <any>UserTenantEntity.translator.partial(from);
-		}
-		return <any>UserTenantEntity.translator.whole(from);
-	}
-
-	/**
-	 * @override
-	 */
-	protected toDTO(from: UserTenantEntity | UserTenantEntity[], isPartial: boolean): UserTenantDTO & UserTenantDTO[] {
-		if (isPartial) {
-			return <any>UserTenantDTO.translator.partial(from, { enableValidation: false });
-		}
-		// Disable validation because it's unnecessary.
-		return <any>UserTenantDTO.translator.whole(from, { enableValidation: false });
+		return this._processor.executeCommand(query => query.delete());
 	}
 }
 
 let cachedDTO: UserTenantDTO,
 	dbConnector: IDatabaseConnector,
 	usrRepo: UserTenantRepo,
-	idGen = new BigIdGenerator();
+	idGen = new IdGenerator();
 
 
 // These test suites make real changes to SqlLite file or PostgreSQl server.
@@ -266,13 +234,13 @@ describe('RepositoryBase-tenant', function() {
 			let modelOne = new UserTenantDTO(),
 				modelTwo = new UserTenantDTO();
 
-			modelOne.id = idGen.next().toString();
-			modelOne.tenantId = idGen.next().toString();
+			modelOne.id = idGen.nextBigInt().toString();
+			modelOne.tenantId = idGen.nextBigInt().toString();
 			modelOne.name = 'One';
 			modelOne.age = 11;
 
-			modelTwo.id = idGen.wrap(modelOne.id).toString(); // Basically same with `modelTwo.id = modelOne.id`
-			modelTwo.tenantId = idGen.next().toString();
+			modelTwo.id = idGen.wrapBigInt(modelOne.id).toString(); // Basically same with `modelTwo.id = modelOne.id`
+			modelTwo.tenantId = idGen.nextBigInt().toString();
 			modelTwo.name = 'Two';
 			modelTwo.age = 22;
 
@@ -319,12 +287,12 @@ describe('RepositoryBase-tenant', function() {
 			let modelOne = new UserTenantDTO(),
 				modelTwo = new UserTenantDTO();
 
-			modelOne.id = modelTwo.id = idGen.next().toString();
-			modelOne.tenantId = idGen.next().toString();
+			modelOne.id = modelTwo.id = idGen.nextBigInt().toString();
+			modelOne.tenantId = idGen.nextBigInt().toString();
 			modelOne.name = 'One';
 			modelOne.age = 11;
 
-			modelTwo.tenantId = idGen.next().toString();
+			modelTwo.tenantId = idGen.nextBigInt().toString();
 			modelTwo.name = null; // fail
 			modelTwo.age = 22;
 
@@ -354,12 +322,12 @@ describe('RepositoryBase-tenant', function() {
 			let modelOne = new UserTenantDTO(),
 				modelTwo = new UserTenantDTO();
 
-			modelOne.id = modelTwo.id = idGen.next().toString();
-			modelOne.tenantId = idGen.next().toString();
+			modelOne.id = modelTwo.id = idGen.nextBigInt().toString();
+			modelOne.tenantId = idGen.nextBigInt().toString();
 			modelOne.name = 'One';
 			modelOne.age = 11;
 
-			modelTwo.tenantId = idGen.next().toString();
+			modelTwo.tenantId = idGen.nextBigInt().toString();
 			modelTwo.name = 'Two';
 			modelTwo.age = 22;
 
@@ -397,12 +365,12 @@ describe('RepositoryBase-tenant', function() {
 			let modelOne = new UserTenantDTO(),
 				modelTwo = new UserTenantDTO();
 
-			modelOne.id = modelTwo.id = idGen.next().toString();
-			modelOne.tenantId = idGen.next().toString();
+			modelOne.id = modelTwo.id = idGen.nextBigInt().toString();
+			modelOne.tenantId = idGen.nextBigInt().toString();
 			modelOne.name = 'One';
 			modelOne.age = 11;
 
-			modelTwo.tenantId = idGen.next().toString();
+			modelTwo.tenantId = idGen.nextBigInt().toString();
 			modelTwo.name = 'Two';
 			modelTwo.age = 22;
 
@@ -426,8 +394,8 @@ describe('RepositoryBase-tenant', function() {
 		it('should throw error if executing on non-existing named connection', async () => {
 			// Arrange
 			let adam = new UserTenantDTO();
-			adam.id = idGen.next().toString();
-			adam.tenantId = idGen.next().toString();
+			adam.id = idGen.nextBigInt().toString();
+			adam.tenantId = idGen.nextBigInt().toString();
 			adam.name = 'One';
 			adam.age = 11;
 
@@ -444,8 +412,8 @@ describe('RepositoryBase-tenant', function() {
 		it('should execute on named connection(s) only', async () => {
 			// Arrange
 			let adam = new UserTenantDTO();
-			adam.id = idGen.next().toString();
-			adam.tenantId = idGen.next().toString();
+			adam.id = idGen.nextBigInt().toString();
+			adam.tenantId = idGen.nextBigInt().toString();
 			adam.name = 'One';
 			adam.age = 11;
 
@@ -488,12 +456,12 @@ describe('RepositoryBase-tenant', function() {
 			let modelOne = new UserTenantDTO(),
 				modelTwo = new UserTenantDTO();
 
-			modelOne.id = modelTwo.id = idGen.next().toString();
-			modelOne.tenantId = idGen.next().toString();
+			modelOne.id = modelTwo.id = idGen.nextBigInt().toString();
+			modelOne.tenantId = idGen.nextBigInt().toString();
 			modelOne.name = 'One';
 			modelOne.age = 11;
 
-			modelTwo.tenantId = idGen.next().toString();
+			modelTwo.tenantId = idGen.nextBigInt().toString();
 			modelTwo.name = 'Two';
 			modelTwo.age = 22;
 
@@ -537,8 +505,8 @@ describe('RepositoryBase-tenant', function() {
 		it('should insert a row to database without transaction', async () => {
 			// Arrange
 			let model = new UserTenantDTO(),
-				tenantId = idGen.next().toString();
-			model.id = idGen.next().toString();
+				tenantId = idGen.nextBigInt().toString();
+			model.id = idGen.nextBigInt().toString();
 			model.tenantId = tenantId;
 			model.name = 'Hiri';
 			model.age = 29;
@@ -556,8 +524,8 @@ describe('RepositoryBase-tenant', function() {
 		it('should throw error if not success on all connections', async () => {
 			// Arrange
 			let model = new UserTenantDTO(),
-				tenantId = idGen.next().toString();
-			model.id = idGen.next().toString();
+				tenantId = idGen.nextBigInt().toString();
+			model.id = idGen.nextBigInt().toString();
 			model.tenantId = tenantId;
 			model.name = 'Hiri';
 			model.age = 29;
@@ -623,7 +591,6 @@ describe('RepositoryBase-tenant', function() {
 			// Assert
 			expect(partial.id).to.equal(cachedDTO.id);
 			expect(partial.age).to.equal(newAge);
-			expect(partial['updatedAt']).to.exist;
 			expect(refetchedDTO).to.be.not.null;
 			expect(refetchedDTO.id).to.equal(cachedDTO.id);
 			expect(refetchedDTO.name).to.equal(cachedDTO.name);
@@ -670,7 +637,6 @@ describe('RepositoryBase-tenant', function() {
 			expect(modified).to.exist;
 			expect(modified.id).to.equal(cachedDTO.id);
 			expect(modified.name).to.equal(newName);
-			expect(modified['updatedAt']).to.exist;
 			expect(refetchedDTO).to.be.not.null;
 			expect(refetchedDTO.id).to.equal(cachedDTO.id);
 			expect(refetchedDTO.name).to.equal(newName);
@@ -700,17 +666,49 @@ describe('RepositoryBase-tenant', function() {
 
 	describe('delete (soft)', () => {
 		it('should return a possitive number and the record is still in database', async () => {
-			// Arrange
-			let model = new UserTenantDTO();
-			model.id = idGen.next().toString();
-			model.tenantId = idGen.next().toString();
-			model.name = 'Hiri';
-			model.age = 29;
-
-			cachedDTO = await usrRepo.create(model);
-
 			// Act
-			let affectedRows: number = await usrRepo.delete({
+			let affectedRows: number = await usrRepo.deleteSoft({
+					id: cachedDTO.id,
+					tenantId: cachedDTO.tenantId
+				}),
+				refetchedDTO: UserTenantDTO = await usrRepo.findByPk({
+					id: cachedDTO.id,
+					tenantId: cachedDTO.tenantId
+				});
+
+			// Assert
+			expect(affectedRows).to.equal(1);
+			// If `delete` is successful, we must be able to still find that entity with the id.
+			expect(refetchedDTO).to.exist;
+			expect(refetchedDTO.deletedAt).to.exist;
+		});
+
+		it('should return number of affected rows', async () => {
+			// Act
+			let affectedRows: number = await usrRepo.deleteSoft([{
+					id: cachedDTO.id,
+					tenantId: cachedDTO.tenantId
+				}, {
+					id: cachedDTO.id,
+					tenantId: IMPOSSIBLE_ID
+				}]),
+				refetchedDTO: UserTenantDTO = await usrRepo.findByPk({
+					id: cachedDTO.id,
+					tenantId: cachedDTO.tenantId
+				});
+
+			// Assert
+			expect(affectedRows).to.equal(1);
+			// If `delete` is successful, we must be able to still find that entity with the id.
+			expect(refetchedDTO).to.exist;
+			expect(refetchedDTO.deletedAt).to.exist;
+		});
+	}); // END describe 'delete (soft)'
+
+	describe('recover', () => {
+		it('should return a possitive number if success', async () => {
+			// Act
+			let affectedRows: number = await usrRepo.recover({
 					id: cachedDTO.id,
 					tenantId: cachedDTO.tenantId
 				}),
@@ -723,9 +721,20 @@ describe('RepositoryBase-tenant', function() {
 			expect(affectedRows).to.be.greaterThan(0);
 			// If `delete` is successful, we must be able to still find that entity with the id.
 			expect(refetchedDTO).to.exist;
-			expect(refetchedDTO.deletedAt).to.exist;
+			expect(refetchedDTO.deletedAt).to.be.null;
 		});
-	});
+		
+		it('should return 0 if no affected records', async () => {
+			// Act
+			let affectedRows: number = await usrRepo.recover({
+				id: cachedDTO.id,
+				tenantId: IMPOSSIBLE_ID
+			});
+
+			// Assert
+			expect(affectedRows).to.be.equal(0);
+		});
+	}); // END describe 'recover'
 
 	describe('delete (hard)', () => {
 		it('should return a possitive number if found', async () => {
@@ -761,7 +770,7 @@ describe('RepositoryBase-tenant', function() {
 			// If `delete` returns 0, but we actually find an entity with the id, then something is wrong.
 			expect(refetchedDTO).to.be.null;
 		});
-	}); // END describe 'delete'
+	}); // END describe 'delete (hard)'
 	
 	describe('page', () => {
 		it('Should return `null` if there is no records', async () => {
@@ -787,14 +796,14 @@ describe('RepositoryBase-tenant', function() {
 				SIZE = 10,
 				TOTAL = SIZE * 2;
 			let model: UserTenantDTO,
-				tenantId = idGen.next().toString();
+				tenantId = idGen.nextBigInt().toString();
 
 			// Deletes all from DB
 			await usrRepo.deleteAll();
 
 			for (let i = 0; i < TOTAL; i++) {
 				model = new UserTenantDTO();
-				model.id = idGen.next().toString();
+				model.id = idGen.nextBigInt().toString();
 				model.tenantId = tenantId;
 				model.name = 'Hiri' + i;
 				model.age = Math.ceil(29 * Math.random());

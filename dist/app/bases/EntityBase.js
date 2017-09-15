@@ -2,9 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const objection_1 = require("objection");
 const mapKeys = require('lodash/mapKeys');
-const memoize = require('lodash/memoize');
-const snakeCase = memoize(require('lodash/snakeCase'));
-const camelCase = memoize(require('lodash/camelCase'));
+const snakeCase = global['snakeCase'];
+const camelCase = global['camelCase'];
 class EntityBase extends objection_1.Model {
     constructor() {
         super(...arguments);
@@ -42,14 +41,18 @@ class EntityBase extends objection_1.Model {
     }
 }
 /**
- * Should be overiden (['id', 'tenant_id']) for composite PK.
+ * [ObjectionJS] Array of primary column names.
  */
 EntityBase.idColumn = ['id'];
+/**
+ * An array of non-primary unique column names.
+ */
+EntityBase.uniqColumn = [];
 /**
  * Same with `idColumn`, but transform snakeCase to camelCase.
  * Should be overiden (['id', 'tenantId']) for composite PK.
  */
-EntityBase.idProp = ['id'];
+EntityBase.idProp = EntityBase.idColumn.map(camelCase);
 exports.EntityBase = EntityBase;
 EntityBase.knex(null);
 
