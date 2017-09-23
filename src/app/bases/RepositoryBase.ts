@@ -2,7 +2,7 @@ const every = require('lodash/every');
 const isEmpty = require('lodash/isEmpty');
 import { QueryBuilder, QueryBuilderSingle } from 'objection';
 import * as moment from 'moment';
-import { injectable, Guard, MinorException } from 'back-lib-common-util';
+import { injectable, unmanaged, Guard, MinorException } from 'back-lib-common-util';
 import * as cc from 'back-lib-common-contracts';
 
 import { AtomicSessionFactory } from '../atom/AtomicSessionFactory';
@@ -37,7 +37,7 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 
 	protected _processor: BatchProcessor<TEntity, TModel, TPk, TUk>;
 
-	constructor(EntityClass, dbConnector: IDatabaseConnector, options: RepositoryBaseOptions<TEntity, TModel, TPk, TUk> = {}) {
+	constructor( @unmanaged() EntityClass, @unmanaged() dbConnector: IDatabaseConnector, @unmanaged() options: RepositoryBaseOptions<TEntity, TModel, TPk, TUk> = {}) {
 		Guard.assertArgDefined('EntityClass', EntityClass);
 		Guard.assertArgDefined('dbConnector', dbConnector);
 		let crud: any;
