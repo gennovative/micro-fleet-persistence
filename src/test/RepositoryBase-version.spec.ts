@@ -27,7 +27,7 @@ const CONN_FILE = `${process.cwd()}/database-adapter-test.sqlite`,
 const TYPE_USER_DTO = Symbol('UserVersionDTO'),
 	TYPE_USER_ENT = Symbol('UserVersionEntity');
 
-class UserVersionDTO implements IModelDTO {
+class UserVersionDTO implements IModelDTO, ISoftDeletable, IVersionControlled {
 
 	public static translator: ModelAutoMapper<UserVersionDTO> = new ModelAutoMapper(UserVersionDTO);
 
@@ -36,7 +36,8 @@ class UserVersionDTO implements IModelDTO {
 	public id: BigSInt = undefined;
 	public name: string = undefined;
 	public age: number = undefined;
-	public deletedAt: number = undefined;
+	public deletedAt: Date = undefined;
+	public createdAt: Date = undefined;
 	public version: number = undefined;
 	public isMain: boolean = undefined;
 }
@@ -58,7 +59,8 @@ class UserVersionEntity extends EntityBase {
 	// will disappear in transpiled code.
 	public name: string = undefined;
 	public age: number = undefined;
-	public deletedAt: number = undefined;
+	public deletedAt: string = undefined;
+	public createdAt: string = undefined;
 	public version: number = undefined;
 	public isMain: boolean = undefined;
 }
@@ -197,7 +199,7 @@ let cachedDTO: UserVersionDTO,
 
 // These test suites make real changes to SqlLite file or PostgreSQl server.
 describe.skip('RepositoryBase-version', function () {
-	this.timeout(10000);
+	this.timeout(50000);
 
 	beforeEach('Initialize db adapter', () => {
 		dbConnector = new KnexDatabaseConnector();

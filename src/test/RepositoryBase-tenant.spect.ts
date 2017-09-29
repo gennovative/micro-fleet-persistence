@@ -26,7 +26,7 @@ const CONN_FILE = `${process.cwd()}/database-adapter-test.sqlite`,
 const TYPE_USER_DTO = Symbol('UserDTO'),
 	TYPE_USER_ENT = Symbol('UserEntity');
 
-class UserTenantDTO implements IModelDTO {
+class UserTenantDTO implements IModelDTO, ISoftDeletable {
 
 	public static translator: ModelAutoMapper<UserTenantDTO> = new ModelAutoMapper(UserTenantDTO);
 
@@ -36,7 +36,7 @@ class UserTenantDTO implements IModelDTO {
 	public tenantId: BigSInt = undefined;
 	public name: string = undefined;
 	public age: number = undefined;
-	public deletedAt: number = undefined;
+	public deletedAt: Date = undefined;
 }
 
 
@@ -59,7 +59,7 @@ class UserTenantEntity extends EntityBase {
 	public tenantId: BigSInt = undefined;
 	public name: string = undefined;
 	public age: number = undefined;
-	public deletedAt: number = undefined;
+	public deletedAt: string = undefined;
 }
 
 class UserTenantRepo extends RepositoryBase<UserTenantEntity, UserTenantDTO, TenantPk> {
@@ -196,7 +196,7 @@ let cachedDTO: UserTenantDTO,
 
 // These test suites make real changes to SqlLite file or PostgreSQl server.
 describe('RepositoryBase-tenant', function() {
-	this.timeout(10000);
+	this.timeout(50000);
 	
 	beforeEach('Initialize db adapter', () => {
 		dbConnector = new KnexDatabaseConnector();
@@ -217,8 +217,6 @@ describe('RepositoryBase-tenant', function() {
 	});
 
 	describe('create with transaction', function () {
-		this.timeout(10000);
-
 		beforeEach(() => {
 			// Add second connection
 			let secondDb = Object.assign({}, DB_DETAILS);

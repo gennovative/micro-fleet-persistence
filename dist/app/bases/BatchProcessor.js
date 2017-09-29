@@ -9,6 +9,12 @@ class BatchProcessor {
         this._atomFac = new AtomicSessionFactory_1.AtomicSessionFactory(dbConnector);
     }
     /**
+     * Gets current date time in UTC.
+     */
+    get utcNow() {
+        return this._mono.utcNow;
+    }
+    /**
      * @see IRepository.countAll
      */
     countAll(opts = {}) {
@@ -126,13 +132,13 @@ class BatchProcessor {
     /**
      * @see MonoProcessor.toEntity
      */
-    toEntity(from, isPartial) {
+    toEntity(dto, isPartial) {
         return this._mono.toEntity.apply(this._mono, arguments);
     }
     /**
      * @see MonoProcessor.toDTO
      */
-    toDTO(from, isPartial) {
+    toDTO(entity, isPartial) {
         return this._mono.toDTO.apply(this._mono, arguments);
     }
     /**

@@ -55,7 +55,7 @@ export class KnexDatabaseConnector implements IDatabaseConnector {
 		});
 		this._knex = null;
 		this._connections = null;
-		return <any>destroyPromises;
+		return <any>Promise.all(destroyPromises);
 	}
 
 	/**

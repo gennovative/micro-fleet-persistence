@@ -30,6 +30,14 @@ export class BatchProcessor<TEntity extends EntityBase, TModel extends IModelDTO
 
 
 	/**
+	 * Gets current date time in UTC.
+	 */
+	public get utcNow(): moment.Moment {
+		return this._mono.utcNow;
+	}
+
+
+	/**
 	 * @see IRepository.countAll
 	 */
 	public countAll(opts: cc.RepositoryCountAllOptions = {}): Promise<number> {
@@ -167,14 +175,14 @@ export class BatchProcessor<TEntity extends EntityBase, TModel extends IModelDTO
 	/**
 	 * @see MonoProcessor.toEntity
 	 */
-	public toEntity(from: TModel | TModel[] | Partial<TModel>, isPartial: boolean): TEntity & TEntity[] {
+	public toEntity(dto: TModel | TModel[] | Partial<TModel>, isPartial: boolean): TEntity & TEntity[] {
 		return this._mono.toEntity.apply(this._mono, arguments);
 	}
 
 	/**
 	 * @see MonoProcessor.toDTO
 	 */
-	public toDTO(from: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel & TModel[] {
+	public toDTO(entity: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel & TModel[] {
 		return this._mono.toDTO.apply(this._mono, arguments);
 	}
 

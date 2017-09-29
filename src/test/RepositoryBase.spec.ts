@@ -25,7 +25,7 @@ const CONN_FILE = `${process.cwd()}/database-adapter-test.sqlite`,
 const TYPE_USER_DTO = Symbol('UserDTO'),
 	TYPE_USER_ENT = Symbol('UserEntity');
 
-class UserDTO implements IModelDTO {
+class UserDTO implements IModelDTO, ISoftDeletable, IAuditable {
 
 	public static translator: ModelAutoMapper<UserDTO> = new ModelAutoMapper(UserDTO);
 
@@ -34,7 +34,9 @@ class UserDTO implements IModelDTO {
 	public id: BigSInt = undefined;
 	public name: string = undefined;
 	public age: number = undefined;
-	public deletedAt: number = undefined;
+	public deletedAt: Date = undefined;
+	public createdAt: Date = undefined;
+	public updatedAt: Date = undefined;
 }
 
 
@@ -55,7 +57,9 @@ class UserEntity extends EntityBase {
 	// will disappear in transpiled code.
 	public name: string = undefined;
 	public age: number = undefined;
-	public deletedAt: number = undefined;
+	public deletedAt: string = undefined;
+	public createdAt: string = undefined;
+	public updatedAt: string = undefined;
 }
 
 type NameAgeUk = {
@@ -194,7 +198,7 @@ let cachedDTO: UserDTO,
 
 // These test suites make real changes to SqlLite file or PostgreSQl server.
 describe('RepositoryBase', function() {
-	this.timeout(10000);
+	this.timeout(50000);
 
 	beforeEach('Initialize db adapter', () => {
 		dbConnector = new KnexDatabaseConnector();
@@ -249,11 +253,15 @@ describe('RepositoryBase', function() {
 				expect(createdOne.id).to.be.equal(modelOne.id);
 				expect(createdOne.name).to.equal(modelOne.name);
 				expect(createdOne.age).to.equal(modelOne.age);
+				expect(createdOne.createdAt).to.be.instanceof(Date);
+				expect(createdOne.updatedAt).to.be.instanceof(Date);
 
 				expect(createdTwo).to.exist;
 				expect(createdTwo.id).to.be.equal(modelTwo.id);
 				expect(createdTwo.name).to.equal(modelTwo.name);
 				expect(createdTwo.age).to.equal(modelTwo.age);
+				expect(createdTwo.createdAt).to.be.instanceof(Date);
+				expect(createdTwo.updatedAt).to.be.instanceof(Date);
 
 				// Clean up
 				await Promise.all([
@@ -467,6 +475,8 @@ describe('RepositoryBase', function() {
 			expect(createdDTO.id).to.equal(model.id);
 			expect(createdDTO.name).to.equal(model.name);
 			expect(createdDTO.age).to.equal(model.age);
+			expect(createdDTO.createdAt).to.be.instanceof(Date);
+			expect(createdDTO.updatedAt).to.be.instanceof(Date);
 		});
 
 		it('should throw error if not success on all connections', async () => {
@@ -549,10 +559,12 @@ describe('RepositoryBase', function() {
 			// Assert
 			expect(partial.id).to.equal(cachedDTO.id);
 			expect(partial.age).to.equal(newAge);
+			expect(partial.updatedAt).to.be.instanceof(Date);
 			expect(refetchedDTO).to.be.not.null;
 			expect(refetchedDTO.id).to.equal(cachedDTO.id);
 			expect(refetchedDTO.name).to.equal(cachedDTO.name);
 			expect(refetchedDTO.age).to.equal(newAge);
+			expect(refetchedDTO.updatedAt).to.be.instanceof(Date);
 		});
 
 		it('should return `null` if not found', async () => {
@@ -585,10 +597,12 @@ describe('RepositoryBase', function() {
 			expect(modified).to.exist;
 			expect(modified.id).to.equal(cachedDTO.id);
 			expect(modified.name).to.equal(newName);
+			expect(modified.updatedAt).to.be.instanceof(Date);
 			expect(refetchedDTO).to.be.not.null;
 			expect(refetchedDTO.id).to.equal(cachedDTO.id);
 			expect(refetchedDTO.name).to.equal(newName);
 			expect(refetchedDTO.age).to.equal(cachedDTO.age);
+			expect(refetchedDTO.updatedAt).to.be.instanceof(Date);
 		});
 
 		it('should return `null` if not found', async () => {
@@ -620,6 +634,7 @@ describe('RepositoryBase', function() {
 			// If `delete` is successful, we must be able to still find that entity with the id.
 			expect(refetchedDTO).to.exist;
 			expect(refetchedDTO.deletedAt).to.exist;
+			expect(refetchedDTO.deletedAt).to.be.instanceOf(Date);
 		});
 
 		it('should return 0 if no affected records', async () => {

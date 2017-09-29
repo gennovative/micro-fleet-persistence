@@ -48,7 +48,7 @@ let KnexDatabaseConnector = class KnexDatabaseConnector {
         });
         this._knex = null;
         this._connections = null;
-        return destroyPromises;
+        return Promise.all(destroyPromises);
     }
     /**
      * @see IDatabaseConnector.prepare
