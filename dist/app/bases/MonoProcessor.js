@@ -59,6 +59,9 @@ class MonoProcessor {
      * @see IRepository.create
      */
     create(model, opts = {}) {
+        if (model.hasOwnProperty('createdAt')) {
+            model['createdAt'] = model['updatedAt'] = this.utcNow.toDate();
+        }
         let entity = this.toEntity(model, false);
         return this.executeCommand(query => query.insert(entity), opts.atomicSession)
             .then(() => model);
@@ -140,6 +143,11 @@ class MonoProcessor {
      */
     patch(model, opts = {}) {
         let entity = this.toEntity(model, true);
+        // We check property in "entity" because the "model" here is partial.
+        if (entity.hasOwnProperty('updatedAt')) {
+            model['updatedAt'] = this.utcNow.toDate();
+            entity['updatedAt'] = this.utcNow.format();
+        }
         return this.executeCommand(query => {
             // let q = this.buildPatch(entity, query, opts);
             let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
@@ -177,6 +185,9 @@ class MonoProcessor {
      * @see IRepository.update
      */
     update(model, opts = {}) {
+        if (model.hasOwnProperty('updatedAt')) {
+            model['updatedAt'] = this.utcNow.toDate();
+        }
         let entity = this.toEntity(model, false), affectedRows;
         return this.executeCommand(query => {
             // let q = this.buildUpdate(entity, query, opts);
@@ -224,21 +235,41 @@ class MonoProcessor {
     /**
      * Translates from DTO model(s) to entity model(s).
      */
-    toEntity(from, isPartial) {
-        if (isPartial) {
-            return this._EntityClass.translator.partial(from);
+    toEntity(dto, isPartial) {
+        if (!dto) {
+            return null;
         }
-        return this._EntityClass.translator.whole(from);
+        let entity;
+        if (isPartial) {
+            entity = this._EntityClass.translator.partial(dto);
+        }
+        entity = this._EntityClass.translator.whole(dto);
+        for (let prop of ['createdAt', 'updatedAt', 'deletedAt']) {
+            if (dto[prop]) {
+                entity[prop] = moment.utc(dto[prop]).format();
+            }
+        }
+        return entity;
     }
     /**
      * Translates from entity model(s) to DTO model(s).
      */
-    toDTO(from, isPartial) {
+    toDTO(entity, isPartial) {
+        if (!entity) {
+            return null;
+        }
+        let dto;
         if (isPartial) {
-            return this._EntityClass.translator.partial(from, { enableValidation: false });
+            dto = this._EntityClass.translator.partial(entity, { enableValidation: false });
         }
         // Disable validation because it's unnecessary.
-        return this._EntityClass.translator.whole(from, { enableValidation: false });
+        dto = this._EntityClass.translator.whole(entity, { enableValidation: false });
+        for (let prop of ['createdAt', 'updatedAt', 'deletedAt']) {
+            if (entity[prop]) {
+                dto[prop] = moment.utc(entity[prop]).toDate();
+            }
+        }
+        return dto;
     }
     /**
      * Maps from an array of columns to array of values.

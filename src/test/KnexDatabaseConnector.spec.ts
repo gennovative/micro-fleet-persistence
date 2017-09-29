@@ -24,7 +24,8 @@ class DummyEntity extends EntityBase {
 	}
 }
 
-describe('KnexDatabaseConnector', () => {
+describe('KnexDatabaseConnector', function () {
+	this.timeout(50000);
 
 	describe('addConnection', () => {
 		it('should configure connection with file name settings', async () => {

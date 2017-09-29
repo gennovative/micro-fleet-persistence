@@ -3,7 +3,7 @@ import { DbClient } from 'back-lib-common-constants';
 export default {
 	clientName: DbClient.POSTGRESQL,
 	host: {
-		address: 'firstidea.lan',
+		address: 'localhost',
 		user: 'postgres',
 		password: 'postgres',
 		database: 'unittestOne'

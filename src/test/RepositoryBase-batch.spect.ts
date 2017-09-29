@@ -25,7 +25,7 @@ const CONN_FILE = `${process.cwd()}/database-adapter-test.sqlite`,
 const TYPE_USER_DTO = Symbol('UserDTO'),
 	TYPE_USER_ENT = Symbol('UserEntity');
 
-class UserBatchDTO implements IModelDTO {
+class UserBatchDTO implements IModelDTO, ISoftDeletable {
 
 	public static translator: ModelAutoMapper<UserBatchDTO> = new ModelAutoMapper(UserBatchDTO);
 
@@ -34,7 +34,7 @@ class UserBatchDTO implements IModelDTO {
 	public id: BigSInt = undefined;
 	public name: string = undefined;
 	public age: number = undefined;
-	public deletedAt: number = undefined;
+	public deletedAt: Date = undefined;
 }
 
 
@@ -55,7 +55,7 @@ class UserBatchEntity extends EntityBase {
 	// will disappear in transpiled code.
 	public name: string = undefined;
 	public age: number = undefined;
-	public deletedAt: number = undefined;
+	public deletedAt: string = undefined;
 }
 
 class UserBatchRepo 
@@ -203,7 +203,7 @@ let cachedDTOs: UserBatchDTO[],
 
 // These test suites make real changes to SqlLite file or PostgreSQl server.
 describe('RepositoryBase-batch', function() {
-	this.timeout(10000);
+	this.timeout(50000);
 
 	beforeEach('Initialize db adapter', () => {
 		dbConnector = new KnexDatabaseConnector();

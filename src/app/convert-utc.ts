@@ -12,7 +12,11 @@ const TIMESTAMPTZ_OID = 1184, // Timestamp without timezone
  */
 /* istanbul ignore next */
 let parseFn = function(val) {
-	return val === null ? null : moment(val).toDate();
+	// Use this if you want Entity classes have Date OBJECT properties.
+	// return val === null ? null : moment(val).toDate();
+	
+	// Use this if you want Entity classes have Date STRING properties.
+	return val;
 };
 
 types.setTypeParser(TIMESTAMPTZ_OID, parseFn);

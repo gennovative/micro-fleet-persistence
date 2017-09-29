@@ -24,6 +24,10 @@ Provides base repository class and database connector that helps connect to data
 ## 2.1.0 (Coming soon)
 - **RepositoryBase** will supports version controlling.
 
+## 2.0.2
+- Set `utcNow` as public.
+- Handles `createdAt` and `updatedAt`.
+
 ## 2.0.1
 - Decorated **RepositoryBase** with @unmanaged annotation.
 

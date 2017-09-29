@@ -49,7 +49,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 	/**
 	 * Gets current date time in UTC.
 	 */
-	protected get utcNow(): moment.Moment {
+	public get utcNow(): moment.Moment {
 		return moment(new Date()).utc();
 	}
 
@@ -79,6 +79,9 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 	 * @see IRepository.create
 	 */
 	public create(model: TModel, opts: cc.RepositoryCreateOptions = {}): Promise<TModel & TModel[]> {
+		if (model.hasOwnProperty('createdAt')) {
+			model['createdAt'] = model['updatedAt'] = this.utcNow.toDate();
+		}
 		let entity = this.toEntity(model, false);
 
 		return this.executeCommand(query => query.insert(entity), opts.atomicSession)
@@ -180,6 +183,12 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 	public patch(model: Partial<TModel>, opts: cc.RepositoryPatchOptions = {}): Promise<Partial<TModel> & Partial<TModel>[]> {
 		let entity = this.toEntity(model, true);
 
+		// We check property in "entity" because the "model" here is partial.
+		if (entity.hasOwnProperty('updatedAt')) {
+			(<any>model)['updatedAt'] = this.utcNow.toDate();
+			entity['updatedAt'] = this.utcNow.format();
+		}
+
 		return this.executeCommand(
 			query => {
 				// let q = this.buildPatch(entity, query, opts);
@@ -221,8 +230,12 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 	 * @see IRepository.update
 	 */
 	public update(model: TModel, opts: cc.RepositoryUpdateOptions = {}): Promise<TModel> {
+		if (model.hasOwnProperty('updatedAt')) {
+			model['updatedAt'] = this.utcNow.toDate();
+		}
 		let entity = this.toEntity(model, false),
 			affectedRows: number;
+
 
 		return this.executeCommand(
 			query => {
@@ -277,22 +290,44 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 	/**
 	 * Translates from DTO model(s) to entity model(s).
 	 */
-	public toEntity(from: TModel | TModel[] | Partial<TModel>, isPartial: boolean): TEntity & TEntity[] {
+	public toEntity(dto: TModel | TModel[] | Partial<TModel>, isPartial: boolean): TEntity & TEntity[] {
+		if (!dto) { return null; }
+
+		let entity;
 		if (isPartial) {
-			return <any>this._EntityClass.translator.partial(from);
+			entity = this._EntityClass.translator.partial(dto);
 		}
-		return <any>this._EntityClass.translator.whole(from);
+		entity = this._EntityClass.translator.whole(dto);
+
+		for (let prop of ['createdAt', 'updatedAt', 'deletedAt']) {
+			if (dto[prop]) {
+				entity[prop] = moment.utc(dto[prop]).format();
+			}
+		}
+
+		return entity;
 	}
 
 	/**
 	 * Translates from entity model(s) to DTO model(s).
 	 */
-	public toDTO(from: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel & TModel[] {
+	public toDTO(entity: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel & TModel[] {
+		if (!entity) { return null; }
+
+		let dto;
 		if (isPartial) {
-			return <any>this._EntityClass.translator.partial(from, { enableValidation: false });
+			dto = this._EntityClass.translator.partial(entity, { enableValidation: false });
 		}
 		// Disable validation because it's unnecessary.
-		return <any>this._EntityClass.translator.whole(from, { enableValidation: false });
+		dto = this._EntityClass.translator.whole(entity, { enableValidation: false });
+
+		for (let prop of ['createdAt', 'updatedAt', 'deletedAt']) {
+			if (entity[prop]) {
+				dto[prop] = moment.utc(entity[prop]).toDate();
+			}
+		}
+
+		return dto;
 	}
 
 	/**

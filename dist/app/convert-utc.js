@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const pg_1 = require("pg");
-const moment = require("moment");
 // PostgreSQL data type OID
 const TIMESTAMPTZ_OID = 1184, // Timestamp without timezone
 TIMESTAMP_OID = 1114, // Timestamp with timezone
@@ -12,7 +11,10 @@ DATE_OID = 1082;
  */
 /* istanbul ignore next */
 let parseFn = function (val) {
-    return val === null ? null : moment(val).toDate();
+    // Use this if you want Entity classes have Date OBJECT properties.
+    // return val === null ? null : moment(val).toDate();
+    // Use this if you want Entity classes have Date STRING properties.
+    return val;
 };
 pg_1.types.setTypeParser(TIMESTAMPTZ_OID, parseFn);
 pg_1.types.setTypeParser(TIMESTAMP_OID, parseFn);

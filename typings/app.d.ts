@@ -259,7 +259,7 @@ declare module 'back-lib-persistence/dist/app/bases/MonoProcessor' {
 	    /**
 	     * Gets current date time in UTC.
 	     */
-	    protected readonly utcNow: moment.Moment;
+	    readonly utcNow: moment.Moment;
 	    /**
 	     * @see IRepository.countAll
 	     */
@@ -315,11 +315,11 @@ declare module 'back-lib-persistence/dist/app/bases/MonoProcessor' {
 	    /**
 	     * Translates from DTO model(s) to entity model(s).
 	     */
-	    toEntity(from: TModel | TModel[] | Partial<TModel>, isPartial: boolean): TEntity & TEntity[];
+	    toEntity(dto: TModel | TModel[] | Partial<TModel>, isPartial: boolean): TEntity & TEntity[];
 	    /**
 	     * Translates from entity model(s) to DTO model(s).
 	     */
-	    toDTO(from: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel & TModel[];
+	    toDTO(entity: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel & TModel[];
 	    /**
 	     * Maps from an array of columns to array of values.
 	     * @param pk Object to get values from
@@ -336,6 +336,7 @@ declare module 'back-lib-persistence/dist/app/bases/MonoProcessor' {
 
 }
 declare module 'back-lib-persistence/dist/app/bases/BatchProcessor' {
+	import * as moment from 'moment';
 	import * as cc from 'back-lib-common-contracts';
 	import { IDatabaseConnector, QueryCallback } from 'back-lib-persistence/dist/app/connector/IDatabaseConnector';
 	import { EntityBase } from 'back-lib-persistence/dist/app/bases/EntityBase';
@@ -347,6 +348,10 @@ declare module 'back-lib-persistence/dist/app/bases/BatchProcessor' {
 	     */
 	    ukCol: string[];
 	    	    constructor(_mono: MonoProcessor<TEntity, TModel, TPk, TUk>, dbConnector: IDatabaseConnector);
+	    /**
+	     * Gets current date time in UTC.
+	     */
+	    readonly utcNow: moment.Moment;
 	    /**
 	     * @see IRepository.countAll
 	     */
@@ -402,11 +407,11 @@ declare module 'back-lib-persistence/dist/app/bases/BatchProcessor' {
 	    /**
 	     * @see MonoProcessor.toEntity
 	     */
-	    toEntity(from: TModel | TModel[] | Partial<TModel>, isPartial: boolean): TEntity & TEntity[];
+	    toEntity(dto: TModel | TModel[] | Partial<TModel>, isPartial: boolean): TEntity & TEntity[];
 	    /**
 	     * @see MonoProcessor.toDTO
 	     */
-	    toDTO(from: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel & TModel[];
+	    toDTO(entity: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel & TModel[];
 	    /**
 	     * Maps from an array of columns to array of values.
 	     * @param pk Object to get values from
