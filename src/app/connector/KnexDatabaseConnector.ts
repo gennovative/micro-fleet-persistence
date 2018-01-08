@@ -3,7 +3,7 @@ import { Model, QueryBuilder, transaction } from 'objection';
 const isEmpty = require('lodash/isEmpty');
 
 import { injectable, Guard, MinorException } from 'back-lib-common-util';
-import { AtomicSession, IConnectionDetail } from 'back-lib-common-contracts';
+import { AtomicSession, IDbConnectionDetail } from 'back-lib-common-contracts';
 
 import { EntityBase } from '../bases/EntityBase';
 import { IDatabaseConnector, QueryCallback, KnexConnection } from './IDatabaseConnector';
@@ -33,7 +33,7 @@ export class KnexDatabaseConnector implements IDatabaseConnector {
 	/**
 	 * @see IDatabaseConnector.addConnection
 	 */
-	public addConnection(detail: IConnectionDetail, name?: string): void {
+	public addConnection(detail: IDbConnectionDetail, name?: string): void {
 		Guard.assertArgDefined('detail', detail);
 
 		let settings = {
@@ -70,7 +70,7 @@ export class KnexDatabaseConnector implements IDatabaseConnector {
 	}
 
 
-	private buildConnSettings(detail: IConnectionDetail): any {
+	private buildConnSettings(detail: IDbConnectionDetail): any {
 		// 1st priority: connect to a local file.
 		if (detail.filePath) {
 			return { filename: detail.filePath };

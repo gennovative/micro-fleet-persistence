@@ -1,7 +1,7 @@
 import * as knex from 'knex';
 import { QueryBuilder } from 'objection';
 import { DbClient } from 'back-lib-common-constants';
-import { AtomicSession, IConnectionDetail } from 'back-lib-common-contracts';
+import { AtomicSession, IDbConnectionDetail } from 'back-lib-common-contracts';
 
 import { EntityBase } from '../bases/EntityBase';
 
@@ -37,7 +37,7 @@ export interface IDatabaseConnector {
 	 * @param {string} name Optionally give a name to the connection, for later reference.
 	 * 	If not given, the position index of connection in the managed list will be assigned as name.
 	 */
-	addConnection(detail: IConnectionDetail, name?: string): void;
+	addConnection(detail: IDbConnectionDetail, name?: string): void;
 
 	/**
 	 * Closes all connections and destroys this connector.

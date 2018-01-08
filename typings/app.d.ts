@@ -28,7 +28,7 @@ declare module 'back-lib-persistence/dist/app/bases/EntityBase' {
 	    /**
 	     * This is called when an object is read from database.
 	     */
-	    $parseDatabaseJson(json: any): Object;
+	    $parseDatabaseJson(json: any): object;
 	}
 
 }
@@ -36,7 +36,7 @@ declare module 'back-lib-persistence/dist/app/connector/IDatabaseConnector' {
 	/// <reference types="knex" />
 	import * as knex from 'knex';
 	import { QueryBuilder } from 'objection';
-	import { AtomicSession, IConnectionDetail } from 'back-lib-common-contracts';
+	import { AtomicSession, IDbConnectionDetail } from 'back-lib-common-contracts';
 	import { EntityBase } from 'back-lib-persistence/dist/app/bases/EntityBase';
 	export interface KnexConnection extends knex {
 	    /**
@@ -66,7 +66,7 @@ declare module 'back-lib-persistence/dist/app/connector/IDatabaseConnector' {
 	     * @param {string} name Optionally give a name to the connection, for later reference.
 	     * 	If not given, the position index of connection in the managed list will be assigned as name.
 	     */
-	    addConnection(detail: IConnectionDetail, name?: string): void;
+	    addConnection(detail: IDbConnectionDetail, name?: string): void;
 	    /**
 	     * Closes all connections and destroys this connector.
 	     */
@@ -520,7 +520,7 @@ declare module 'back-lib-persistence/dist/app/bases/RepositoryBase' {
 
 }
 declare module 'back-lib-persistence/dist/app/connector/KnexDatabaseConnector' {
-	import { AtomicSession, IConnectionDetail } from 'back-lib-common-contracts';
+	import { AtomicSession, IDbConnectionDetail } from 'back-lib-common-contracts';
 	import { EntityBase } from 'back-lib-persistence/dist/app/bases/EntityBase';
 	import { IDatabaseConnector, QueryCallback, KnexConnection } from 'back-lib-persistence/dist/app/connector/IDatabaseConnector';
 	/**
@@ -535,7 +535,7 @@ declare module 'back-lib-persistence/dist/app/connector/KnexDatabaseConnector' {
 	    /**
 	     * @see IDatabaseConnector.addConnection
 	     */
-	    addConnection(detail: IConnectionDetail, name?: string): void;
+	    addConnection(detail: IDbConnectionDetail, name?: string): void;
 	    /**
 	     * @see IDatabaseConnector.dispose
 	     */

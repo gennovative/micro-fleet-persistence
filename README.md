@@ -24,6 +24,9 @@ Provides base repository class and database connector that helps connect to data
 ## 2.1.0 (Coming soon)
 - **RepositoryBase** will supports version controlling.
 
+## 2.0.3
+- Upgraded to `back-lib-common-contracts##1.2.0` and `back-lib-common-util#1.2.1`.
+
 ## 2.0.2
 - Set `utcNow` as public.
 - Handles `createdAt` and `updatedAt`.
