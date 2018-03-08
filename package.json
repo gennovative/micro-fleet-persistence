@@ -2,7 +2,7 @@
   "name": "back-lib-persistence",
   "description": "Provides base repository class and database connector that helps connect to database and map db tables to JS objects (ORM).",
   "private": true,
-  "version": "2.0.2",
+  "version": "2.0.3",
   "main": "./dist/app/index.js",
   "types": "./typings/app.d.ts",
   "engines": {
@@ -10,7 +10,7 @@
     "npm": "^4.6.1"
   },
   "dependencies": {
-    "back-lib-common-contracts": "git+ssh://git@bitbucket.org:firstinteractive/back-lib-common-contracts.git#1.1.0",
+    "back-lib-common-contracts": "git+ssh://git@bitbucket.org:firstinteractive/back-lib-common-contracts.git#1.2.1",
     "back-lib-common-util": "git+ssh://git@bitbucket.org:firstinteractive/back-lib-common-util.git#1.1.1",
     "knex": "^0.13.0",
     "lodash": "^4.17.4",

@@ -3,7 +3,7 @@ import * as spies from 'chai-spies';
 import * as _ from 'lodash';
 import { Model } from 'objection';
 import { DbClient, DbSettingKeys as S } from 'back-lib-common-constants';
-import { AtomicSession, IConfigurationProvider, IConnectionDetail } from 'back-lib-common-contracts';
+import { AtomicSession, IConfigurationProvider, IDbConnectionDetail } from 'back-lib-common-contracts';
 import { CriticalException } from 'back-lib-common-util';
 import { IDatabaseConnector, QueryCallback,
 	EntityBase, DatabaseAddOn } from '../app';
@@ -87,7 +87,7 @@ class MockDbConnector implements IDatabaseConnector {
 		return this._connections;
 	}
 
-	public addConnection(detail: IConnectionDetail, name?: string): void {
+	public addConnection(detail: IDbConnectionDetail, name?: string): void {
 		this._connections.push(detail);
 	}
 

@@ -1,5 +1,5 @@
 import { DbSettingKeys as S } from 'back-lib-common-constants';
-import { IConfigurationProvider, IConnectionDetail, Types as ConT } from 'back-lib-common-contracts';
+import { IConfigurationProvider, IDbConnectionDetail, Types as ConT } from 'back-lib-common-contracts';
 import { injectable, inject, Guard, CriticalException } from 'back-lib-common-util';
 
 import { IDatabaseConnector } from './connector/IDatabaseConnector';
@@ -60,9 +60,9 @@ export class DatabaseAddOn implements IServiceAddOn {
 		}
 	}
 
-	private buildConnDetails(connIdx: number): IConnectionDetail {
+	private buildConnDetails(connIdx: number): IDbConnectionDetail {
 		let provider = this._configProvider,
-			cnnDetail: IConnectionDetail = {
+			cnnDetail: IDbConnectionDetail = {
 				clientName: provider.get(S.DB_ENGINE + connIdx) // Must belong to `DbClient`
 			},
 			value: string;
