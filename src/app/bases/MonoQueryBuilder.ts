@@ -44,7 +44,11 @@ export class MonoQueryBuilder<TEntity extends EntityBase, TModel extends IModelD
 	}
 
 	public buildPage(pageIndex: number, pageSize: number, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: cc.RepositoryPageOptions): QueryBuilder<TEntity> {
-		let q = rawQuery.page(pageIndex, pageSize);
+		let q = rawQuery.page(pageIndex - 1, pageSize);
+		if (opts.sortBy) {
+			let direction = opts.sortType || 'asc';
+			q = q.orderBy(opts.sortBy, direction);
+		}
 		return (opts.includeDeleted) ? q : q.whereNull('deleted_at');
 	}
 
