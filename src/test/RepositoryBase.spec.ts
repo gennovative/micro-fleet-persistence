@@ -1,4 +1,5 @@
 import { expect } from 'chai';
+import { QueryBuilder } from 'objection';
 
 import { DbClient } from 'back-lib-common-constants';
 import { InvalidArgumentException, MinorException } from 'back-lib-common-util';
@@ -172,7 +173,7 @@ class UserRepo extends RepositoryBase<UserEntity, UserDTO, BigSInt, NameAgeUk> {
 	}
 
 	public async findOnSecondConn(id: BigSInt): Promise<UserDTO> {
-		let foundEnt: UserEntity = await this._processor.executeQuery(query => {
+		let foundEnt: UserEntity = await this._processor.executeQuery((query: QueryBuilder<UserEntity>) => {
 				return query.findById(id);
 			}, null, 'sec'); // Executing on second connection (named 'sec').
 
