@@ -32,7 +32,7 @@ let RepositoryBase = class RepositoryBase {
         back_lib_common_util_1.Guard.assertArgDefined('dbConnector', dbConnector);
         let crud;
         if (options.isVersionControlled) {
-            // TODO: Should let `VersionControlledProcessor` acceps `MonoProcessor` as argument.
+            // TODO: Should let `VersionControlledProcessor` accepts `MonoProcessor` as argument.
             crud = options.versionProcessor || new VersionControlledProcessor_1.VersionControlledProcessor(EntityClass, dbConnector, options);
         }
         else {

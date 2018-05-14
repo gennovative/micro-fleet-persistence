@@ -42,7 +42,7 @@ export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends 
 		Guard.assertArgDefined('dbConnector', dbConnector);
 		let crud: any;
 		if (options.isVersionControlled) {
-			// TODO: Should let `VersionControlledProcessor` acceps `MonoProcessor` as argument.
+			// TODO: Should let `VersionControlledProcessor` accepts `MonoProcessor` as argument.
 			crud = options.versionProcessor || new VersionControlledProcessor<TEntity, TModel, TPk, TUk>(EntityClass, dbConnector, options);
 		} else {
 			crud = options.monoProcessor || new MonoProcessor<TEntity, TModel, TPk, TUk>(EntityClass, dbConnector, options);

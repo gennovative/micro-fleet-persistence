@@ -33,7 +33,7 @@ class MonoQueryBuilder {
         return rawQuery.findById(pk);
     }
     buildPage(pageIndex, pageSize, prevQuery, rawQuery, opts) {
-        let q = rawQuery.page(pageIndex - 1, pageSize);
+        let q = rawQuery.page(pageIndex, pageSize);
         if (opts.sortBy) {
             let direction = opts.sortType || 'asc';
             q = q.orderBy(opts.sortBy, direction);

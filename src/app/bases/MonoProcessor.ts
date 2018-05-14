@@ -64,7 +64,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 				let q = this._queryBuilders.reduce<QueryBuilder<TEntity>>((prevQuery, currBuilder) => {
 					return currBuilder.buildCountAll(prevQuery, query.clone(), opts); 
 				}, null);
-				console.log('COUNT ALL:', q.toSql());
+				// console.log('COUNT ALL:', q.toSql());
 				return q;
 			},
 			opts.atomicSession
@@ -105,7 +105,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 				let q = this._queryBuilders.reduce<QueryBuilderSingle<number>>((prevQuery: any, currBuilder) => {
 					return currBuilder.buildDeleteHard(pk, prevQuery, query.clone());
 				}, null);
-				console.log('HARD DELETE (${pk}):', q.toSql());
+				// console.log('HARD DELETE (${pk}):', q.toSql());
 				return q;
 			},
 			opts.atomicSession
@@ -122,7 +122,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 				let q = this._queryBuilders.reduce<QueryBuilder<TEntity>>((prevQuery, currBuilder) => {
 					return currBuilder.buildExists(this.toArr(props, this.ukCol), prevQuery, query.clone(), opts);
 				}, null);
-				console.log('EXIST: ', q.toSql());
+				// console.log('EXIST: ', q.toSql());
 				return q;
 			},
 			opts.atomicSession
@@ -141,7 +141,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 				let q = this._queryBuilders.reduce<QueryBuilder<TEntity>>((prevQuery, currBuilder) => {
 					return currBuilder.buildFind(pk, prevQuery, query.clone(), opts);
 				}, null);
-				console.log('FIND BY (%s):', pk, q.toSql());
+				// console.log('FIND BY (%s):', pk, q.toSql());
 				return q;
 			},
 			opts.atomicSession)
@@ -164,7 +164,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 				let q = this._queryBuilders.reduce<QueryBuilder<TEntity>>((prevQuery, currBuilder) => {
 					return currBuilder.buildPage(pageIndex, pageSize, prevQuery, query.clone(), opts);
 				}, null);
-				console.log('PAGE:', q.toSql());
+				// console.log('PAGE:', q.toSql());
 				return q;
 			},
 			opts.atomicSession
@@ -195,7 +195,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 				let q = this._queryBuilders.reduce<QueryBuilder<number>>((prevQuery: any, currBuilder) => {
 					return currBuilder.buildPatch(entity, prevQuery, query.clone(), opts);
 				}, null);
-				console.log('PATCH (%s):', entity, q.toSql());
+				// console.log('PATCH (%s):', entity, q.toSql());
 				return q;
 			},
 			opts.atomicSession)
@@ -243,7 +243,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 				let q = this._queryBuilders.reduce<QueryBuilder<number>>((prevQuery: any, currBuilder) => {
 					return currBuilder.buildUpdate(entity, prevQuery, query.clone(), opts);
 				}, null);
-				console.log('UPDATE (%s): ', entity, q.toSql());
+				// console.log('UPDATE (%s): ', entity, q.toSql());
 				return q;
 			}, opts.atomicSession)
 			// `query.update` returns number of affected rows, but we want to return the updated model.
@@ -370,7 +370,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 				let q = this._queryBuilders.reduce<QueryBuilder<number>>((prevQuery: any, currBuilder) => {
 					return currBuilder.buildPatch(delta, prevQuery, query.clone(), opts);
 				}, null);
-				console.log('DEL STATE (%s):', isDel, q.toSql());
+				// console.log('DEL STATE (%s):', isDel, q.toSql());
 				return q;
 			},
 			opts.atomicSession);
