@@ -10,8 +10,8 @@
     "npm": "^4.6.1"
   },
   "dependencies": {
-    "back-lib-common-contracts": "git+ssh://git@bitbucket.org:firstinteractive/back-lib-common-contracts.git#1.2.0",
-    "back-lib-common-util": "git+ssh://git@bitbucket.org:firstinteractive/back-lib-common-util.git#1.2.1",
+    "back-lib-common-contracts": "git+ssh://git@bitbucket.org:firstinteractive/back-lib-common-contracts.git#1.2.1",
+    "back-lib-common-util": "git+ssh://git@bitbucket.org:firstinteractive/back-lib-common-util.git#1.1.1",
     "knex": "^0.13.0",
     "lodash": "^4.17.4",
     "moment": "^2.18.1",

@@ -34,6 +34,10 @@ class MonoQueryBuilder {
     }
     buildPage(pageIndex, pageSize, prevQuery, rawQuery, opts) {
         let q = rawQuery.page(pageIndex, pageSize);
+        if (opts.sortBy) {
+            let direction = opts.sortType || 'asc';
+            q = q.orderBy(opts.sortBy, direction);
+        }
         return (opts.includeDeleted) ? q : q.whereNull('deleted_at');
     }
     buildPatch(entity, prevQuery, rawQuery, opts) {

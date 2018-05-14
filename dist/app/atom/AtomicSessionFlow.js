@@ -153,6 +153,7 @@ class AtomicSessionFlow {
             this.loop(prev);
         })
             .catch(err => this.rejectAllTransactions(err))
+            // This catches both promise errors and AtomicSessionFlow's errors.
             .catch(this._abortFn);
     }
     resolveAllTransactions(outputs) {
