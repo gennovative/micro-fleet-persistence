@@ -1,9 +1,13 @@
+/// <reference types="debug" />
+
 const every = require('lodash/every');
 const isEmpty = require('lodash/isEmpty');
+const debug: debug.IDebugger = require('debug')('MonoProcessor');
+
 import { QueryBuilder, QueryBuilderSingle } from 'objection';
 import * as moment from 'moment';
-import { MinorException } from 'back-lib-common-util';
-import * as cc from 'back-lib-common-contracts';
+import { MinorException } from '@micro-fleet/common-util';
+import * as cc from '@micro-fleet/common-contracts';
 
 import { AtomicSessionFactory } from '../atom/AtomicSessionFactory';
 import { IDatabaseConnector, QueryCallback } from '../connector/IDatabaseConnector';
@@ -23,7 +27,7 @@ export interface ProcessorOptions {
 	triggerProps?: string[];
 }
 
-export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO, TPk extends PkType = BigSInt, TUk = NameUk> {
+export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO, TPk extends PkType = BigInt, TUk = NameUk> {
 
 	/**
 	 * Gets array of non-primary unique property(ies).
@@ -64,7 +68,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 				let q = this._queryBuilders.reduce<QueryBuilder<TEntity>>((prevQuery, currBuilder) => {
 					return currBuilder.buildCountAll(prevQuery, query.clone(), opts); 
 				}, null);
-				// console.log('COUNT ALL:', q.toSql());
+				debug('COUNT ALL: %s', q.toSql());
 				return q;
 			},
 			opts.atomicSession
@@ -84,7 +88,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 		}
 		let entity = this.toEntity(model, false);
 
-		return this.executeCommand(query => query.insert(entity), opts.atomicSession)
+		return this.executeQuery(query => query.insert(entity), opts.atomicSession)
 			.then(() => <any>model);
 	}
 
@@ -99,13 +103,13 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 	 * @see IRepository.deleteHard
 	 */
 	public deleteHard(pk: TPk, opts: cc.RepositoryDeleteOptions = {}): Promise<number> {
-		return this.executeCommand(
+		return this.executeQuery(
 			query => {
 				// let q = this.buildDeleteHard(pk, query);
 				let q = this._queryBuilders.reduce<QueryBuilderSingle<number>>((prevQuery: any, currBuilder) => {
 					return currBuilder.buildDeleteHard(pk, prevQuery, query.clone());
 				}, null);
-				// console.log('HARD DELETE (${pk}):', q.toSql());
+				debug('HARD DELETE: %s', q.toSql());
 				return q;
 			},
 			opts.atomicSession
@@ -122,7 +126,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 				let q = this._queryBuilders.reduce<QueryBuilder<TEntity>>((prevQuery, currBuilder) => {
 					return currBuilder.buildExists(this.toArr(props, this.ukCol), prevQuery, query.clone(), opts);
 				}, null);
-				// console.log('EXIST: ', q.toSql());
+				debug('EXIST: %s', q.toSql());
 				return q;
 			},
 			opts.atomicSession
@@ -141,7 +145,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 				let q = this._queryBuilders.reduce<QueryBuilder<TEntity>>((prevQuery, currBuilder) => {
 					return currBuilder.buildFind(pk, prevQuery, query.clone(), opts);
 				}, null);
-				// console.log('FIND BY (%s):', pk, q.toSql());
+				debug('FIND BY (%s): %s', pk, q.toSql());
 				return q;
 			},
 			opts.atomicSession)
@@ -164,7 +168,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 				let q = this._queryBuilders.reduce<QueryBuilder<TEntity>>((prevQuery, currBuilder) => {
 					return currBuilder.buildPage(pageIndex, pageSize, prevQuery, query.clone(), opts);
 				}, null);
-				// console.log('PAGE:', q.toSql());
+				debug('PAGE: %s', q.toSql());
 				return q;
 			},
 			opts.atomicSession
@@ -189,13 +193,13 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 			entity['updatedAt'] = this.utcNow.format();
 		}
 
-		return this.executeCommand(
+		return this.executeQuery(
 			query => {
 				// let q = this.buildPatch(entity, query, opts);
 				let q = this._queryBuilders.reduce<QueryBuilder<number>>((prevQuery: any, currBuilder) => {
 					return currBuilder.buildPatch(entity, prevQuery, query.clone(), opts);
 				}, null);
-				// console.log('PATCH (%s):', entity, q.toSql());
+				debug('PATCH (%o): %s', entity, q.toSql());
 				return q;
 			},
 			opts.atomicSession)
@@ -237,13 +241,13 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 			affectedRows: number;
 
 
-		return this.executeCommand(
+		return this.executeQuery(
 			query => {
 				// let q = this.buildUpdate(entity, query, opts);
 				let q = this._queryBuilders.reduce<QueryBuilder<number>>((prevQuery: any, currBuilder) => {
 					return currBuilder.buildUpdate(entity, prevQuery, query.clone(), opts);
 				}, null);
-				// console.log('UPDATE (%s): ', entity, q.toSql());
+				debug('UPDATE (%o): %s', entity, q.toSql());
 				return q;
 			}, opts.atomicSession)
 			// `query.update` returns number of affected rows, but we want to return the updated model.
@@ -251,40 +255,10 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 	}
 
 	/**
-	 * Executing an query that does something and doesn't expect return value.
-	 * This kind of query is executed on all added connections.
-	 * @return A promise that resolve to affected rows.
-	 * @throws {[errorMsg, affectedRows]} When not all connections have same affected rows.
+	 * Executing an query
 	 */
-	public executeCommand(callback: QueryCallback<TEntity>, atomicSession: cc.AtomicSession = null, ...names: string[]): Promise<any> {
-		let queryJobs = this.prepare(callback, atomicSession, ...names),
-			// Create exception here to have full error stack
-			exception = new MinorException('NOT_SUCCESSFUL_ON_ALL_CONNECTIONS');
-
-		if (atomicSession) {
-			return <any>queryJobs[0];
-		}
-
-		return <any>Promise.all(queryJobs)
-			.then((affectedRows: number[]) => {
-				// If there is no affected rows, or if not all connections have same affected rows.
-				/* istanbul ignore next */
-				if (isEmpty(affectedRows) || !every(affectedRows, r => r == affectedRows[0])) {
-					return <any>Promise.reject(exception);
-				}
-				// If all connections have same affected rows, it means the execution was successful.
-				return affectedRows[0];
-			});
-	}
-
-	/**
-	 * Executing an query that has returned value.
-	 * This kind of query is executed on the primary (first) connection.
-	 */
-	public executeQuery(callback: QueryCallback<TEntity>, atomicSession?: cc.AtomicSession, name: string = '0'): Promise<any> {
-		let queryJobs = this.prepare(callback, atomicSession, name);
-		// Get value from first connection
-		return queryJobs[0];
+	public executeQuery(callback: QueryCallback<TEntity>, atomicSession?: cc.AtomicSession): Promise<any> {
+		return this.prepare(callback, atomicSession);
 	}
 
 	/**
@@ -343,8 +317,8 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 	/**
 	 * @see IDatabaseConnector.query
 	 */
-	protected prepare(callback: QueryCallback<TEntity>, atomicSession?: cc.AtomicSession, ...names: string[]): Promise<any>[] {
-		return this._dbConnector.prepare(this._EntityClass, <any>callback, atomicSession, ...names);
+	protected prepare(callback: QueryCallback<TEntity>, atomicSession?: cc.AtomicSession): Promise<any> {
+		return this._dbConnector.prepare(this._EntityClass, <any>callback, atomicSession);
 	}
 
 	protected buildDeleteState(pk: TPk, isDel: boolean): any {
@@ -364,13 +338,13 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 	protected setDeleteState(pk: TPk, isDel: boolean, opts: cc.RepositoryDeleteOptions = {}): Promise<number> {
 		let delta = this.buildDeleteState(pk, isDel);
 
-		return this.executeCommand(
+		return this.executeQuery(
 			query => {
 				// let q = this.buildPatch(delta, query, opts);
 				let q = this._queryBuilders.reduce<QueryBuilder<number>>((prevQuery: any, currBuilder) => {
 					return currBuilder.buildPatch(delta, prevQuery, query.clone(), opts);
 				}, null);
-				// console.log('DEL STATE (%s):', isDel, q.toSql());
+				debug('DEL STATE (%s): %s', isDel, q.toSql());
 				return q;
 			},
 			opts.atomicSession);

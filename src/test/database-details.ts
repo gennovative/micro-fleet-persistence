@@ -1,4 +1,6 @@
-import { DbClient } from 'back-lib-common-constants';
+import { constants } from '@micro-fleet/common-contracts';
+const { DbClient } = constants;
+
 
 export default {
 	clientName: DbClient.POSTGRESQL,
@@ -6,6 +8,6 @@ export default {
 		address: 'localhost',
 		user: 'postgres',
 		password: 'postgres',
-		database: 'unittestOne'
+		database: 'unittest-persistence'
 	}
 };

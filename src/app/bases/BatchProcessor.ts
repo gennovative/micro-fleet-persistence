@@ -2,8 +2,8 @@ const every = require('lodash/every');
 const isEmpty = require('lodash/isEmpty');
 import { QueryBuilder, QueryBuilderSingle } from 'objection';
 import * as moment from 'moment';
-import { injectable, Guard, MinorException } from 'back-lib-common-util';
-import * as cc from 'back-lib-common-contracts';
+import { injectable, Guard, MinorException } from '@micro-fleet/common-util';
+import * as cc from '@micro-fleet/common-contracts';
 
 import { AtomicSessionFactory } from '../atom/AtomicSessionFactory';
 import { IDatabaseConnector, QueryCallback } from '../connector/IDatabaseConnector';
@@ -11,7 +11,7 @@ import { EntityBase } from './EntityBase';
 import { MonoProcessor } from './MonoProcessor';
 
 
-export class BatchProcessor<TEntity extends EntityBase, TModel extends IModelDTO, TPk extends PkType = BigSInt, TUk = NameUk> {
+export class BatchProcessor<TEntity extends EntityBase, TModel extends IModelDTO, TPk extends PkType = BigInt, TUk = NameUk> {
 
 	/**
 	 * Gets array of non-primary unique property(ies).
@@ -138,13 +138,6 @@ export class BatchProcessor<TEntity extends EntityBase, TModel extends IModelDTO
 			return this.execBatch(model, this.update, opts);
 		}
 		return <any>this._mono.update(model, opts);
-	}
-
-	/**
-	 * @see MonoProcessor.executeCommand
-	 */
-	public executeCommand(callback: QueryCallback<TEntity>, atomicSession: cc.AtomicSession = null, ...names: string[]): Promise<any> {
-		return this._mono.executeCommand.apply(this._mono, arguments);
 	}
 
 	/**

@@ -106,12 +106,6 @@ class BatchProcessor {
         return this._mono.update(model, opts);
     }
     /**
-     * @see MonoProcessor.executeCommand
-     */
-    executeCommand(callback, atomicSession = null, ...names) {
-        return this._mono.executeCommand.apply(this._mono, arguments);
-    }
-    /**
      * @see MonoProcessor.executeQuery
      */
     executeQuery(callback, atomicSession, name = '0') {

@@ -41,7 +41,7 @@ class MonoQueryBuilder {
         return (opts.includeDeleted) ? q : q.whereNull('deleted_at');
     }
     buildPatch(entity, prevQuery, rawQuery, opts) {
-        return rawQuery.patch(entity).where('id', entity.id);
+        return rawQuery.patch(entity).where('id', entity['id']);
     }
     buildRecoverOpts(pk, prevOpts, rawOpts) {
         return {
@@ -49,7 +49,7 @@ class MonoQueryBuilder {
         };
     }
     buildUpdate(entity, prevQuery, rawQuery, opts) {
-        return rawQuery.update(entity).where('id', entity.id);
+        return rawQuery.update(entity).where('id', entity['id']);
     }
 }
 exports.MonoQueryBuilder = MonoQueryBuilder;

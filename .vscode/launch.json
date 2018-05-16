@@ -4,6 +4,7 @@
 	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
 	"version": "0.2.0",
 	"configurations": [
+
 		{
 			"type": "node",
 			"request": "launch",
@@ -30,6 +31,19 @@
 			"cwd": "${workspaceRoot}",
 			"outFiles": [],
 			"sourceMaps": true
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Knex Migration",
+			"program": "${workspaceRoot}/node_modules/knex/bin/cli.js",
+			"cwd": "${workspaceRoot}/restore-db",
+			"args": [
+				"migrate:latest"
+			],
+			// Automatically stop program after launch.
+			"stopOnEntry": false,
+			"outFiles": []
 		},
 		{
 			"type": "node",

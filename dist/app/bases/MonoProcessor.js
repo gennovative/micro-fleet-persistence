@@ -1,4 +1,5 @@
 "use strict";
+/// <reference types="debug" />
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -10,9 +11,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const every = require('lodash/every');
 const isEmpty = require('lodash/isEmpty');
+const debug = require('debug')('MonoProcessor');
 const moment = require("moment");
-const back_lib_common_util_1 = require("back-lib-common-util");
-const cc = require("back-lib-common-contracts");
+const common_util_1 = require("@micro-fleet/common-util");
+const cc = require("@micro-fleet/common-contracts");
 const MonoQueryBuilder_1 = require("./MonoQueryBuilder");
 const TenantQueryBuilder_1 = require("./TenantQueryBuilder");
 class MonoProcessor {
@@ -47,7 +49,7 @@ class MonoProcessor {
                 let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
                     return currBuilder.buildCountAll(prevQuery, query.clone(), opts);
                 }, null);
-                // console.log('COUNT ALL:', q.toSql());
+                debug('COUNT ALL: %s', q.toSql());
                 return q;
             }, opts.atomicSession);
             // In case with Postgres, `count` returns a bigint type which will be a String 
@@ -63,7 +65,7 @@ class MonoProcessor {
             model['createdAt'] = model['updatedAt'] = this.utcNow.toDate();
         }
         let entity = this.toEntity(model, false);
-        return this.executeCommand(query => query.insert(entity), opts.atomicSession)
+        return this.executeQuery(query => query.insert(entity), opts.atomicSession)
             .then(() => model);
     }
     /**
@@ -76,12 +78,12 @@ class MonoProcessor {
      * @see IRepository.deleteHard
      */
     deleteHard(pk, opts = {}) {
-        return this.executeCommand(query => {
+        return this.executeQuery(query => {
             // let q = this.buildDeleteHard(pk, query);
             let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
                 return currBuilder.buildDeleteHard(pk, prevQuery, query.clone());
             }, null);
-            // console.log('HARD DELETE (${pk}):', q.toSql());
+            debug('HARD DELETE: %s', q.toSql());
             return q;
         }, opts.atomicSession);
     }
@@ -95,7 +97,7 @@ class MonoProcessor {
                 let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
                     return currBuilder.buildExists(this.toArr(props, this.ukCol), prevQuery, query.clone(), opts);
                 }, null);
-                // console.log('EXIST: ', q.toSql());
+                debug('EXIST: %s', q.toSql());
                 return q;
             }, opts.atomicSession);
             return result[0]['total'] != 0;
@@ -110,7 +112,7 @@ class MonoProcessor {
             let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
                 return currBuilder.buildFind(pk, prevQuery, query.clone(), opts);
             }, null);
-            // console.log('FIND BY (%s):', pk, q.toSql());
+            debug('FIND BY (%s): %s', pk, q.toSql());
             return q;
         }, opts.atomicSession)
             .then(foundEnt => {
@@ -128,7 +130,7 @@ class MonoProcessor {
                 let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
                     return currBuilder.buildPage(pageIndex, pageSize, prevQuery, query.clone(), opts);
                 }, null);
-                // console.log('PAGE:', q.toSql());
+                debug('PAGE: %s', q.toSql());
                 return q;
             }, opts.atomicSession);
             if (!foundList || isEmpty(foundList.results)) {
@@ -148,12 +150,12 @@ class MonoProcessor {
             model['updatedAt'] = this.utcNow.toDate();
             entity['updatedAt'] = this.utcNow.format();
         }
-        return this.executeCommand(query => {
+        return this.executeQuery(query => {
             // let q = this.buildPatch(entity, query, opts);
             let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
                 return currBuilder.buildPatch(entity, prevQuery, query.clone(), opts);
             }, null);
-            // console.log('PATCH (%s):', entity, q.toSql());
+            debug('PATCH (%o): %s', entity, q.toSql());
             return q;
         }, opts.atomicSession)
             // `query.patch` returns number of affected rows, but we want to return the updated model.
@@ -177,7 +179,7 @@ class MonoProcessor {
             // If another ACTIVE record with same unique keys exists
             options.includeDeleted = false;
             if (yield this.exists(model, options)) {
-                throw new back_lib_common_util_1.MinorException('DUPLICATE_UNIQUE_KEY');
+                throw new common_util_1.MinorException('DUPLICATE_UNIQUE_KEY');
             }
             return this.setDeleteState(pk, false, opts);
         });
@@ -190,49 +192,22 @@ class MonoProcessor {
             model['updatedAt'] = this.utcNow.toDate();
         }
         let entity = this.toEntity(model, false), affectedRows;
-        return this.executeCommand(query => {
+        return this.executeQuery(query => {
             // let q = this.buildUpdate(entity, query, opts);
             let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
                 return currBuilder.buildUpdate(entity, prevQuery, query.clone(), opts);
             }, null);
-            // console.log('UPDATE (%s): ', entity, q.toSql());
+            debug('UPDATE (%o): %s', entity, q.toSql());
             return q;
         }, opts.atomicSession)
             // `query.update` returns number of affected rows, but we want to return the updated model.
             .then(count => count ? model : null);
     }
     /**
-     * Executing an query that does something and doesn't expect return value.
-     * This kind of query is executed on all added connections.
-     * @return A promise that resolve to affected rows.
-     * @throws {[errorMsg, affectedRows]} When not all connections have same affected rows.
+     * Executing an query
      */
-    executeCommand(callback, atomicSession = null, ...names) {
-        let queryJobs = this.prepare(callback, atomicSession, ...names), 
-        // Create exception here to have full error stack
-        exception = new back_lib_common_util_1.MinorException('NOT_SUCCESSFUL_ON_ALL_CONNECTIONS');
-        if (atomicSession) {
-            return queryJobs[0];
-        }
-        return Promise.all(queryJobs)
-            .then((affectedRows) => {
-            // If there is no affected rows, or if not all connections have same affected rows.
-            /* istanbul ignore next */
-            if (isEmpty(affectedRows) || !every(affectedRows, r => r == affectedRows[0])) {
-                return Promise.reject(exception);
-            }
-            // If all connections have same affected rows, it means the execution was successful.
-            return affectedRows[0];
-        });
-    }
-    /**
-     * Executing an query that has returned value.
-     * This kind of query is executed on the primary (first) connection.
-     */
-    executeQuery(callback, atomicSession, name = '0') {
-        let queryJobs = this.prepare(callback, atomicSession, name);
-        // Get value from first connection
-        return queryJobs[0];
+    executeQuery(callback, atomicSession) {
+        return this.prepare(callback, atomicSession);
     }
     /**
      * Translates from DTO model(s) to entity model(s).
@@ -284,8 +259,8 @@ class MonoProcessor {
     /**
      * @see IDatabaseConnector.query
      */
-    prepare(callback, atomicSession, ...names) {
-        return this._dbConnector.prepare(this._EntityClass, callback, atomicSession, ...names);
+    prepare(callback, atomicSession) {
+        return this._dbConnector.prepare(this._EntityClass, callback, atomicSession);
     }
     buildDeleteState(pk, isDel) {
         let delta, deletedAt = (isDel ? this.utcNow.format() : null);
@@ -301,12 +276,12 @@ class MonoProcessor {
     }
     setDeleteState(pk, isDel, opts = {}) {
         let delta = this.buildDeleteState(pk, isDel);
-        return this.executeCommand(query => {
+        return this.executeQuery(query => {
             // let q = this.buildPatch(delta, query, opts);
             let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
                 return currBuilder.buildPatch(delta, prevQuery, query.clone(), opts);
             }, null);
-            // console.log('DEL STATE (%s):', isDel, q.toSql());
+            debug('DEL STATE (%s): %s', isDel, q.toSql());
             return q;
         }, opts.atomicSession);
     }

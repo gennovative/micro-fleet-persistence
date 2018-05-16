@@ -1,14 +1,15 @@
 import * as chai from 'chai';
 import * as spies from 'chai-spies';
 import * as _ from 'lodash';
-import { DbClient } from 'back-lib-common-constants';
-import { MinorException } from 'back-lib-common-util';
+import { constants } from '@micro-fleet/common-contracts';
+import { MinorException } from '@micro-fleet/common-util';
 
 import { KnexDatabaseConnector, EntityBase } from '../app';
 import DB_DETAILS from './database-details';
 
 chai.use(spies);
 
+const { DbClient } = constants;
 const expect = chai.expect,
 	CONN_FILE = `${process.cwd()}/database-adapter-test.sqlite`,
 	CONN_STRING = 'msql://localhost@user:pass',
@@ -47,7 +48,7 @@ describe('KnexDatabaseConnector', function () {
 			});
 
 			// Act
-			dbConnector.addConnection({
+			dbConnector.init({
 				clientName: DbClient.SQLITE3,
 				filePath: CONN_FILE
 			});
@@ -70,7 +71,7 @@ describe('KnexDatabaseConnector', function () {
 			});
 
 			// Act
-			dbConnector.addConnection({
+			dbConnector.init({
 				clientName: DbClient.POSTGRESQL,
 				connectionString: CONN_STRING
 			});
@@ -99,7 +100,7 @@ describe('KnexDatabaseConnector', function () {
 			});
 
 			// Act KnexDatabaseConnector.spec.js
-			dbConnector.addConnection(DB_DETAILS);
+			dbConnector.init(DB_DETAILS);
 
 			// Assert
 			expect(dbConnector['_knex']).to.be.spy;
@@ -117,7 +118,7 @@ describe('KnexDatabaseConnector', function () {
 
 			// Act
 			try {
-				dbConnector.addConnection({
+				dbConnector.init({
 					clientName: DbClient.MSSQL
 				});
 				isSuccess = true;
@@ -139,7 +140,7 @@ describe('KnexDatabaseConnector', function () {
 			let dbConnector = new KnexDatabaseConnector(),
 				callMe = chai.spy();
 
-			dbConnector.addConnection({
+			dbConnector.init({
 				clientName: DbClient.SQLITE3,
 				filePath: CONN_FILE
 			});
@@ -162,7 +163,7 @@ describe('KnexDatabaseConnector', function () {
 			let dbConnector = new KnexDatabaseConnector(),
 				callMe = chai.spy();
 
-			dbConnector.addConnection({
+			dbConnector.init({
 				clientName: DbClient.SQLITE3,
 				filePath: CONN_FILE
 			});
@@ -172,7 +173,7 @@ describe('KnexDatabaseConnector', function () {
 			// 	filePath: CONN_FILE
 			// });
 
-			dbConnector.addConnection(DB_DETAILS);
+			dbConnector.init(DB_DETAILS);
 
 			// Act
 			await dbConnector.prepare<DummyEntity>(DummyEntity, (query) => {
@@ -185,34 +186,6 @@ describe('KnexDatabaseConnector', function () {
 			await dbConnector.dispose();
 		});
 
-		it('should execute query with named connections', async () => {
-			// Arrange
-			let dbConnector = new KnexDatabaseConnector(),
-				callMe = chai.spy();
-
-			dbConnector.addConnection({
-				clientName: DbClient.SQLITE3,
-				filePath: CONN_FILE
-			}, 'first');
-
-			// dbConnector.addConnection({
-			// 	clientName: DbClient.SQLITE3,
-			// 	filePath: CONN_FILE
-			// }, 'second');
-
-			dbConnector.addConnection(DB_DETAILS, 'second');
-
-			// Act
-			await dbConnector.prepare<DummyEntity>(DummyEntity, (query) => {
-				callMe();
-				return Promise.resolve();
-			}, null, 'first');
-
-			// Assert
-			expect(callMe).to.be.called.once;
-			await dbConnector.dispose();
-		});
-
 		it('should bind entity class with each added knex connection', async () => {
 			// Arrange
 			let dbConnector = new KnexDatabaseConnector(),
@@ -220,7 +193,7 @@ describe('KnexDatabaseConnector', function () {
 				oldKnex = DummyEntity.knex(),
 				newKnex = null;
 
-			dbConnector.addConnection({
+			dbConnector.init({
 				clientName: DbClient.SQLITE3,
 				filePath: CONN_FILE
 			});
@@ -230,7 +203,7 @@ describe('KnexDatabaseConnector', function () {
 			// 	filePath: CONN_FILE
 			// });
 
-			dbConnector.addConnection(DB_DETAILS);
+			dbConnector.init(DB_DETAILS);
 
 			// Act
 			await dbConnector.prepare<DummyEntity>(DummyEntity, (query, BoundDummyEntity) => {

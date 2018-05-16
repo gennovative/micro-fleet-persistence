@@ -2,8 +2,8 @@ import * as knex from 'knex';
 import { Model, QueryBuilder, transaction } from 'objection';
 const isEmpty = require('lodash/isEmpty');
 
-import { injectable, Guard, MinorException } from 'back-lib-common-util';
-import { AtomicSession, IDbConnectionDetail } from 'back-lib-common-contracts';
+import { injectable, Guard, MinorException } from '@micro-fleet/common-util';
+import { AtomicSession, IDbConnectionDetail } from '@micro-fleet/common-contracts';
 
 import { EntityBase } from '../bases/EntityBase';
 import { IDatabaseConnector, QueryCallback, KnexConnection } from './IDatabaseConnector';
@@ -15,58 +15,53 @@ import { IDatabaseConnector, QueryCallback, KnexConnection } from './IDatabaseCo
 @injectable()
 export class KnexDatabaseConnector implements IDatabaseConnector {
 	
-	private _connections: KnexConnection[];
+	private _connection: KnexConnection;
 	private _knex; // for unittest mocking
 
 	constructor() {
-		this._connections = [];
 		this._knex = knex;
 	}
 
 	/**
-	 * @see IDatabaseConnector.connections
+	 * @see IDatabaseConnector.connection
 	 */
-	public get connections(): KnexConnection[] {
-		return this._connections;
+	public get connection(): KnexConnection {
+		return this._connection;
 	}
 
 	/**
-	 * @see IDatabaseConnector.addConnection
+	 * @see IDatabaseConnector.init
 	 */
-	public addConnection(detail: IDbConnectionDetail, name?: string): void {
+	public init(detail: IDbConnectionDetail): void {
 		Guard.assertArgDefined('detail', detail);
 
-		let settings = {
+		const settings = {
 				client: detail.clientName,
 				useNullAsDefault: true,
 				connection: this.buildConnSettings(detail)
 			},
-			knexConn: KnexConnection = this._knex(settings);
-			knexConn.customName = name ? name : (this._connections.length + '');
-		this._connections.push(knexConn);
+			knexConn: KnexConnection = 
+		this._connection = this._knex(settings);
 	}
 
 	/**
 	 * @see IDatabaseConnector.dispose
 	 */
-	public dispose(): Promise<void> {
-		let destroyPromises = this._connections.map(conn => {
-			return conn['destroy']();
-		});
+	public async dispose(): Promise<void> {
+		this._connection.destroy();
+		this._connection = null;
 		this._knex = null;
-		this._connections = null;
-		return <any>Promise.all(destroyPromises);
 	}
 
 	/**
 	 * @see IDatabaseConnector.prepare
 	 */
-	public prepare<TEntity extends EntityBase>(EntityClass, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession, ...names: string[]): Promise<any>[] {
-		Guard.assertIsNotEmpty(this._connections, 'Must call addConnection() before executing any query.');
+	public prepare<TEntity extends EntityBase>(EntityClass, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any> {
+		Guard.assertIsNotEmpty(this._connection, 'Must call addConnection() before executing any query.');
 		if (atomicSession) {
 			return this.prepareTransactionalQuery(EntityClass, callback, atomicSession);
 		}
-		return this.prepareSimpleQuery(EntityClass, callback, ...names);
+		return this.prepareSimpleQuery(EntityClass, callback);
 	}
 
 
@@ -93,31 +88,14 @@ export class KnexDatabaseConnector implements IDatabaseConnector {
 		throw new MinorException('No database settings!');
 	}
 
-	private prepareSimpleQuery<TEntity>(EntityClass, callback: QueryCallback<TEntity>, ...names: string[]): Promise<any>[] {
-		let calls: Promise<any>[] = [],
-			BoundClass;
-
-		for (let knexConn of this._connections) {
-			if (isEmpty(names)) {
-				BoundClass = EntityClass['bindKnex'](knexConn);
-				calls.push(callback(BoundClass['query'](), BoundClass));
-			} else {
-				// If connection names are specified, we only execute queries on those connections.
-				if (names.includes(knexConn.customName)) {
-					BoundClass = EntityClass['bindKnex'](knexConn);
-					calls.push(callback(BoundClass['query'](), BoundClass));
-				}
-			}
-		}
-
-		return calls;
+	private prepareSimpleQuery<TEntity>(EntityClass, callback: QueryCallback<TEntity>): Promise<any> {
+		let BoundClass = EntityClass['bindKnex'](this._connection);
+		return callback(BoundClass['query'](), BoundClass);
 	}
 
-	private prepareTransactionalQuery<TEntity>(EntityClass, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any>[] {
-		let BoundClass = EntityClass['bindKnex'](atomicSession.knexConnection);
-		return [
-			callback(BoundClass['query'](atomicSession.knexTransaction), BoundClass)
-		];
+	private prepareTransactionalQuery<TEntity>(EntityClass, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any> {
+		const BoundClass = EntityClass['bindKnex'](atomicSession.knexConnection);
+		return callback(BoundClass['query'](atomicSession.knexTransaction), BoundClass);
 	}
 
 }

@@ -1,15 +1,16 @@
 import { expect } from 'chai';
 
-import { DbClient } from 'back-lib-common-constants';
-import { InvalidArgumentException, MinorException } from 'back-lib-common-util';
-import { PagedArray, ModelAutoMapper, AtomicSession } from 'back-lib-common-contracts';
-import { IdGenerator } from 'back-lib-id-generator';
+import { InvalidArgumentException, MinorException } from '@micro-fleet/common-util';
+import { PagedArray, ModelAutoMapper, AtomicSession, constants } from '@micro-fleet/common-contracts';
+import { IdGenerator } from '@micro-fleet/id-generator';
 
 import {
 	RepositoryBase, EntityBase, QueryCallback, IDatabaseConnector,
 	KnexDatabaseConnector, AtomicSessionFactory, AtomicSessionFlow
 } from '../app';
 import DB_DETAILS from './database-details';
+
+const { DbClient } = constants;
 
 
 const CONN_FILE = `${process.cwd()}/database-adapter-test.sqlite`,
@@ -33,7 +34,7 @@ class UserVersionDTO implements IModelDTO, ISoftDeletable, IVersionControlled {
 
 	// NOTE: Class properties must be initialized, otherwise they
 	// will disappear in transpiled code.
-	public id: BigSInt = undefined;
+	public id: BigInt = undefined;
 	public name: string = undefined;
 	public age: number = undefined;
 	public deletedAt: Date = undefined;
@@ -164,7 +165,7 @@ class UserVersionRepo extends RepositoryBase<UserVersionEntity, UserVersionDTO> 
 		//.closePipe(); // Not closing pipe
 	}
 
-	public async findOnFirstConn(id: BigSInt): Promise<UserVersionDTO> {
+	public async findOnFirstConn(id: BigInt): Promise<UserVersionDTO> {
 		let foundEnt: UserVersionEntity = await this._processor.executeQuery(query => {
 			return query.findById(id);
 		}, null, '0'); // Executing on first connection only.
@@ -172,7 +173,7 @@ class UserVersionRepo extends RepositoryBase<UserVersionEntity, UserVersionDTO> 
 		return this._processor.toDTO(foundEnt, false);
 	}
 
-	public async findOnSecondConn(id: BigSInt): Promise<UserVersionDTO> {
+	public async findOnSecondConn(id: BigInt): Promise<UserVersionDTO> {
 		let foundEnt: UserVersionEntity = await this._processor.executeQuery(query => {
 			return query.findById(id);
 		}, null, 'sec'); // Executing on second connection (named 'sec').
@@ -180,15 +181,15 @@ class UserVersionRepo extends RepositoryBase<UserVersionEntity, UserVersionDTO> 
 		return this._processor.toDTO(foundEnt, false);
 	}
 
-	public async deleteOnSecondConn(id: BigSInt): Promise<UserVersionDTO> {
-		let affectedRows = await this._processor.executeCommand(query => {
+	public async deleteOnSecondConn(id: BigInt): Promise<UserVersionDTO> {
+		let affectedRows = await this._processor.executeQuery(query => {
 			return query.deleteById(id);
 		}, null, 'sec');
 		return affectedRows;
 	}
 
 	public deleteAll(): Promise<void> {
-		return this._processor.executeCommand(query => query.delete());
+		return this._processor.executeQuery(query => query.delete());
 	}
 }
 
@@ -210,7 +211,7 @@ describe.skip('RepositoryBase-version', function () {
 		// });
 
 		// // For PostgreSQL
-		dbConnector.addConnection(DB_DETAILS);
+		dbConnector.init(DB_DETAILS);
 		usrRepo = new UserVersionRepo(dbConnector);
 	});
 

@@ -1,10 +1,10 @@
-import { DbSettingKeys as S } from 'back-lib-common-constants';
-import { IConfigurationProvider, IDbConnectionDetail, Types as ConT } from 'back-lib-common-contracts';
-import { injectable, inject, Guard, CriticalException } from 'back-lib-common-util';
+import { IConfigurationProvider, IDbConnectionDetail, Types as ConT, constants } from '@micro-fleet/common-contracts';
+import { injectable, inject, Guard, CriticalException } from '@micro-fleet/common-util';
 
 import { IDatabaseConnector } from './connector/IDatabaseConnector';
 import { Types as T } from './Types';
 
+const { DbSettingKeys: S } = constants;
 
 /**
  * Initializes database connections.
@@ -52,11 +52,11 @@ export class DatabaseAddOn implements IServiceAddOn {
 		for (let i = 0; i < nConn; ++i) {
 			connDetail = this.buildConnDetails(i);
 			if (!connDetail) { continue; }
-			this._dbConnector.addConnection(connDetail);
+			this._dbConnector.init(connDetail);
 		}
 
-		if (!this._dbConnector.connections.length) {
-		throw new CriticalException('No database settings!');
+		if (!this._dbConnector.connection) {
+			throw new CriticalException('No database settings!');
 		}
 	}
 

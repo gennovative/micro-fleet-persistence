@@ -20,10 +20,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const back_lib_common_constants_1 = require("back-lib-common-constants");
-const back_lib_common_contracts_1 = require("back-lib-common-contracts");
-const back_lib_common_util_1 = require("back-lib-common-util");
+const common_contracts_1 = require("@micro-fleet/common-contracts");
+const common_util_1 = require("@micro-fleet/common-util");
 const Types_1 = require("./Types");
+const { DbSettingKeys: S } = common_contracts_1.constants;
 /**
  * Initializes database connections.
  */
@@ -31,8 +31,8 @@ let DatabaseAddOn = class DatabaseAddOn {
     constructor(_configProvider, _dbConnector) {
         this._configProvider = _configProvider;
         this._dbConnector = _dbConnector;
-        back_lib_common_util_1.Guard.assertArgDefined('_configProvider', _configProvider);
-        back_lib_common_util_1.Guard.assertArgDefined('_dbConnector', _dbConnector);
+        common_util_1.Guard.assertArgDefined('_configProvider', _configProvider);
+        common_util_1.Guard.assertArgDefined('_dbConnector', _dbConnector);
     }
     /**
      * @see IServiceAddOn.init
@@ -58,42 +58,42 @@ let DatabaseAddOn = class DatabaseAddOn {
         });
     }
     addConnections() {
-        let nConn = this._configProvider.get(back_lib_common_constants_1.DbSettingKeys.DB_NUM_CONN), connDetail;
+        let nConn = this._configProvider.get(S.DB_NUM_CONN), connDetail;
         for (let i = 0; i < nConn; ++i) {
             connDetail = this.buildConnDetails(i);
             if (!connDetail) {
                 continue;
             }
-            this._dbConnector.addConnection(connDetail);
+            this._dbConnector.init(connDetail);
         }
-        if (!this._dbConnector.connections.length) {
-            throw new back_lib_common_util_1.CriticalException('No database settings!');
+        if (!this._dbConnector.connection) {
+            throw new common_util_1.CriticalException('No database settings!');
         }
     }
     buildConnDetails(connIdx) {
         let provider = this._configProvider, cnnDetail = {
-            clientName: provider.get(back_lib_common_constants_1.DbSettingKeys.DB_ENGINE + connIdx) // Must belong to `DbClient`
+            clientName: provider.get(S.DB_ENGINE + connIdx) // Must belong to `DbClient`
         }, value;
         // 1st priority: connect to a local file.
-        value = provider.get(back_lib_common_constants_1.DbSettingKeys.DB_FILE + connIdx);
+        value = provider.get(S.DB_FILE + connIdx);
         if (value) {
             cnnDetail.filePath = value;
             return cnnDetail;
         }
         // 2nd priority: connect with a connection string.
-        value = provider.get(back_lib_common_constants_1.DbSettingKeys.DB_CONN_STRING + connIdx);
+        value = provider.get(S.DB_CONN_STRING + connIdx);
         if (value) {
             cnnDetail.connectionString = value;
             return cnnDetail;
         }
         // Last priority: connect with host credentials.
-        value = provider.get(back_lib_common_constants_1.DbSettingKeys.DB_HOST + connIdx);
+        value = provider.get(S.DB_HOST + connIdx);
         if (value) {
             cnnDetail.host = {
-                address: provider.get(back_lib_common_constants_1.DbSettingKeys.DB_HOST + connIdx),
-                user: provider.get(back_lib_common_constants_1.DbSettingKeys.DB_USER + connIdx),
-                password: provider.get(back_lib_common_constants_1.DbSettingKeys.DB_PASSWORD + connIdx),
-                database: provider.get(back_lib_common_constants_1.DbSettingKeys.DB_NAME + connIdx),
+                address: provider.get(S.DB_HOST + connIdx),
+                user: provider.get(S.DB_USER + connIdx),
+                password: provider.get(S.DB_PASSWORD + connIdx),
+                database: provider.get(S.DB_NAME + connIdx),
             };
             return cnnDetail;
         }
@@ -101,9 +101,9 @@ let DatabaseAddOn = class DatabaseAddOn {
     }
 };
 DatabaseAddOn = __decorate([
-    back_lib_common_util_1.injectable(),
-    __param(0, back_lib_common_util_1.inject(back_lib_common_contracts_1.Types.CONFIG_PROVIDER)),
-    __param(1, back_lib_common_util_1.inject(Types_1.Types.DB_CONNECTOR)),
+    common_util_1.injectable(),
+    __param(0, common_util_1.inject(common_contracts_1.Types.CONFIG_PROVIDER)),
+    __param(1, common_util_1.inject(Types_1.Types.DB_CONNECTOR)),
     __metadata("design:paramtypes", [Object, Object])
 ], DatabaseAddOn);
 exports.DatabaseAddOn = DatabaseAddOn;

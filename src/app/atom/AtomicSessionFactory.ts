@@ -1,5 +1,5 @@
-import { injectable, inject, Guard } from 'back-lib-common-util';
-import { AtomicSession } from 'back-lib-common-contracts';
+import { injectable, inject, Guard } from '@micro-fleet/common-util';
+import { AtomicSession } from '@micro-fleet/common-contracts';
 
 import { Types } from '../Types';
 import { IDatabaseConnector } from '../connector/IDatabaseConnector';

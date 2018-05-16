@@ -1,16 +1,17 @@
 import * as knex from 'knex';
 import { QueryBuilder } from 'objection';
-import { DbClient } from 'back-lib-common-constants';
-import { AtomicSession, IDbConnectionDetail } from 'back-lib-common-contracts';
+import { AtomicSession, IDbConnectionDetail, constants } from '@micro-fleet/common-contracts';
 
 import { EntityBase } from '../bases/EntityBase';
+
+const { DbClient } = constants;
 
 
 export interface KnexConnection extends knex {
 	/**
 	 * Connection name.
 	 */
-	customName: string;
+	// customName: string;
 }
 
 /**
@@ -26,18 +27,15 @@ export type QueryCallback<TEntity> = (queryBuilder: QueryBuilder<TEntity>, bound
  */
 export interface IDatabaseConnector {
 	/**
-	 * Gets list of established database connections.
-	 * Each item is a Knex instance.
+	 * Gets the established database connection.
 	 */
-	connections: KnexConnection[];
+	connection: KnexConnection;
 
 	/**
-	 * Makes a new database connection then adds to managed list.
+	 * Creates a new database connection.
 	 * @param {IConnectionDetail} detail Credentials to make connection.
-	 * @param {string} name Optionally give a name to the connection, for later reference.
-	 * 	If not given, the position index of connection in the managed list will be assigned as name.
 	 */
-	addConnection(detail: IDbConnectionDetail, name?: string): void;
+	init(detail: IDbConnectionDetail): void;
 
 	/**
 	 * Closes all connections and destroys this connector.
@@ -49,24 +47,15 @@ export interface IDatabaseConnector {
 	 * to `EntityClass` and passes a queryable instance to `callback`.
 	 * 
 	 * @param {class} EntityClass An entity class to bind a connection.
-	 * @param {AtomicSession} atomicSession A session which provides transaction to execute queries on.
 	 * @param {QueryCallback} callback A callback to invoke each time a connection is bound.
-	 * @param {string[]} names Optionally filters out and only executes the query on connections with specified names.
+	 * @param {AtomicSession} atomicSession A session which provides transaction to execute queries on.
 	 * @example
-	 * 	// Must add at least one connection.
-	 * 	connector.addConnection({...});
-	 * 
-	 * 	// Executes same query on all connections.
-	 * 	let promises = connector.query(AccountEntity, (query) => {
+	 * 	connector.init({...});
+	 * 	const result = await connector.prepare(AccountEntity, (query) => {
 	 * 		return query.insert({ name: 'Example' })
 	 * 	});
 	 * 
-	 * 	// Waits for operations on all connections to complete.
-	 * 	let results = await Promise.all(promises);
-	 * 
-	 * 	// Only waits for the primary connection that we care most.
-	 * 	let result = await promises[0];
-	 * @return {Promise[]} An array of promises returned by all above callbacks.
+	 * @return {Promise} A promise returned by the `callback`.
 	 */
-	prepare<TEntity extends EntityBase>(EntityClass, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession, ...names: string[]): Promise<any>[];
+	prepare<TEntity extends EntityBase>(EntityClass, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any>;
 }

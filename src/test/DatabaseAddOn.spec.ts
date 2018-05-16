@@ -2,17 +2,16 @@ import * as chai from 'chai';
 import * as spies from 'chai-spies';
 import * as _ from 'lodash';
 import { Model } from 'objection';
-import { DbClient, DbSettingKeys as S } from 'back-lib-common-constants';
-import { AtomicSession, IConfigurationProvider, IDbConnectionDetail } from 'back-lib-common-contracts';
-import { CriticalException } from 'back-lib-common-util';
+import { AtomicSession, IConfigurationProvider, IDbConnectionDetail, constants } from '@micro-fleet/common-contracts';
+import { CriticalException } from '@micro-fleet/common-util';
 import { IDatabaseConnector, QueryCallback,
 	EntityBase, DatabaseAddOn } from '../app';
 
 import DB_DETAILS from './database-details';
 
-
 chai.use(spies);
 
+const { DbClient, DbSettingKeys: S } = constants;
 const expect = chai.expect,
 	MODE_FILE = 'file',
 	MODE_STRING = 'string',
@@ -81,22 +80,22 @@ class MockConfigAddOn implements IConfigurationProvider {
 }
 
 class MockDbConnector implements IDatabaseConnector {
-	private _connections = [];
+	private _connection;
 
-	public get connections() {
-		return this._connections;
+	public get connection() {
+		return this._connection;
 	}
 
-	public addConnection(detail: IDbConnectionDetail, name?: string): void {
-		this._connections.push(detail);
+	public init(detail: IDbConnectionDetail, name?: string): void {
+		this._connection = detail;
 	}
 
 	public dispose(): Promise<void> {
 		return Promise.resolve();
 	}
 
-	public prepare<TEntity extends EntityBase>(EntityClass: any, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession, ...names: string[]): Promise<any>[] {
-		return [Promise.resolve()];
+	public prepare<TEntity extends EntityBase>(EntityClass: any, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any> {
+		return Promise.resolve();
 	}
 }
 

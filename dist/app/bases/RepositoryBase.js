@@ -22,14 +22,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const every = require('lodash/every');
 const isEmpty = require('lodash/isEmpty');
-const back_lib_common_util_1 = require("back-lib-common-util");
+const common_util_1 = require("@micro-fleet/common-util");
 const MonoProcessor_1 = require("./MonoProcessor");
 const BatchProcessor_1 = require("./BatchProcessor");
 const VersionControlledProcessor_1 = require("./VersionControlledProcessor");
 let RepositoryBase = class RepositoryBase {
     constructor(EntityClass, dbConnector, options = {}) {
-        back_lib_common_util_1.Guard.assertArgDefined('EntityClass', EntityClass);
-        back_lib_common_util_1.Guard.assertArgDefined('dbConnector', dbConnector);
+        common_util_1.Guard.assertArgDefined('EntityClass', EntityClass);
+        common_util_1.Guard.assertArgDefined('dbConnector', dbConnector);
         let crud;
         if (options.isVersionControlled) {
             // TODO: Should let `VersionControlledProcessor` accepts `MonoProcessor` as argument.
@@ -110,8 +110,8 @@ let RepositoryBase = class RepositoryBase {
     }
 };
 RepositoryBase = __decorate([
-    back_lib_common_util_1.injectable(),
-    __param(0, back_lib_common_util_1.unmanaged()), __param(1, back_lib_common_util_1.unmanaged()), __param(2, back_lib_common_util_1.unmanaged()),
+    common_util_1.injectable(),
+    __param(0, common_util_1.unmanaged()), __param(1, common_util_1.unmanaged()), __param(2, common_util_1.unmanaged()),
     __metadata("design:paramtypes", [Object, Object, Object])
 ], RepositoryBase);
 exports.RepositoryBase = RepositoryBase;

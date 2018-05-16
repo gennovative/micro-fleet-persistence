@@ -1,14 +1,15 @@
 import { expect } from 'chai';
 
-import { DbClient } from 'back-lib-common-constants';
-import { InvalidArgumentException, MinorException } from 'back-lib-common-util';
-import { PagedArray, ModelAutoMapper, AtomicSession } from 'back-lib-common-contracts';
-import { IdGenerator } from 'back-lib-id-generator';
+import { InvalidArgumentException, MinorException } from '@micro-fleet/common-util';
+import { PagedArray, ModelAutoMapper, AtomicSession, constants } from '@micro-fleet/common-contracts';
+import { IdGenerator } from '@micro-fleet/id-generator';
 
 import { EntityBase, QueryCallback, IDatabaseConnector,
 	KnexDatabaseConnector, AtomicSessionFactory, AtomicSessionFlow,
 	RepositoryBase } from '../app';
 import DB_DETAILS from './database-details';
+
+const { DbClient } = constants;
 
 
 const CONN_FILE = `${process.cwd()}/database-adapter-test.sqlite`,
@@ -32,8 +33,8 @@ class UserTenantDTO implements IModelDTO, ISoftDeletable {
 
 	// NOTE: Class properties must be initialized, otherwise they
 	// will disappear in transpiled code.
-	public id: BigSInt = undefined;
-	public tenantId: BigSInt = undefined;
+	public id: BigInt = undefined;
+	public tenantId: BigInt = undefined;
 	public name: string = undefined;
 	public age: number = undefined;
 	public deletedAt: Date = undefined;
@@ -56,7 +57,7 @@ class UserTenantEntity extends EntityBase {
 
 	// NOTE: Class properties must be initialized, otherwise they
 	// will disappear in transpiled code.
-	public tenantId: BigSInt = undefined;
+	public tenantId: BigInt = undefined;
 	public name: string = undefined;
 	public age: number = undefined;
 	public deletedAt: string = undefined;
@@ -177,14 +178,14 @@ class UserTenantRepo extends RepositoryBase<UserTenantEntity, UserTenantDTO, Ten
 	}
 
 	public async deleteOnSecondConn(pk: TenantPk): Promise<UserTenantDTO> {
-		let affectedRows = await this._processor.executeCommand(query => {
+		let affectedRows = await this._processor.executeQuery(query => {
 			return query.deleteById(this._processor.toArr(pk, UserTenantEntity.idProp));
 			}, null, 'sec');
 		return affectedRows;
 	}
 
 	public deleteAll(): Promise<void> {
-		return this._processor.executeCommand(query => query.delete());
+		return this._processor.executeQuery(query => query.delete());
 	}
 }
 
@@ -207,7 +208,7 @@ describe('RepositoryBase-tenant', function() {
 		// });
 
 		// // For PostgreSQL
-		dbConnector.addConnection(DB_DETAILS);
+		dbConnector.init(DB_DETAILS);
 		usrRepo = new UserTenantRepo(dbConnector);
 	});
 
@@ -222,7 +223,7 @@ describe('RepositoryBase-tenant', function() {
 			let secondDb = Object.assign({}, DB_DETAILS);
 			secondDb.host = Object.assign({}, DB_DETAILS.host);
 			secondDb.host.database = 'unittestTwo';
-			dbConnector.addConnection(secondDb, 'sec'); // Name this connection as 'sec'
+			dbConnector.init(secondDb); // Name this connection as 'sec'
 
 			usrRepo = new UserTenantRepo(dbConnector);
 		});
@@ -528,7 +529,7 @@ describe('RepositoryBase-tenant', function() {
 			model.name = 'Hiri';
 			model.age = 29;
 
-			dbConnector.addConnection({
+			dbConnector.init({
 				clientName: DbClient.SQLITE3,
 				filePath: CONN_FILE_2,
 			});

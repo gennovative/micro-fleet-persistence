@@ -25,7 +25,7 @@ class VersionControlledProcessor extends MonoProcessor_1.MonoProcessor {
         if (!entity['version']) {
             entity['version'] = model['version'] = 1;
         }
-        return this.executeCommand(query => query.insert(entity), opts.atomicSession)
+        return this.executeQuery(query => query.insert(entity), opts.atomicSession)
             .then(() => model);
     }
     patch(model, opts = {}) {

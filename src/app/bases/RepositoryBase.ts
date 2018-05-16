@@ -2,8 +2,8 @@ const every = require('lodash/every');
 const isEmpty = require('lodash/isEmpty');
 import { QueryBuilder, QueryBuilderSingle } from 'objection';
 import * as moment from 'moment';
-import { injectable, unmanaged, Guard, MinorException } from 'back-lib-common-util';
-import * as cc from 'back-lib-common-contracts';
+import { injectable, unmanaged, Guard, MinorException } from '@micro-fleet/common-util';
+import * as cc from '@micro-fleet/common-contracts';
 
 import { AtomicSessionFactory } from '../atom/AtomicSessionFactory';
 import { IDatabaseConnector, QueryCallback } from '../connector/IDatabaseConnector';
@@ -12,7 +12,7 @@ import { MonoProcessor, ProcessorOptions } from './MonoProcessor';
 import { BatchProcessor } from './BatchProcessor';
 import { VersionControlledProcessor } from './VersionControlledProcessor';
 
-export interface RepositoryBaseOptions<TEntity extends EntityBase, TModel extends IModelDTO, TPk extends PkType = BigSInt, TUk = NameUk>
+export interface RepositoryBaseOptions<TEntity extends EntityBase, TModel extends IModelDTO, TPk extends PkType = BigInt, TUk = NameUk>
 		extends ProcessorOptions {
 	/**
 	 * Used by default version-controlled processor and default batch processor.
@@ -32,7 +32,7 @@ export interface RepositoryBaseOptions<TEntity extends EntityBase, TModel extend
 
 
 @injectable()
-export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends IModelDTO, TPk extends PkType = BigSInt, TUk = NameUk>
+export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends IModelDTO, TPk extends PkType = BigInt, TUk = NameUk>
 	implements cc.ISoftDelRepository<TModel, TPk, TUk> {
 
 	protected _processor: BatchProcessor<TEntity, TModel, TPk, TUk>;

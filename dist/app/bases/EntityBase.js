@@ -5,16 +5,13 @@ const mapKeys = require('lodash/mapKeys');
 const snakeCase = global['snakeCase'];
 const camelCase = global['camelCase'];
 class EntityBase extends objection_1.Model {
-    constructor() {
-        super(...arguments);
-        this.id = undefined;
-    }
     /**
      * @abstract
      */
     static get tableName() {
         throw 'This method must be implemented by derived class!';
     }
+    // public id: BigInt = undefined;
     /**
      * This is called when an object is serialized to database format.
      */
@@ -50,7 +47,7 @@ EntityBase.idColumn = ['id'];
 EntityBase.uniqColumn = [];
 /**
  * Same with `idColumn`, but transform snakeCase to camelCase.
- * Should be overiden (['id', 'tenantId']) for composite PK.
+ * Should be overriden (['id', 'tenantId']) for composite PK.
  */
 EntityBase.idProp = EntityBase.idColumn.map(camelCase);
 exports.EntityBase = EntityBase;

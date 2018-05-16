@@ -8,57 +8,61 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const knex = require("knex");
 const isEmpty = require('lodash/isEmpty');
-const back_lib_common_util_1 = require("back-lib-common-util");
+const common_util_1 = require("@micro-fleet/common-util");
 /**
  * Provides settings from package
  */
 let KnexDatabaseConnector = class KnexDatabaseConnector {
     constructor() {
-        this._connections = [];
         this._knex = knex;
     }
     /**
-     * @see IDatabaseConnector.connections
+     * @see IDatabaseConnector.connection
      */
-    get connections() {
-        return this._connections;
+    get connection() {
+        return this._connection;
     }
     /**
-     * @see IDatabaseConnector.addConnection
+     * @see IDatabaseConnector.init
      */
-    addConnection(detail, name) {
-        back_lib_common_util_1.Guard.assertArgDefined('detail', detail);
-        let settings = {
+    init(detail) {
+        common_util_1.Guard.assertArgDefined('detail', detail);
+        const settings = {
             client: detail.clientName,
             useNullAsDefault: true,
             connection: this.buildConnSettings(detail)
-        }, knexConn = this._knex(settings);
-        knexConn.customName = name ? name : (this._connections.length + '');
-        this._connections.push(knexConn);
+        }, knexConn = this._connection = this._knex(settings);
     }
     /**
      * @see IDatabaseConnector.dispose
      */
     dispose() {
-        let destroyPromises = this._connections.map(conn => {
-            return conn['destroy']();
+        return __awaiter(this, void 0, void 0, function* () {
+            this._connection.destroy();
+            this._connection = null;
+            this._knex = null;
         });
-        this._knex = null;
-        this._connections = null;
-        return Promise.all(destroyPromises);
     }
     /**
      * @see IDatabaseConnector.prepare
      */
-    prepare(EntityClass, callback, atomicSession, ...names) {
-        back_lib_common_util_1.Guard.assertIsNotEmpty(this._connections, 'Must call addConnection() before executing any query.');
+    prepare(EntityClass, callback, atomicSession) {
+        common_util_1.Guard.assertIsNotEmpty(this._connection, 'Must call addConnection() before executing any query.');
         if (atomicSession) {
             return this.prepareTransactionalQuery(EntityClass, callback, atomicSession);
         }
-        return this.prepareSimpleQuery(EntityClass, callback, ...names);
+        return this.prepareSimpleQuery(EntityClass, callback);
     }
     buildConnSettings(detail) {
         // 1st priority: connect to a local file.
@@ -78,34 +82,19 @@ let KnexDatabaseConnector = class KnexDatabaseConnector {
                 database: detail.host.database,
             };
         }
-        throw new back_lib_common_util_1.MinorException('No database settings!');
+        throw new common_util_1.MinorException('No database settings!');
     }
-    prepareSimpleQuery(EntityClass, callback, ...names) {
-        let calls = [], BoundClass;
-        for (let knexConn of this._connections) {
-            if (isEmpty(names)) {
-                BoundClass = EntityClass['bindKnex'](knexConn);
-                calls.push(callback(BoundClass['query'](), BoundClass));
-            }
-            else {
-                // If connection names are specified, we only execute queries on those connections.
-                if (names.includes(knexConn.customName)) {
-                    BoundClass = EntityClass['bindKnex'](knexConn);
-                    calls.push(callback(BoundClass['query'](), BoundClass));
-                }
-            }
-        }
-        return calls;
+    prepareSimpleQuery(EntityClass, callback) {
+        let BoundClass = EntityClass['bindKnex'](this._connection);
+        return callback(BoundClass['query'](), BoundClass);
     }
     prepareTransactionalQuery(EntityClass, callback, atomicSession) {
-        let BoundClass = EntityClass['bindKnex'](atomicSession.knexConnection);
-        return [
-            callback(BoundClass['query'](atomicSession.knexTransaction), BoundClass)
-        ];
+        const BoundClass = EntityClass['bindKnex'](atomicSession.knexConnection);
+        return callback(BoundClass['query'](atomicSession.knexTransaction), BoundClass);
     }
 };
 KnexDatabaseConnector = __decorate([
-    back_lib_common_util_1.injectable(),
+    common_util_1.injectable(),
     __metadata("design:paramtypes", [])
 ], KnexDatabaseConnector);
 exports.KnexDatabaseConnector = KnexDatabaseConnector;

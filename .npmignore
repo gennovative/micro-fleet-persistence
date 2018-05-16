@@ -1,9 +1,10 @@
 .vscode
-database-adapter-test.sqlite
-database-adapter-test-second.sqlite
+coverage
+dist/test
+dist/**/*.map
+src
+.editorconfig
+.gitignore
 gulpfile.js
 tsconfig.json
 tslint.json
-src
-dist/test
-dist/**/*.map

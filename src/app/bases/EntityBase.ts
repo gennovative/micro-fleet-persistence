@@ -25,12 +25,12 @@ export abstract class EntityBase extends Model {
 
 	/**
 	 * Same with `idColumn`, but transform snakeCase to camelCase.
-	 * Should be overiden (['id', 'tenantId']) for composite PK.
+	 * Should be overriden (['id', 'tenantId']) for composite PK.
 	 */
 	public static readonly idProp = EntityBase.idColumn.map<string>(camelCase);
 
 
-	public id: BigSInt = undefined;
+	// public id: BigInt = undefined;
 
 	/**
 	 * This is called when an object is serialized to database format.

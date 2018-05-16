@@ -1,13 +1,14 @@
 import { expect } from 'chai';
 
-import { DbClient } from 'back-lib-common-constants';
-import { InvalidArgumentException, MinorException } from 'back-lib-common-util';
-import { PagedArray, ModelAutoMapper, AtomicSession, ISoftDelRepository } from 'back-lib-common-contracts';
-import { IdGenerator } from 'back-lib-id-generator';
+import { InvalidArgumentException, MinorException } from '@micro-fleet/common-util';
+import { PagedArray, ModelAutoMapper, AtomicSession, ISoftDelRepository, constants } from '@micro-fleet/common-contracts';
+import { IdGenerator } from '@micro-fleet/id-generator';
 
 import { RepositoryBase, EntityBase, QueryCallback, IDatabaseConnector,
 		KnexDatabaseConnector, AtomicSessionFactory, AtomicSessionFlow } from '../app';
 import DB_DETAILS from './database-details';
+
+const { DbClient } = constants;
 
 
 const CONN_FILE = `${process.cwd()}/database-adapter-test.sqlite`,
@@ -31,7 +32,7 @@ class UserBatchDTO implements IModelDTO, ISoftDeletable {
 
 	// NOTE: Class properties must be initialized, otherwise they
 	// will disappear in transpiled code.
-	public id: BigSInt = undefined;
+	public id: BigInt = undefined;
 	public name: string = undefined;
 	public age: number = undefined;
 	public deletedAt: Date = undefined;
@@ -166,7 +167,7 @@ class UserBatchRepo
 			//.closePipe(); // Not closing pipe
 	}
 
-	public async findOnFirstConn(id: BigSInt): Promise<UserBatchDTO> {
+	public async findOnFirstConn(id: BigInt): Promise<UserBatchDTO> {
 		let foundEnt: UserBatchEntity = await this._processor.executeQuery(query => {
 				return query.findById(id);
 			}, null, '0'); // Executing on first connection only.
@@ -174,7 +175,7 @@ class UserBatchRepo
 		return this._processor.toDTO(foundEnt, false);
 	}
 
-	public async findOnSecondConn(id: BigSInt): Promise<UserBatchDTO> {
+	public async findOnSecondConn(id: BigInt): Promise<UserBatchDTO> {
 		let foundEnt: UserBatchEntity = await this._processor.executeQuery(query => {
 				return query.findById(id);
 			}, null, 'sec'); // Executing on second connection (named 'sec').
@@ -182,9 +183,9 @@ class UserBatchRepo
 		return this._processor.toDTO(foundEnt, false);
 	}
 
-	public async deleteOnSecondConn(ids: BigSInt[]): Promise<number> {
+	public async deleteOnSecondConn(ids: BigInt[]): Promise<number> {
 		let affectedRowArr = await Promise.all(ids.map(id => 
-			this._processor.executeCommand(query => {
+			this._processor.executeQuery(query => {
 					return query.deleteById(id);
 				}, null, 'sec')
 		));
@@ -192,7 +193,7 @@ class UserBatchRepo
 	}
 
 	public deleteAll(): Promise<void> {
-		return this._processor.executeCommand(query => query.delete());
+		return this._processor.executeQuery(query => query.delete());
 	}
 }
 
@@ -214,7 +215,7 @@ describe('RepositoryBase-batch', function() {
 		// });
 
 		// // For PostgreSQL
-		dbConnector.addConnection(DB_DETAILS);
+		dbConnector.init(DB_DETAILS);
 		usrRepo = new UserBatchRepo(dbConnector);
 	});
 
@@ -230,7 +231,7 @@ describe('RepositoryBase-batch', function() {
 			let secondDb = Object.assign({}, DB_DETAILS);
 			secondDb.host = Object.assign({}, DB_DETAILS.host);
 			secondDb.host.database = 'unittestTwo';
-			dbConnector.addConnection(secondDb, 'sec'); // Name this connection as 'sec'
+			dbConnector.init(secondDb); // Name this connection as 'sec'
 		});
 
 		it('should insert four rows on each database', async () => {
@@ -527,7 +528,7 @@ describe('RepositoryBase-batch', function() {
 			modelTwo.name = 'Two';
 			modelTwo.age = 92;
 
-			dbConnector.addConnection({
+			dbConnector.init({
 				clientName: DbClient.SQLITE3,
 				filePath: CONN_FILE_2,
 			});

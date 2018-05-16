@@ -2,8 +2,8 @@ const every = require('lodash/every');
 const isEmpty = require('lodash/isEmpty');
 import { QueryBuilder, QueryBuilderSingle } from 'objection';
 import * as moment from 'moment';
-import { MinorException } from 'back-lib-common-util';
-import * as cc from 'back-lib-common-contracts';
+import { MinorException } from '@micro-fleet/common-util';
+import * as cc from '@micro-fleet/common-contracts';
 
 import { AtomicSessionFactory } from '../atom/AtomicSessionFactory';
 import { IDatabaseConnector, QueryCallback } from '../connector/IDatabaseConnector';
@@ -34,7 +34,7 @@ export class VersionControlledProcessor<TEntity extends EntityBase, TModel exten
 			entity['version'] = model['version'] = 1;
 		}
 
-		return this.executeCommand(query => query.insert(entity), opts.atomicSession)
+		return this.executeQuery(query => query.insert(entity), opts.atomicSession)
 			.then(() => <any>model);
 	}
 

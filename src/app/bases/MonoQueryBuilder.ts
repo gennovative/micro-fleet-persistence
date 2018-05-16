@@ -1,12 +1,12 @@
 import { QueryBuilder, QueryBuilderSingle } from 'objection';
-import * as cc from 'back-lib-common-contracts';
+import * as cc from '@micro-fleet/common-contracts';
 
 import { IQueryBuilder } from './IQueryBuilder';
 import { EntityBase } from './EntityBase';
 
 
 export class MonoQueryBuilder<TEntity extends EntityBase, TModel extends IModelDTO, TUk = NameUk> 
-	implements IQueryBuilder<TEntity, TModel, BigSInt, TUk> {
+	implements IQueryBuilder<TEntity, TModel, BigInt, TUk> {
 
 	constructor(private _EntityClass) {
 	}
@@ -17,7 +17,7 @@ export class MonoQueryBuilder<TEntity extends EntityBase, TModel extends IModelD
 		return (opts.includeDeleted) ? q : q.whereNull('deleted_at');
 	}
 
-	public buildDeleteHard(pk: BigSInt, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>): QueryBuilderSingle<number> {
+	public buildDeleteHard(pk: BigInt, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>): QueryBuilderSingle<number> {
 		return rawQuery.deleteById(<any>pk);
 	}
 
@@ -39,7 +39,7 @@ export class MonoQueryBuilder<TEntity extends EntityBase, TModel extends IModelD
 		return (opts.includeDeleted) ? q : q.whereNull('deleted_at');
 	}
 
-	public buildFind(pk: BigSInt, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: cc.RepositoryFindOptions = {}): QueryBuilder<TEntity> {
+	public buildFind(pk: BigInt, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: cc.RepositoryFindOptions = {}): QueryBuilder<TEntity> {
 		return <any>rawQuery.findById(<any>pk);
 	}
 
@@ -53,17 +53,17 @@ export class MonoQueryBuilder<TEntity extends EntityBase, TModel extends IModelD
 	}
 
 	public buildPatch(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: cc.RepositoryPatchOptions): QueryBuilder<number> {
-		return rawQuery.patch(entity).where('id', entity.id);
+		return rawQuery.patch(entity).where('id', entity['id']);
 	}
 
-	public buildRecoverOpts(pk: BigSInt, prevOpts: cc.RepositoryRecoverOptions, rawOpts: cc.RepositoryRecoverOptions): cc.RepositoryExistsOptions {
+	public buildRecoverOpts(pk: BigInt, prevOpts: cc.RepositoryRecoverOptions, rawOpts: cc.RepositoryRecoverOptions): cc.RepositoryExistsOptions {
 		return {
 			includeDeleted: true,
 		};
 	}
 
 	public buildUpdate(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: cc.RepositoryPatchOptions): QueryBuilder<number> {
-		return rawQuery.update(entity).where('id', entity.id);
+		return rawQuery.update(entity).where('id', entity['id']);
 	}
 
 }

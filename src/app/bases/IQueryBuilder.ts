@@ -1,5 +1,5 @@
 import { QueryBuilder, QueryBuilderSingle } from 'objection';
-import * as cc from 'back-lib-common-contracts';
+import * as cc from '@micro-fleet/common-contracts';
 
 import { EntityBase } from './EntityBase';
 
