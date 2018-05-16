@@ -1,0 +1,9 @@
+.vscode
+database-adapter-test.sqlite
+database-adapter-test-second.sqlite
+gulpfile.js
+tsconfig.json
+tslint.json
+src
+dist/test
+dist/**/*.map
