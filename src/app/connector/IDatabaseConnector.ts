@@ -1,10 +1,9 @@
 import * as knex from 'knex';
 import { QueryBuilder } from 'objection';
-import { AtomicSession, IDbConnectionDetail, constants } from '@micro-fleet/common-contracts';
+import { DbConnectionDetail } from '@micro-fleet/common';
 
+import { AtomicSession } from '../atom/AtomicSession';
 import { EntityBase } from '../bases/EntityBase';
-
-const { DbClient } = constants;
 
 
 export interface KnexConnection extends knex {
@@ -17,9 +16,9 @@ export interface KnexConnection extends knex {
 /**
  * Invoked when a request for getting query is replied.
  * @param {QueryBuilder} queryBuilder A query that is bound to a connection.
- * @param {Class extends Model} boundEntityClass A class that is bound to a connection.
+ * @param {Class extends EntityBase} boundEntityClass A class that is bound to a connection.
  */
-export type QueryCallback<TEntity> = (queryBuilder: QueryBuilder<TEntity>, boundEntityClass?) => Promise<any>;
+export type QueryCallback<TEntity> = (queryBuilder: QueryBuilder<TEntity>, boundEntityClass?: typeof EntityBase) => Promise<any>;
 
 /**
  * Helps with managing multiple database connections and executing same query with all
@@ -35,7 +34,7 @@ export interface IDatabaseConnector {
 	 * Creates a new database connection.
 	 * @param {IConnectionDetail} detail Credentials to make connection.
 	 */
-	init(detail: IDbConnectionDetail): void;
+	init(detail: DbConnectionDetail): void;
 
 	/**
 	 * Closes all connections and destroys this connector.
@@ -57,5 +56,5 @@ export interface IDatabaseConnector {
 	 * 
 	 * @return {Promise} A promise returned by the `callback`.
 	 */
-	prepare<TEntity extends EntityBase>(EntityClass, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any>;
+	prepare<TEntity extends EntityBase>(EntityClass: typeof EntityBase, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any>;
 }

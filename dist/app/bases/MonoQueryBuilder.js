@@ -53,5 +53,4 @@ class MonoQueryBuilder {
     }
 }
 exports.MonoQueryBuilder = MonoQueryBuilder;
-
 //# sourceMappingURL=MonoQueryBuilder.js.map

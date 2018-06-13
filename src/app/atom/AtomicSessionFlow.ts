@@ -1,8 +1,8 @@
 import { transaction } from 'objection';
-import { MinorException } from '@micro-fleet/common-util';
-import { AtomicSession } from '@micro-fleet/common-contracts';
+import { MinorException } from '@micro-fleet/common';
 
-import { IDatabaseConnector, KnexConnection } from '../connector/IDatabaseConnector';
+import { IDatabaseConnector } from '../connector/IDatabaseConnector';
+import { AtomicSession } from './AtomicSession';
 
 
 export type SessionTask = (session: AtomicSession, previousOutput?: any) => Promise<any>;
@@ -17,7 +17,7 @@ export class AtomicSessionFlow {
 	private _tasks: SessionTask[];
 	private _initPromise: Promise<any>;
 	private _finalPromise: Promise<any>;
-	private _abortFn: (reason) => void;
+	private _abortFn: (reason: any) => void;
 
 	/**
 	 * 
@@ -25,7 +25,7 @@ export class AtomicSessionFlow {
 	 */
 	constructor(protected _dbConnector: IDatabaseConnector, names: string[]) {
 		this._tasks = [];
-		this.initSession();
+		this._initSession();
 	}
 
 	/**
@@ -51,7 +51,7 @@ export class AtomicSessionFlow {
 					this._initPromise = null;
 
 					// Start executing enqueued tasks
-					this.loop();
+					this._loop();
 
 					// Waits for all transaction to complete,
 					// but only takes output from primary (first) one.
@@ -82,7 +82,7 @@ export class AtomicSessionFlow {
 	}
 
 
-	private initSession(): Promise<any[]> {
+	private _initSession(): Promise<any[]> {
 		const knexConn = this._dbConnector.connection;
 		return this._initPromise = transaction(knexConn, trans => {
 			this._session = new AtomicSession(knexConn, trans);
@@ -90,13 +90,13 @@ export class AtomicSessionFlow {
 		});
 	}
 
-	private doTask(prevOutput): Promise<any[]> {
+	private _doTask(prevOutput: any): Promise<any[]> {
 		let task = this._tasks.shift();
 		prevOutput = prevOutput || [];
 
 		if (!task) {
 			// When there's no more task, we commit all transactions.
-			this.resolveTransactions(prevOutput);
+			this._resolveTransactions(prevOutput);
 			return null;
 		}
 
@@ -142,27 +142,27 @@ export class AtomicSessionFlow {
 	}
 	//*/
 
-	private loop(prevOutput?): Promise<void> {
-		let prevWorks = this.doTask(prevOutput);
+	private async _loop(prevOutput?: any): Promise<void> {
+		let prevWorks = this._doTask(prevOutput);
 		if (!prevWorks) {
 			return;
 		}
 
 		prevWorks
 			.then(prev => {
-				this.loop(prev);
+				return this._loop(prev);
 			})
-			.catch(err => this.rejectTransactions(err))
+			.catch(err => this._rejectTransactions(err))
 			// This catches both promise errors and AtomicSessionFlow's errors.
 			.catch(this._abortFn);
 	}
 
-	private resolveTransactions(output): void {
+	private _resolveTransactions(output: any): void {
 		this._session.knexTransaction.commit(output);
 		this._session = this._tasks = null; // Clean up
 	}
 	
-	private rejectTransactions(error): void {
+	private _rejectTransactions(error: any): void {
 		this._session.knexTransaction.rollback(error);
 		this._session = this._tasks = null; // Clean up
 	}

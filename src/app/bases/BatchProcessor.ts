@@ -1,17 +1,15 @@
-const every = require('lodash/every');
-const isEmpty = require('lodash/isEmpty');
-import { QueryBuilder, QueryBuilderSingle } from 'objection';
-import * as moment from 'moment';
-import { injectable, Guard, MinorException } from '@micro-fleet/common-util';
-import * as cc from '@micro-fleet/common-contracts';
+import moment from 'moment';
+import { DtoBase, PagedArray } from '@micro-fleet/common';
 
+import * as it from '../interfaces';
+import { AtomicSession } from '../atom/AtomicSession';
 import { AtomicSessionFactory } from '../atom/AtomicSessionFactory';
 import { IDatabaseConnector, QueryCallback } from '../connector/IDatabaseConnector';
 import { EntityBase } from './EntityBase';
 import { MonoProcessor } from './MonoProcessor';
 
 
-export class BatchProcessor<TEntity extends EntityBase, TModel extends IModelDTO, TPk extends PkType = BigInt, TUk = NameUk> {
+export class BatchProcessor<TEntity extends EntityBase, TModel extends DtoBase, TPk extends PkType = BigInt, TUk = NameUk> {
 
 	/**
 	 * Gets array of non-primary unique property(ies).
@@ -40,14 +38,14 @@ export class BatchProcessor<TEntity extends EntityBase, TModel extends IModelDTO
 	/**
 	 * @see IRepository.countAll
 	 */
-	public countAll(opts: cc.RepositoryCountAllOptions = {}): Promise<number> {
+	public countAll(opts: it.RepositoryCountAllOptions = {}): Promise<number> {
 		return this._mono.countAll(opts);
 	}
 
 	/**
 	 * @see IRepository.create
 	 */
-	public create(model: TModel | TModel[], opts: cc.RepositoryCreateOptions = {}): Promise<TModel & TModel[]> {
+	public create(model: TModel | TModel[], opts: it.RepositoryCreateOptions = {}): Promise<TModel & TModel[]> {
 		if (Array.isArray(model)) {
 			return this.execBatch(model, this.create, opts);
 		}
@@ -58,7 +56,7 @@ export class BatchProcessor<TEntity extends EntityBase, TModel extends IModelDTO
 	/**
 	 * @see ISoftDelRepository.deleteSoft
 	 */
-	public deleteSoft(pk: TPk | TPk[], opts: cc.RepositoryDeleteOptions = {}): Promise<number> {
+	public deleteSoft(pk: TPk | TPk[], opts: it.RepositoryDeleteOptions = {}): Promise<number> {
 		if (Array.isArray(pk)) {
 			return this.execBatch(pk, this.deleteSoft, opts)
 				.then((r: number[]) => {
@@ -73,7 +71,7 @@ export class BatchProcessor<TEntity extends EntityBase, TModel extends IModelDTO
 	/**
 	 * @see IRepository.deleteHard
 	 */
-	public deleteHard(pk: TPk | TPk[], opts: cc.RepositoryDeleteOptions = {}): Promise<number> {
+	public deleteHard(pk: TPk | TPk[], opts: it.RepositoryDeleteOptions = {}): Promise<number> {
 		if (Array.isArray(pk)) {
 			return this.execBatch(pk, this.deleteHard, opts)
 				.then((r: number[]) => {
@@ -89,28 +87,28 @@ export class BatchProcessor<TEntity extends EntityBase, TModel extends IModelDTO
 	/**
 	 * @see IRepository.exists
 	 */
-	public exists(props: TUk, opts: cc.RepositoryExistsOptions = {}): Promise<boolean> {
+	public exists(props: TUk, opts: it.RepositoryExistsOptions = {}): Promise<boolean> {
 		return this._mono.exists(props, opts);
 	}
 
 	/**
 	 * @see IRepository.findByPk
 	 */
-	public findByPk(pk: TPk, opts: cc.RepositoryFindOptions = {}): Promise<TModel> {
+	public findByPk(pk: TPk, opts: it.RepositoryFindOptions = {}): Promise<TModel> {
 		return this._mono.findByPk(pk, opts);
 	}
 
 	/**
 	 * @see IRepository.page
 	 */
-	public page(pageIndex: number, pageSize: number, opts: cc.RepositoryPageOptions = {}): Promise<cc.PagedArray<TModel>> {
+	public page(pageIndex: number, pageSize: number, opts: it.RepositoryPageOptions = {}): Promise<PagedArray<TModel>> {
 		return this._mono.page(pageIndex, pageSize, opts);
 	}
 
 	/**
 	 * @see IRepository.patch
 	 */
-	public patch(model: Partial<TModel> | Partial<TModel>[], opts: cc.RepositoryPatchOptions = {}): Promise<Partial<TModel> & Partial<TModel>[]> {
+	public patch(model: Partial<TModel> | Partial<TModel>[], opts: it.RepositoryPatchOptions = {}): Promise<Partial<TModel> & Partial<TModel>[]> {
 		if (Array.isArray(model)) {
 			return this.execBatch(model, this.patch, opts);
 		}
@@ -120,7 +118,7 @@ export class BatchProcessor<TEntity extends EntityBase, TModel extends IModelDTO
 	/**
 	 * @see ISoftDelRepository.recover
 	 */
-	public recover(pk: TPk | TPk[], opts: cc.RepositoryRecoverOptions = {}): Promise<number> {
+	public recover(pk: TPk | TPk[], opts: it.RepositoryRecoverOptions = {}): Promise<number> {
 		if (Array.isArray(pk)) {
 			return this.execBatch(pk, this.recover, opts)
 				.then((r: number[]) => {
@@ -133,7 +131,7 @@ export class BatchProcessor<TEntity extends EntityBase, TModel extends IModelDTO
 	/**
 	 * @see IRepository.update
 	 */
-	public update(model: TModel | TModel[], opts: cc.RepositoryUpdateOptions = {}): Promise<TModel & TModel[]> {
+	public update(model: TModel | TModel[], opts: it.RepositoryUpdateOptions = {}): Promise<TModel & TModel[]> {
 		if (Array.isArray(model)) {
 			return this.execBatch(model, this.update, opts);
 		}
@@ -143,14 +141,14 @@ export class BatchProcessor<TEntity extends EntityBase, TModel extends IModelDTO
 	/**
 	 * @see MonoProcessor.executeQuery
 	 */
-	public executeQuery(callback: QueryCallback<TEntity>, atomicSession?: cc.AtomicSession, name: string = '0'): Promise<any> {
+	public executeQuery(callback: QueryCallback<TEntity>, atomicSession?: AtomicSession, name: string = '0'): Promise<any> {
 		return this._mono.executeQuery.apply(this._mono, arguments);
 	}
 
 	/**
 	 * Executes batch operation in transaction.
 	 */
-	public execBatch(inputs: any[], func: (m: any, opts?: cc.RepositoryOptions) => any, opts?: cc.RepositoryOptions): Promise<any> {
+	public execBatch(inputs: any[], func: (m: any, opts?: it.RepositoryOptions) => any, opts?: it.RepositoryOptions): Promise<any> {
 		// Utilize the provided transaction
 		if (opts.atomicSession) {
 			return Promise.all(

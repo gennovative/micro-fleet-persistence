@@ -70,5 +70,4 @@ class VersionControlledProcessor extends MonoProcessor_1.MonoProcessor {
     }
 }
 exports.VersionControlledProcessor = VersionControlledProcessor;
-
 //# sourceMappingURL=VersionControlledProcessor.js.map

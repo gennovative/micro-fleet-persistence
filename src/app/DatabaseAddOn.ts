@@ -1,5 +1,5 @@
-import { IConfigurationProvider, IDbConnectionDetail, Types as ConT, constants } from '@micro-fleet/common-contracts';
-import { injectable, inject, Guard, CriticalException } from '@micro-fleet/common-util';
+import { IConfigurationProvider, DbConnectionDetail, Types as ConT, constants,
+	injectable, inject, Guard, CriticalException, Maybe } from '@micro-fleet/common';
 
 import { IDatabaseConnector } from './connector/IDatabaseConnector';
 import { Types as T } from './Types';
@@ -24,7 +24,7 @@ export class DatabaseAddOn implements IServiceAddOn {
 	 * @see IServiceAddOn.init
 	 */
 	public init(): Promise<void> {
-		this.addConnections();
+		this._prepareConnection();
 		return Promise.resolve();
 	}
 
@@ -45,53 +45,47 @@ export class DatabaseAddOn implements IServiceAddOn {
 	}
 
 
-	private addConnections(): void {
-		let nConn = <number>this._configProvider.get(S.DB_NUM_CONN),
-			connDetail;
-
-		for (let i = 0; i < nConn; ++i) {
-			connDetail = this.buildConnDetails(i);
-			if (!connDetail) { continue; }
-			this._dbConnector.init(connDetail);
-		}
-
-		if (!this._dbConnector.connection) {
+	private _prepareConnection(): void {
+		const connDetail = this._buildConnDetails();
+		if (!connDetail.hasValue) {
 			throw new CriticalException('No database settings!');
 		}
+		this._dbConnector.init(connDetail.value);
+
 	}
 
-	private buildConnDetails(connIdx: number): IDbConnectionDetail {
+	private _buildConnDetails(): Maybe<DbConnectionDetail> {
 		let provider = this._configProvider,
-			cnnDetail: IDbConnectionDetail = {
-				clientName: provider.get(S.DB_ENGINE + connIdx) // Must belong to `DbClient`
+			cnnDetail: DbConnectionDetail = {
+				clientName: provider.get(S.DB_ENGINE).value as string // Must belong to `DbClient`
 			},
-			value: string;
+			setting: Maybe<string>;
 
 		// 1st priority: connect to a local file.
-		value = provider.get(S.DB_FILE + connIdx);
-		if (value) {
-			cnnDetail.filePath = value;
-			return cnnDetail;
+		setting = provider.get(S.DB_FILE) as Maybe<string>;
+		if (setting.hasValue) {
+			cnnDetail.filePath = setting.value;
+			return new Maybe(cnnDetail);
 		}
 
 		// 2nd priority: connect with a connection string.
-		value = provider.get(S.DB_CONN_STRING + connIdx);
-		if (value) {
-			cnnDetail.connectionString = value;
-			return cnnDetail;
+		setting = provider.get(S.DB_CONN_STRING) as Maybe<string>;
+		if (setting.hasValue) {
+			cnnDetail.connectionString = setting.value;
+			return new Maybe(cnnDetail);
 		}
 
 		// Last priority: connect with host credentials.
-		value = provider.get(S.DB_HOST + connIdx);
-		if (value) {
+		setting = provider.get(S.DB_ADDRESS) as Maybe<string>;
+		if (setting.hasValue) {
 			cnnDetail.host = {
-				address: provider.get(S.DB_HOST + connIdx),
-				user: provider.get(S.DB_USER + connIdx),
-				password: provider.get(S.DB_PASSWORD + connIdx),
-				database: provider.get(S.DB_NAME + connIdx),
+				address: provider.get(S.DB_ADDRESS).value as string,
+				user: provider.get(S.DB_USER).value as string,
+				password: provider.get(S.DB_PASSWORD).value as string,
+				database: provider.get(S.DB_NAME).value as string,
 			};
-			return cnnDetail;
+			return new Maybe(cnnDetail);
 		}
-		return null;
+		return new Maybe;
 	}
 }

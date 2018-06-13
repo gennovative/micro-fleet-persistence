@@ -115,5 +115,4 @@ RepositoryBase = __decorate([
     __metadata("design:paramtypes", [Object, Object, Object])
 ], RepositoryBase);
 exports.RepositoryBase = RepositoryBase;
-
 //# sourceMappingURL=RepositoryBase.js.map

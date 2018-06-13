@@ -34,5 +34,4 @@ class TenantQueryBuilder {
     }
 }
 exports.TenantQueryBuilder = TenantQueryBuilder;
-
 //# sourceMappingURL=TenantQueryBuilder.js.map

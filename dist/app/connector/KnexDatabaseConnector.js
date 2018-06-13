@@ -98,5 +98,4 @@ KnexDatabaseConnector = __decorate([
     __metadata("design:paramtypes", [])
 ], KnexDatabaseConnector);
 exports.KnexDatabaseConnector = KnexDatabaseConnector;
-
 //# sourceMappingURL=KnexDatabaseConnector.js.map

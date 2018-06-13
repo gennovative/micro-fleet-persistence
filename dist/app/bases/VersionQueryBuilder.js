@@ -40,5 +40,4 @@ class VersionQueryBuilder {
     }
 }
 exports.VersionQueryBuilder = VersionQueryBuilder;
-
 //# sourceMappingURL=VersionQueryBuilder.js.map

@@ -9,12 +9,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const every = require('lodash/every');
-const isEmpty = require('lodash/isEmpty');
 const debug = require('debug')('MonoProcessor');
-const moment = require("moment");
-const common_util_1 = require("@micro-fleet/common-util");
-const cc = require("@micro-fleet/common-contracts");
+const isEmpty_1 = require("lodash/isEmpty");
+const moment_1 = require("moment");
+const common_1 = require("@micro-fleet/common");
 const MonoQueryBuilder_1 = require("./MonoQueryBuilder");
 const TenantQueryBuilder_1 = require("./TenantQueryBuilder");
 class MonoProcessor {
@@ -37,14 +35,14 @@ class MonoProcessor {
      * Gets current date time in UTC.
      */
     get utcNow() {
-        return moment(new Date()).utc();
+        return moment_1.default(new Date()).utc();
     }
     /**
      * @see IRepository.countAll
      */
     countAll(opts = {}) {
         return __awaiter(this, void 0, void 0, function* () {
-            let result = yield this.executeQuery(query => {
+            let result = yield this.executeQuery((query) => {
                 // let q = this.buildCountAll(query, opts);
                 let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
                     return currBuilder.buildCountAll(prevQuery, query.clone(), opts);
@@ -124,7 +122,7 @@ class MonoProcessor {
      */
     page(pageIndex, pageSize, opts = {}) {
         return __awaiter(this, void 0, void 0, function* () {
-            let foundList, dtoList, affectedRows;
+            let foundList, dtoList;
             foundList = yield this.executeQuery(query => {
                 // let q = this.buildPage(pageIndex, pageSize, query, opts);
                 let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
@@ -133,11 +131,11 @@ class MonoProcessor {
                 debug('PAGE: %s', q.toSql());
                 return q;
             }, opts.atomicSession);
-            if (!foundList || isEmpty(foundList.results)) {
+            if (!foundList || isEmpty_1.default(foundList.results)) {
                 return null;
             }
             dtoList = this.toDTO(foundList.results, false);
-            return new cc.PagedArray(foundList.total, ...dtoList);
+            return new common_1.PagedArray(foundList.total, ...dtoList);
         });
     }
     /**
@@ -179,7 +177,7 @@ class MonoProcessor {
             // If another ACTIVE record with same unique keys exists
             options.includeDeleted = false;
             if (yield this.exists(model, options)) {
-                throw new common_util_1.MinorException('DUPLICATE_UNIQUE_KEY');
+                throw new common_1.MinorException('DUPLICATE_UNIQUE_KEY');
             }
             return this.setDeleteState(pk, false, opts);
         });
@@ -191,8 +189,8 @@ class MonoProcessor {
         if (model.hasOwnProperty('updatedAt')) {
             model['updatedAt'] = this.utcNow.toDate();
         }
-        let entity = this.toEntity(model, false), affectedRows;
-        return this.executeQuery(query => {
+        let entity = this.toEntity(model, false);
+        return this.executeQuery((query) => {
             // let q = this.buildUpdate(entity, query, opts);
             let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
                 return currBuilder.buildUpdate(entity, prevQuery, query.clone(), opts);
@@ -223,7 +221,7 @@ class MonoProcessor {
         entity = this._EntityClass.translator.whole(dto);
         for (let prop of ['createdAt', 'updatedAt', 'deletedAt']) {
             if (dto[prop]) {
-                entity[prop] = moment.utc(dto[prop]).format();
+                entity[prop] = moment_1.default.utc(dto[prop]).format();
             }
         }
         return entity;
@@ -243,7 +241,7 @@ class MonoProcessor {
         dto = this._EntityClass.translator.whole(entity, { enableValidation: false });
         for (let prop of ['createdAt', 'updatedAt', 'deletedAt']) {
             if (entity[prop]) {
-                dto[prop] = moment.utc(entity[prop]).toDate();
+                dto[prop] = moment_1.default.utc(entity[prop]).toDate();
             }
         }
         return dto;
@@ -263,7 +261,7 @@ class MonoProcessor {
         return this._dbConnector.prepare(this._EntityClass, callback, atomicSession);
     }
     buildDeleteState(pk, isDel) {
-        let delta, deletedAt = (isDel ? this.utcNow.format() : null);
+        let deletedAt = (isDel ? this.utcNow.format() : null);
         if (this._options.isMultiTenancy) {
             return Object.assign(pk, { deletedAt });
         }
@@ -287,5 +285,4 @@ class MonoProcessor {
     }
 }
 exports.MonoProcessor = MonoProcessor;
-
 //# sourceMappingURL=MonoProcessor.js.map

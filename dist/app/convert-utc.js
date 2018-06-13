@@ -19,5 +19,4 @@ let parseFn = function (val) {
 pg_1.types.setTypeParser(TIMESTAMPTZ_OID, parseFn);
 pg_1.types.setTypeParser(TIMESTAMP_OID, parseFn);
 pg_1.types.setTypeParser(DATE_OID, parseFn);
-
 //# sourceMappingURL=convert-utc.js.map

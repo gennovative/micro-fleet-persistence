@@ -7,9 +7,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 if (!Reflect || typeof Reflect['hasOwnMetadata'] !== 'function') {
     require('reflect-metadata');
 }
-const memoize = require('lodash/memoize');
-global['snakeCase'] = memoize(require('lodash/snakeCase'));
-global['camelCase'] = memoize(require('lodash/camelCase'));
+const memoize_1 = require("lodash/memoize");
+global['snakeCase'] = memoize_1.default(require('lodash/snakeCase'));
+global['camelCase'] = memoize_1.default(require('lodash/camelCase'));
 require("./convert-utc");
 __export(require("./atom/AtomicSessionFactory"));
 __export(require("./atom/AtomicSessionFlow"));
@@ -23,5 +23,4 @@ __export(require("./bases/VersionControlledProcessor"));
 __export(require("./connector/KnexDatabaseConnector"));
 __export(require("./DatabaseAddOn"));
 __export(require("./Types"));
-
 //# sourceMappingURL=index.js.map

@@ -1,5 +1,5 @@
 import { types } from 'pg';
-import * as moment from 'moment';
+// import * as moment from 'moment';
 
 // PostgreSQL data type OID
 const TIMESTAMPTZ_OID = 1184, // Timestamp without timezone
@@ -11,7 +11,7 @@ const TIMESTAMPTZ_OID = 1184, // Timestamp without timezone
  * as UTC format.
  */
 /* istanbul ignore next */
-let parseFn = function(val) {
+let parseFn = function(val: string) {
 	// Use this if you want Entity classes have Date OBJECT properties.
 	// return val === null ? null : moment(val).toDate();
 	

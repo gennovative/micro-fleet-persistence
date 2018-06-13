@@ -1,15 +1,14 @@
 /// <reference types="debug" />
 
-const every = require('lodash/every');
-const isEmpty = require('lodash/isEmpty');
 const debug: debug.IDebugger = require('debug')('MonoProcessor');
+import isEmpty from 'lodash/isEmpty';
 
 import { QueryBuilder, QueryBuilderSingle } from 'objection';
-import * as moment from 'moment';
-import { MinorException } from '@micro-fleet/common-util';
-import * as cc from '@micro-fleet/common-contracts';
+import moment from 'moment';
+import { DtoBase, MinorException, PagedArray } from '@micro-fleet/common';
 
-import { AtomicSessionFactory } from '../atom/AtomicSessionFactory';
+import * as it from '../interfaces';
+import { AtomicSession } from '../atom/AtomicSession';
 import { IDatabaseConnector, QueryCallback } from '../connector/IDatabaseConnector';
 import { IQueryBuilder } from './IQueryBuilder';
 import { MonoQueryBuilder } from './MonoQueryBuilder';
@@ -27,7 +26,7 @@ export interface ProcessorOptions {
 	triggerProps?: string[];
 }
 
-export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO, TPk extends PkType = BigInt, TUk = NameUk> {
+export class MonoProcessor<TEntity extends EntityBase, TModel extends DtoBase, TPk extends PkType = BigInt, TUk = NameUk> {
 
 	/**
 	 * Gets array of non-primary unique property(ies).
@@ -39,7 +38,8 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 	protected _queryBuilders: IQueryBuilder<TEntity, TModel, PkType, TUk>[];
 
 	constructor(
-		protected _EntityClass,
+		protected _EntityClass: typeof EntityBase,
+		protected _DtoClass: typeof DtoBase,
 		protected _dbConnector: IDatabaseConnector,
 		protected _options: ProcessorOptions = {}
 	) {
@@ -61,15 +61,15 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 	/**
 	 * @see IRepository.countAll
 	 */
-	public async countAll(opts: cc.RepositoryCountAllOptions = {}): Promise<number> {
+	public async countAll(opts: it.RepositoryCountAllOptions = {}): Promise<number> {
 		let result = await this.executeQuery(
-			query => {
+			(query: QueryBuilder<TEntity>) => {
 				// let q = this.buildCountAll(query, opts);
 				let q = this._queryBuilders.reduce<QueryBuilder<TEntity>>((prevQuery, currBuilder) => {
 					return currBuilder.buildCountAll(prevQuery, query.clone(), opts); 
 				}, null);
 				debug('COUNT ALL: %s', q.toSql());
-				return q;
+				return <any>q;
 			},
 			opts.atomicSession
 		);
@@ -82,27 +82,27 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 	/**
 	 * @see IRepository.create
 	 */
-	public create(model: TModel, opts: cc.RepositoryCreateOptions = {}): Promise<TModel & TModel[]> {
+	public create(model: TModel, opts: it.RepositoryCreateOptions = {}): Promise<TModel & TModel[]> {
 		if (model.hasOwnProperty('createdAt')) {
 			model['createdAt'] = model['updatedAt'] = this.utcNow.toDate();
 		}
-		let entity = this.toEntity(model, false);
+		let entity = this.toEntity(model, false) as TEntity;
 
-		return this.executeQuery(query => query.insert(entity), opts.atomicSession)
+		return this.executeQuery(query => <any>query.insert(entity), opts.atomicSession)
 			.then(() => <any>model);
 	}
 
 	/**
 	 * @see ISoftDelRepository.deleteSoft
 	 */
-	public deleteSoft(pk: TPk, opts: cc.RepositoryDeleteOptions = {}): Promise<number> {
-		return this.setDeleteState(pk, true, opts);
+	public deleteSoft(pk: TPk, opts: it.RepositoryDeleteOptions = {}): Promise<number> {
+		return this._setDeleteState(pk, true, opts);
 	}
 
 	/**
 	 * @see IRepository.deleteHard
 	 */
-	public deleteHard(pk: TPk, opts: cc.RepositoryDeleteOptions = {}): Promise<number> {
+	public deleteHard(pk: TPk, opts: it.RepositoryDeleteOptions = {}): Promise<number> {
 		return this.executeQuery(
 			query => {
 				// let q = this.buildDeleteHard(pk, query);
@@ -110,7 +110,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 					return currBuilder.buildDeleteHard(pk, prevQuery, query.clone());
 				}, null);
 				debug('HARD DELETE: %s', q.toSql());
-				return q;
+				return <any>q;
 			},
 			opts.atomicSession
 		);
@@ -119,7 +119,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 	/**
 	 * @see IRepository.exists
 	 */
-	public async exists(props: TUk, opts: cc.RepositoryExistsOptions = {}): Promise<boolean> {
+	public async exists(props: TUk, opts: it.RepositoryExistsOptions = {}): Promise<boolean> {
 		let result = await this.executeQuery(
 			query => {
 				// let q = this.buildExists(props, query, opts);
@@ -127,7 +127,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 					return currBuilder.buildExists(this.toArr(props, this.ukCol), prevQuery, query.clone(), opts);
 				}, null);
 				debug('EXIST: %s', q.toSql());
-				return q;
+				return <any>q;
 			},
 			opts.atomicSession
 		);
@@ -138,7 +138,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 	/**
 	 * @see IRepository.findByPk
 	 */
-	public findByPk(pk: TPk, opts: cc.RepositoryFindOptions = {}): Promise<TModel> {
+	public findByPk(pk: TPk, opts: it.RepositoryFindOptions = {}): Promise<TModel> {
 		return this.executeQuery(
 			query => {
 				// let q = this.buildFind(pk, query);
@@ -146,7 +146,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 					return currBuilder.buildFind(pk, prevQuery, query.clone(), opts);
 				}, null);
 				debug('FIND BY (%s): %s', pk, q.toSql());
-				return q;
+				return <any>q;
 			},
 			opts.atomicSession)
 			.then(foundEnt => {
@@ -157,10 +157,9 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 	/**
 	 * @see IRepository.page
 	 */
-	public async page(pageIndex: number, pageSize: number, opts: cc.RepositoryPageOptions = {}): Promise<cc.PagedArray<TModel>> {
+	public async page(pageIndex: number, pageSize: number, opts: it.RepositoryPageOptions = {}): Promise<PagedArray<TModel>> {
 		let foundList: { total: number, results: Array<TEntity> },
-			dtoList: TModel[],
-			affectedRows: number;
+			dtoList: TModel[];
 
 		foundList = await this.executeQuery(
 			query => {
@@ -169,7 +168,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 					return currBuilder.buildPage(pageIndex, pageSize, prevQuery, query.clone(), opts);
 				}, null);
 				debug('PAGE: %s', q.toSql());
-				return q;
+				return <any>q;
 			},
 			opts.atomicSession
 		);
@@ -177,15 +176,15 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 		if (!foundList || isEmpty(foundList.results)) {
 			return null;
 		}
-		dtoList = this.toDTO(foundList.results, false);
-		return new cc.PagedArray<TModel>(foundList.total, ...dtoList);
+		dtoList = this.toDTO(foundList.results, false) as TModel[];
+		return new PagedArray<TModel>(foundList.total, ...dtoList);
 	}
 
 	/**
 	 * @see IRepository.patch
 	 */
-	public patch(model: Partial<TModel>, opts: cc.RepositoryPatchOptions = {}): Promise<Partial<TModel> & Partial<TModel>[]> {
-		let entity = this.toEntity(model, true);
+	public patch(model: Partial<TModel>, opts: it.RepositoryPatchOptions = {}): Promise<Partial<TModel> & Partial<TModel>[]> {
+		let entity = this.toEntity(model, true) as TEntity;
 
 		// We check property in "entity" because the "model" here is partial.
 		if (entity.hasOwnProperty('updatedAt')) {
@@ -200,7 +199,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 					return currBuilder.buildPatch(entity, prevQuery, query.clone(), opts);
 				}, null);
 				debug('PATCH (%o): %s', entity, q.toSql());
-				return q;
+				return <any>q;
 			},
 			opts.atomicSession)
 			// `query.patch` returns number of affected rows, but we want to return the updated model.
@@ -210,9 +209,9 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 	/**
 	 * @see ISoftDelRepository.recover
 	 */
-	public async recover(pk: TPk, opts: cc.RepositoryRecoverOptions = {}): Promise<number> {
+	public async recover(pk: TPk, opts: it.RepositoryRecoverOptions = {}): Promise<number> {
 		// let options = this.buildRecoverOpts(pk, opts),
-		let options = this._queryBuilders.reduce<cc.RepositoryExistsOptions>((prevOpts: any, currBuilder) => {
+		let options = this._queryBuilders.reduce<it.RepositoryExistsOptions>((prevOpts: any, currBuilder) => {
 			return currBuilder.buildRecoverOpts(pk, prevOpts, opts);
 		}, null);
 
@@ -227,28 +226,27 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 		if (await this.exists(<any>model, options)) {
 			throw new MinorException('DUPLICATE_UNIQUE_KEY');
 		}
-		return this.setDeleteState(pk, false, opts);
+		return this._setDeleteState(pk, false, opts);
 	}
 
 	/**
 	 * @see IRepository.update
 	 */
-	public update(model: TModel, opts: cc.RepositoryUpdateOptions = {}): Promise<TModel> {
+	public update(model: TModel, opts: it.RepositoryUpdateOptions = {}): Promise<TModel> {
 		if (model.hasOwnProperty('updatedAt')) {
 			model['updatedAt'] = this.utcNow.toDate();
 		}
-		let entity = this.toEntity(model, false),
-			affectedRows: number;
+		let entity = this.toEntity(model, false) as TEntity;
 
 
 		return this.executeQuery(
-			query => {
+			(query: QueryBuilder<TEntity>) => {
 				// let q = this.buildUpdate(entity, query, opts);
-				let q = this._queryBuilders.reduce<QueryBuilder<number>>((prevQuery: any, currBuilder) => {
+				let q = this._queryBuilders.reduce<QueryBuilder<any>>((prevQuery: any, currBuilder) => {
 					return currBuilder.buildUpdate(entity, prevQuery, query.clone(), opts);
 				}, null);
 				debug('UPDATE (%o): %s', entity, q.toSql());
-				return q;
+				return <any>q;
 			}, opts.atomicSession)
 			// `query.update` returns number of affected rows, but we want to return the updated model.
 			.then(count => count ? <any>model : null);
@@ -257,14 +255,14 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 	/**
 	 * Executing an query
 	 */
-	public executeQuery(callback: QueryCallback<TEntity>, atomicSession?: cc.AtomicSession): Promise<any> {
-		return this.prepare(callback, atomicSession);
+	public executeQuery(callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any> {
+		return this._prepare(callback, atomicSession);
 	}
 
 	/**
 	 * Translates from DTO model(s) to entity model(s).
 	 */
-	public toEntity(dto: TModel | TModel[] | Partial<TModel>, isPartial: boolean): TEntity & TEntity[] {
+	public toEntity(dto: TModel | TModel[] | Partial<TModel>, isPartial: boolean): TEntity | TEntity[] {
 		if (!dto) { return null; }
 
 		let entity;
@@ -279,21 +277,21 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 			}
 		}
 
-		return entity;
+		return entity as (TEntity | TEntity[]);
 	}
 
 	/**
 	 * Translates from entity model(s) to DTO model(s).
 	 */
-	public toDTO(entity: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel & TModel[] {
+	public toDTO(entity: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel | TModel[] {
 		if (!entity) { return null; }
 
 		let dto;
 		if (isPartial) {
-			dto = this._EntityClass.translator.partial(entity, { enableValidation: false });
+			dto = this._DtoClass.translator.partial(entity, { enableValidation: false });
 		}
 		// Disable validation because it's unnecessary.
-		dto = this._EntityClass.translator.whole(entity, { enableValidation: false });
+		dto = this._DtoClass.translator.whole(entity, { enableValidation: false });
 
 		for (let prop of ['createdAt', 'updatedAt', 'deletedAt']) {
 			if (entity[prop]) {
@@ -301,7 +299,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 			}
 		}
 
-		return dto;
+		return dto as (TModel | TModel[]);
 	}
 
 	/**
@@ -317,13 +315,12 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 	/**
 	 * @see IDatabaseConnector.query
 	 */
-	protected prepare(callback: QueryCallback<TEntity>, atomicSession?: cc.AtomicSession): Promise<any> {
+	protected _prepare(callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any> {
 		return this._dbConnector.prepare(this._EntityClass, <any>callback, atomicSession);
 	}
 
-	protected buildDeleteState(pk: TPk, isDel: boolean): any {
-		let delta: any,
-			deletedAt = (isDel ? this.utcNow.format() : null);
+	protected _buildDeleteState(pk: TPk, isDel: boolean): any {
+		let deletedAt = (isDel ? this.utcNow.format() : null);
 
 		if (this._options.isMultiTenancy) {
 			return Object.assign(pk, { deletedAt });
@@ -335,8 +332,8 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 		}
 	}
 
-	protected setDeleteState(pk: TPk, isDel: boolean, opts: cc.RepositoryDeleteOptions = {}): Promise<number> {
-		let delta = this.buildDeleteState(pk, isDel);
+	protected _setDeleteState(pk: TPk, isDel: boolean, opts: it.RepositoryDeleteOptions = {}): Promise<number> {
+		let delta = this._buildDeleteState(pk, isDel);
 
 		return this.executeQuery(
 			query => {
@@ -345,7 +342,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends IModelDTO,
 					return currBuilder.buildPatch(delta, prevQuery, query.clone(), opts);
 				}, null);
 				debug('DEL STATE (%s): %s', isDel, q.toSql());
-				return q;
+				return <any>q;
 			},
 			opts.atomicSession);
 	}

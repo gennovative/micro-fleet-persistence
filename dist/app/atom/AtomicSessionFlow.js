@@ -150,5 +150,4 @@ class AtomicSessionFlow {
     }
 }
 exports.AtomicSessionFlow = AtomicSessionFlow;
-
 //# sourceMappingURL=AtomicSessionFlow.js.map

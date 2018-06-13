@@ -1,10 +1,7 @@
 import * as knex from 'knex';
-import { Model, QueryBuilder, transaction } from 'objection';
-const isEmpty = require('lodash/isEmpty');
+import { injectable, Guard, MinorException, DbConnectionDetail } from '@micro-fleet/common';
 
-import { injectable, Guard, MinorException } from '@micro-fleet/common-util';
-import { AtomicSession, IDbConnectionDetail } from '@micro-fleet/common-contracts';
-
+import { AtomicSession } from '../atom/AtomicSession';
 import { EntityBase } from '../bases/EntityBase';
 import { IDatabaseConnector, QueryCallback, KnexConnection } from './IDatabaseConnector';
 
@@ -16,7 +13,7 @@ import { IDatabaseConnector, QueryCallback, KnexConnection } from './IDatabaseCo
 export class KnexDatabaseConnector implements IDatabaseConnector {
 	
 	private _connection: KnexConnection;
-	private _knex; // for unittest mocking
+	private _knex: typeof knex; // for unittest mocking
 
 	constructor() {
 		this._knex = knex;
@@ -32,15 +29,14 @@ export class KnexDatabaseConnector implements IDatabaseConnector {
 	/**
 	 * @see IDatabaseConnector.init
 	 */
-	public init(detail: IDbConnectionDetail): void {
+	public init(detail: DbConnectionDetail): void {
 		Guard.assertArgDefined('detail', detail);
 
 		const settings = {
 				client: detail.clientName,
 				useNullAsDefault: true,
-				connection: this.buildConnSettings(detail)
-			},
-			knexConn: KnexConnection = 
+				connection: this._buildConnSettings(detail)
+			};
 		this._connection = this._knex(settings);
 	}
 
@@ -56,16 +52,16 @@ export class KnexDatabaseConnector implements IDatabaseConnector {
 	/**
 	 * @see IDatabaseConnector.prepare
 	 */
-	public prepare<TEntity extends EntityBase>(EntityClass, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any> {
+	public prepare<TEntity extends EntityBase>(EntityClass: typeof EntityBase, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any> {
 		Guard.assertIsNotEmpty(this._connection, 'Must call addConnection() before executing any query.');
 		if (atomicSession) {
-			return this.prepareTransactionalQuery(EntityClass, callback, atomicSession);
+			return this._prepareTransactionalQuery(EntityClass, callback, atomicSession);
 		}
-		return this.prepareSimpleQuery(EntityClass, callback);
+		return this._prepareSimpleQuery(EntityClass, callback);
 	}
 
 
-	private buildConnSettings(detail: IDbConnectionDetail): any {
+	private _buildConnSettings(detail: DbConnectionDetail): any {
 		// 1st priority: connect to a local file.
 		if (detail.filePath) {
 			return { filename: detail.filePath };
@@ -88,13 +84,14 @@ export class KnexDatabaseConnector implements IDatabaseConnector {
 		throw new MinorException('No database settings!');
 	}
 
-	private prepareSimpleQuery<TEntity>(EntityClass, callback: QueryCallback<TEntity>): Promise<any> {
-		let BoundClass = EntityClass['bindKnex'](this._connection);
-		return callback(BoundClass['query'](), BoundClass);
+	private _prepareSimpleQuery<TEntity extends EntityBase>(EntityClass: typeof EntityBase, callback: QueryCallback<TEntity>): Promise<any> {
+		const BoundClass: any = EntityClass['bindKnex'](this._connection);
+		const query = BoundClass['query']();
+		return callback(query, BoundClass);
 	}
 
-	private prepareTransactionalQuery<TEntity>(EntityClass, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any> {
-		const BoundClass = EntityClass['bindKnex'](atomicSession.knexConnection);
+	private _prepareTransactionalQuery<TEntity>(EntityClass: typeof EntityBase, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any> {
+		const BoundClass: any = EntityClass['bindKnex'](atomicSession.knexConnection);
 		return callback(BoundClass['query'](atomicSession.knexTransaction), BoundClass);
 	}
 

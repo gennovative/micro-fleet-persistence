@@ -1,15 +1,12 @@
 import { expect } from 'chai';
 import { QueryBuilder } from 'objection';
 
-import { InvalidArgumentException, MinorException } from '@micro-fleet/common-util';
-import { PagedArray, ModelAutoMapper, AtomicSession, constants } from '@micro-fleet/common-contracts';
+import { MinorException, PagedArray, ModelAutoMapper } from '@micro-fleet/common';
 import { IdGenerator } from '@micro-fleet/id-generator';
 
-import { RepositoryBase, EntityBase, QueryCallback, IDatabaseConnector,
+import { RepositoryBase, EntityBase, IDatabaseConnector,
 		KnexDatabaseConnector, AtomicSessionFactory, AtomicSessionFlow } from '../app';
 import DB_DETAILS from './database-details';
-
-const { DbClient } = constants;
 
 
 const DB_TABLE = 'usersSoftDel',
@@ -17,9 +14,6 @@ const DB_TABLE = 'usersSoftDel',
 
 
 // Should put this in Types.ts
-const TYPE_USER_DTO = Symbol('UserDTO'),
-	TYPE_USER_ENT = Symbol('UserEntity');
-
 class UserDTO implements IModelDTO, ISoftDeletable, IAuditable {
 
 	public static translator: ModelAutoMapper<UserDTO> = new ModelAutoMapper(UserDTO);

@@ -145,5 +145,4 @@ class BatchProcessor {
     }
 }
 exports.BatchProcessor = BatchProcessor;
-
 //# sourceMappingURL=BatchProcessor.js.map

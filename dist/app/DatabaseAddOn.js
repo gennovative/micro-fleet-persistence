@@ -20,6 +20,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+var _a;
+"use strict";
 const common_contracts_1 = require("@micro-fleet/common-contracts");
 const common_util_1 = require("@micro-fleet/common-util");
 const Types_1 = require("./Types");
@@ -104,8 +106,7 @@ DatabaseAddOn = __decorate([
     common_util_1.injectable(),
     __param(0, common_util_1.inject(common_contracts_1.Types.CONFIG_PROVIDER)),
     __param(1, common_util_1.inject(Types_1.Types.DB_CONNECTOR)),
-    __metadata("design:paramtypes", [Object, Object])
+    __metadata("design:paramtypes", [typeof (_a = typeof common_contracts_1.IConfigurationProvider !== "undefined" && common_contracts_1.IConfigurationProvider) === "function" && _a || Object, Object])
 ], DatabaseAddOn);
 exports.DatabaseAddOn = DatabaseAddOn;
-
 //# sourceMappingURL=DatabaseAddOn.js.map

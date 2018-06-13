@@ -22,8 +22,8 @@ Belongs to Micro Fleet framework, provides base repository class with pre-implem
     `docker run -d --name postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:9.6-alpine`
   - Create a database name `unittest-persistence`. If you want to change the name as well as database credentials, edit file `/src/test/database-details.ts` then execute `gulp compile`.
   - Install knex globally: `npm i -g knex`
-  - Jump to database migration folder: `cd restore-db`
-  - Execute: `knex' migrate:latest`
+  - Jump to database migration folder: `cd database`
+  - Execute: `knex migrate:latest`
   - Note:
     * Existing tables are dropped.
 	* If you want to re-run migration script, truncate all rows in `knex_migrations` table in database.

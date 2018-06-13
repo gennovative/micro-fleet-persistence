@@ -37,5 +37,4 @@ AtomicSessionFactory = __decorate([
     __metadata("design:paramtypes", [Object])
 ], AtomicSessionFactory);
 exports.AtomicSessionFactory = AtomicSessionFactory;
-
 //# sourceMappingURL=AtomicSessionFactory.js.map
