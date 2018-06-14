@@ -1,5 +1,4 @@
 import { expect } from 'chai';
-import { QueryBuilder } from 'objection';
 
 import { MinorException, PagedArray, ModelAutoMapper } from '@micro-fleet/common';
 import { IdGenerator } from '@micro-fleet/id-generator';
@@ -12,11 +11,9 @@ import DB_DETAILS from './database-details';
 const DB_TABLE = 'usersSoftDel',
 	IMPOSSIBLE_ID = '0';
 
+class UserDTO implements ISoftDeletable, IAuditable {
 
-// Should put this in Types.ts
-class UserDTO implements IModelDTO, ISoftDeletable, IAuditable {
-
-	public static translator: ModelAutoMapper<UserDTO> = new ModelAutoMapper(UserDTO);
+	public static readonly translator: ModelAutoMapper<UserDTO> = new ModelAutoMapper(UserDTO);
 
 	// NOTE: Class properties must be initialized, otherwise they
 	// will disappear in transpiled code.
@@ -40,7 +37,7 @@ class UserEntity extends EntityBase {
 	public static readonly idColumn = ['id'];
 	public static readonly uniqColumn = ['name', 'age'];
 
-	public static translator: ModelAutoMapper<UserEntity> = new ModelAutoMapper(UserEntity);
+	public static readonly translator: ModelAutoMapper<UserEntity> = new ModelAutoMapper(UserEntity);
 
 	// NOTE: Class properties must be initialized, otherwise they
 	// will disappear in transpiled code.
@@ -64,7 +61,7 @@ class UserRepo extends RepositoryBase<UserEntity, UserDTO, BigInt, NameAgeUk> {
 	constructor(
 		dbConnector: IDatabaseConnector
 	) {
-		super(UserEntity, dbConnector);
+		super(UserEntity, UserDTO, dbConnector);
 		this._sessionFactory = new AtomicSessionFactory(dbConnector);
 	}
 
@@ -85,7 +82,7 @@ class UserRepo extends RepositoryBase<UserEntity, UserDTO, BigInt, NameAgeUk> {
 	}
 
 	private _counter = 0;
-	public firstOutput;
+	public firstOutput: any;
 	public failOnSecondTransaction(adam: UserDTO, eva: UserDTO): Promise<UserDTO[]> {
 		return this._sessionFactory.startSession()
 			.pipe(atomicSession => this.create(adam, { atomicSession }))
@@ -117,18 +114,6 @@ class UserRepo extends RepositoryBase<UserEntity, UserDTO, BigInt, NameAgeUk> {
 			.closePipe();
 	}
 
-	public createAdamOnSecondConn(adam: UserDTO): Promise<UserDTO> {
-		return this._sessionFactory.startSession('sec')
-			.pipe(atomicSession => this.create(adam, { atomicSession }))
-			.closePipe();
-	}
-
-	public createAdamOnNonExistConn(adam: UserDTO): Promise<UserDTO> {
-		return this._sessionFactory.startSession('nonexist')
-			.pipe(atomicSession => this.create(adam, { atomicSession }))
-			.closePipe();
-	}
-
 	public createSessionPipe(adam: UserDTO, eva: UserDTO): AtomicSessionFlow {
 		return this._sessionFactory.startSession()
 			.pipe(atomicSession => this.create(adam, { atomicSession }))
@@ -153,27 +138,12 @@ class UserRepo extends RepositoryBase<UserEntity, UserDTO, BigInt, NameAgeUk> {
 			//.closePipe(); // Not closing pipe
 	}
 
-	public async findOnFirstConn(id: BigInt): Promise<UserDTO> {
+	public async find(id: BigInt): Promise<UserDTO> {
 		let foundEnt: UserEntity = await this._processor.executeQuery(query => {
 				return query.findById(id);
-			}, null, '0'); // Executing on first connection only.
+			}, null); // Executing on first connection only.
 
 		return this._processor.toDTO(foundEnt, false);
-	}
-
-	public async findOnSecondConn(id: BigInt): Promise<UserDTO> {
-		let foundEnt: UserEntity = await this._processor.executeQuery((query: QueryBuilder<UserEntity>) => {
-				return query.findById(id);
-			}, null, 'sec'); // Executing on second connection (named 'sec').
-
-		return this._processor.toDTO(foundEnt, false);
-	}
-
-	public async deleteOnSecondConn(id: BigInt): Promise<UserDTO> {
-		let affectedRows = await this._processor.executeQuery(query => {
-				return query.deleteById(id);
-			}, null, 'sec');
-		return affectedRows;
 	}
 
 	public deleteAll(): Promise<void> {
@@ -186,8 +156,8 @@ let cachedDTO: UserDTO,
 	usrRepo: UserRepo,
 	idGen = new IdGenerator();
 
-// These test suites make real changes to SqlLite file or PostgreSQl server.
-describe.only('RepositoryBase', function() {
+// These test suites make real changes to database.
+describe('RepositoryBase', function() {
 	//this.timeout(50000);
 
 	beforeEach('Initialize db adapter', () => {
@@ -275,10 +245,10 @@ describe.only('RepositoryBase', function() {
 				// Act
 				let output = await usrRepo.createCoupleWithTransaction(modelOne, modelTwo);
 				expect(output).not.to.exist;
-			} catch (errors) {
+			} catch (error) {
 				// Assert
-				expect(errors).to.exist;
-				expect(errors.length).to.equal(2);
+				expect(error).to.exist;
+				expect(error.message).to.include('violates not-null constraint');
 			}
 			// Assert
 			let count = await usrRepo.countAll();
@@ -347,51 +317,6 @@ describe.only('RepositoryBase', function() {
 				expect(err).to.be.instanceOf(MinorException);
 				expect(err.message).to.equal('Pipe has been closed!');
 			}
-		});
-
-		it('should rollback all transactions if some transactions succeed but at least one transaction fails', async () => {
-			// Arrange
-			try {
-				await usrRepo.deleteAll();
-			} catch (ex) {
-			}
-
-			let modelOne = new UserDTO(),
-				modelTwo = new UserDTO();
-			modelOne.id = idGen.nextBigInt().toString();
-			modelOne.name = 'One';
-			modelOne.age = 11;
-
-			modelTwo.id = idGen.nextBigInt().toString();
-			modelTwo.name = 'Two';
-			modelTwo.age = 22;
-
-			try {
-				// Act
-				let output = await usrRepo.failOnSecondTransaction(modelOne, modelTwo);
-				expect(output).not.to.exist;
-
-			} catch (err) {
-				// Assert: The second transaction failed
-				expect(err).to.exist;
-				expect(err).to.be.instanceOf(MinorException);
-				expect(err.message).to.equal('Error on second transaction');
-			}
-
-			// Assert: The first transaction was successful...
-			let firstOutput = usrRepo.firstOutput;
-			expect(firstOutput).to.exist;
-			expect(firstOutput.length).to.equal(2);
-
-			expect(firstOutput[0].id).to.be.equal(modelOne.id);
-			expect(firstOutput[0].name).to.equal('One');
-
-			expect(firstOutput[1].id).to.be.equal(modelTwo.id);
-			expect(firstOutput[1].name).to.equal('Two');
-
-			// Assert: All transactions were rolled back.
-			let count = await usrRepo.countAll();
-			expect(count).to.equal(0);
 		});
 	});
 

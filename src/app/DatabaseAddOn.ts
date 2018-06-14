@@ -3,6 +3,7 @@ import { IConfigurationProvider, DbConnectionDetail, Types as ConT, constants,
 
 import { IDatabaseConnector } from './connector/IDatabaseConnector';
 import { Types as T } from './Types';
+import { DbClient } from '@micro-fleet/common/dist/app/constants/DbClient';
 
 const { DbSettingKeys: S } = constants;
 
@@ -55,11 +56,16 @@ export class DatabaseAddOn implements IServiceAddOn {
 	}
 
 	private _buildConnDetails(): Maybe<DbConnectionDetail> {
-		let provider = this._configProvider,
-			cnnDetail: DbConnectionDetail = {
-				clientName: provider.get(S.DB_ENGINE).value as string // Must belong to `DbClient`
-			},
-			setting: Maybe<string>;
+		const provider = this._configProvider;
+		const clientName = provider.get(S.DB_ENGINE) as Maybe<DbClient>; // Must belong to `DbClient`
+		if (!clientName.hasValue) {
+			return new Maybe;
+		}
+		
+		const cnnDetail: DbConnectionDetail = {
+			clientName: clientName.value
+		};
+		let setting: Maybe<string>;
 
 		// 1st priority: connect to a local file.
 		setting = provider.get(S.DB_FILE) as Maybe<string>;

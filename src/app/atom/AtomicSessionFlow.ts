@@ -23,7 +23,7 @@ export class AtomicSessionFlow {
 	 * 
 	 * @param {string[]} names Only executes the queries on connections with specified names.
 	 */
-	constructor(protected _dbConnector: IDatabaseConnector, names: string[]) {
+	constructor(protected _dbConnector: IDatabaseConnector) {
 		this._tasks = [];
 		this._initSession();
 	}
@@ -46,7 +46,7 @@ export class AtomicSessionFlow {
 			this._finalPromise = new Promise(async (resolve, reject) => {
 				this._abortFn = reject;
 				try {
-					let transPromises = await this._initPromise;
+					let {transProm} = await this._initPromise;
 					// Clean up
 					this._initPromise = null;
 
@@ -57,8 +57,8 @@ export class AtomicSessionFlow {
 					// but only takes output from primary (first) one.
 					// `transPromises` resolves when `resolveAllTransactions` is called,
 					// and reject when ``rejectAllTransactions()` is called.
-					let outputs = await Promise.all(transPromises);
-					resolve(outputs[0]);
+					let outputs = await transProm;
+					resolve(outputs);
 				}
 				// Error on init transaction
 				catch (err) { reject(err); }
@@ -84,9 +84,14 @@ export class AtomicSessionFlow {
 
 	private _initSession(): Promise<any[]> {
 		const knexConn = this._dbConnector.connection;
-		return this._initPromise = transaction(knexConn, trans => {
-			this._session = new AtomicSession(knexConn, trans);
-			return null;
+		return this._initPromise = new Promise(resolve => {
+				const transProm = transaction(knexConn, trans => {
+					this._session = new AtomicSession(knexConn, trans);
+					// Avoid passing a promise to resolve(),
+					// as it will wait forever
+					resolve({ transProm });
+					return null;
+				});
 		});
 	}
 

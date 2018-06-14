@@ -1,20 +1,17 @@
-import { DtoBase, PagedArray } from '@micro-fleet/common';
-
 import * as it from '../interfaces';
 import { AtomicSessionFactory } from '../atom/AtomicSessionFactory';
 import { IDatabaseConnector } from '../connector/IDatabaseConnector';
-import { EntityBase } from './EntityBase';
 import { MonoProcessor, ProcessorOptions } from './MonoProcessor';
 import { VersionQueryBuilder } from './VersionQueryBuilder';
 
 
-export class VersionControlledProcessor<TEntity extends EntityBase, TModel extends IModelDTO, TPk extends PkType, TUk = NameUk> 
+export class VersionControlledProcessor<TEntity, TModel, TPk extends PkType, TUk = NameUk> 
 	extends MonoProcessor<TEntity, TModel, TPk, TUk> {
 
 	private _triggerProps: string[];
 	private _atomFac: AtomicSessionFactory;
 
-	constructor(EntityClass: typeof EntityBase, DtoClass: typeof DtoBase,
+	constructor(EntityClass: Newable, DtoClass: Newable,
 			dbConnector: IDatabaseConnector,
 			options: ProcessorOptions = {}) {
 		super(EntityClass, DtoClass, dbConnector, options);

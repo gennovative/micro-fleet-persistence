@@ -12,7 +12,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const common_util_1 = require("@micro-fleet/common-util");
+const common_1 = require("@micro-fleet/common");
 const Types_1 = require("../Types");
 const AtomicSessionFlow_1 = require("./AtomicSessionFlow");
 /**
@@ -21,19 +21,19 @@ const AtomicSessionFlow_1 = require("./AtomicSessionFlow");
 let AtomicSessionFactory = class AtomicSessionFactory {
     constructor(_dbConnector) {
         this._dbConnector = _dbConnector;
-        common_util_1.Guard.assertArgDefined('_dbConnector', _dbConnector);
+        common_1.Guard.assertArgDefined('_dbConnector', _dbConnector);
     }
     /**
      * Starts executing queries in transactions.
      * @param {string[]} names Only executes the queries on connections with specified names.
      */
-    startSession(...names) {
-        return new AtomicSessionFlow_1.AtomicSessionFlow(this._dbConnector, names);
+    startSession() {
+        return new AtomicSessionFlow_1.AtomicSessionFlow(this._dbConnector);
     }
 };
 AtomicSessionFactory = __decorate([
-    common_util_1.injectable(),
-    __param(0, common_util_1.inject(Types_1.Types.DB_CONNECTOR)),
+    common_1.injectable(),
+    __param(0, common_1.inject(Types_1.Types.DB_CONNECTOR)),
     __metadata("design:paramtypes", [Object])
 ], AtomicSessionFactory);
 exports.AtomicSessionFactory = AtomicSessionFactory;

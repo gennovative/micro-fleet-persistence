@@ -12,7 +12,7 @@ exports.up = function(knex, Promise) {
 		await schema.dropTableIfExists('users');
 		await schema.createTable('users', tbl => {
 			tbl.bigInteger('id');
-			tbl.string('name');
+			tbl.string('name').notNullable();
 			tbl.integer('age');
 			// tbl.timestamp('deleted_at');
 			tbl.timestamp('created_at', true);
@@ -25,7 +25,7 @@ exports.up = function(knex, Promise) {
 		await schema.dropTableIfExists('usersSoftDel');
 		await schema.createTable('usersSoftDel', tbl => {
 			tbl.bigInteger('id');
-			tbl.string('name');
+			tbl.string('name').notNullable();
 			tbl.integer('age');
 			tbl.timestamp('deleted_at', true);
 			tbl.timestamp('created_at', true);
@@ -38,7 +38,7 @@ exports.up = function(knex, Promise) {
 		await schema.dropTableIfExists('usersBatch');
 		await schema.createTable('usersBatch', tbl => {
 			tbl.bigInteger('id');
-			tbl.string('name');
+			tbl.string('name').notNullable();
 			tbl.integer('age');
 			tbl.timestamp('deleted_at', true);
 		});
@@ -49,8 +49,8 @@ exports.up = function(knex, Promise) {
 		await schema.dropTableIfExists('usersTenant');
 		await schema.createTable('usersTenant', tbl => {
 			tbl.bigInteger('id');
-			tbl.integer('tenant_id');
-			tbl.string('name');
+			tbl.bigInteger('tenant_id');
+			tbl.string('name').notNullable();
 			tbl.integer('age');
 			tbl.timestamp('deleted_at', true);
 		});

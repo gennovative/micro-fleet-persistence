@@ -1,8 +1,7 @@
 import * as chai from 'chai';
 import * as spies from 'chai-spies';
 import * as _ from 'lodash';
-import { constants } from '@micro-fleet/common-contracts';
-import { MinorException } from '@micro-fleet/common-util';
+import { constants, MinorException } from '@micro-fleet/common';
 
 import { KnexDatabaseConnector, EntityBase } from '../app';
 import DB_DETAILS from './database-details';
@@ -25,7 +24,7 @@ class DummyEntity extends EntityBase {
 	}
 }
 
-describe('KnexDatabaseConnector', function () {
+describe.only('KnexDatabaseConnector', function () {
 	this.timeout(50000);
 
 	describe('addConnection', () => {
@@ -43,7 +42,7 @@ describe('KnexDatabaseConnector', function () {
 				};
 
 			// Spy on this method, because we need the real function be called.
-			dbConnector['_knex'] = chai.spy(() => {
+			dbConnector['_knex'] = <any>chai.spy(() => {
 				return {};
 			});
 
@@ -66,7 +65,7 @@ describe('KnexDatabaseConnector', function () {
 					useNullAsDefault: true,
 					connection: CONN_STRING
 				};
-			dbConnector['_knex'] = chai.spy(() => {
+			dbConnector['_knex'] = <any>chai.spy(() => {
 				return {};
 			});
 
@@ -95,7 +94,7 @@ describe('KnexDatabaseConnector', function () {
 					}
 				};
 
-			dbConnector['_knex'] = chai.spy(() => {
+			dbConnector['_knex'] = <any>chai.spy(() => {
 				return {};
 			});
 
@@ -112,7 +111,7 @@ describe('KnexDatabaseConnector', function () {
 			let dbConnector = new KnexDatabaseConnector(),
 				exception: MinorException = null,
 				isSuccess = false;
-			dbConnector['_knex'] = chai.spy(() => {
+			dbConnector['_knex'] = <any>chai.spy(() => {
 				return {};
 			});
 
@@ -178,7 +177,7 @@ describe('KnexDatabaseConnector', function () {
 			// Act
 			await dbConnector.prepare<DummyEntity>(DummyEntity, (query) => {
 				callMe();
-				return Promise.resolve();
+				return <any>Promise.resolve();
 			});
 
 			// Assert
@@ -211,7 +210,7 @@ describe('KnexDatabaseConnector', function () {
 				newKnex = BoundDummyEntity['knex']();
 				// Assert
 				expect(oldKnex).not.to.equal(newKnex);
-				return Promise.resolve();
+				return <any>Promise.resolve();
 			});
 
 			// Assert

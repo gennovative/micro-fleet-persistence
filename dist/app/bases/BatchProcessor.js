@@ -1,7 +1,5 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const every = require('lodash/every');
-const isEmpty = require('lodash/isEmpty');
 const AtomicSessionFactory_1 = require("../atom/AtomicSessionFactory");
 class BatchProcessor {
     constructor(_mono, dbConnector) {
@@ -108,7 +106,7 @@ class BatchProcessor {
     /**
      * @see MonoProcessor.executeQuery
      */
-    executeQuery(callback, atomicSession, name = '0') {
+    executeQuery(callback, atomicSession) {
         return this._mono.executeQuery.apply(this._mono, arguments);
     }
     /**

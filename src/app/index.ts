@@ -3,7 +3,7 @@ if (!Reflect || typeof Reflect['hasOwnMetadata'] !== 'function') {
 	require('reflect-metadata');
 }
 
-import memoize from 'lodash/memoize';
+import memoize = require('lodash/memoize');
 global['snakeCase'] = memoize(require('lodash/snakeCase'));
 global['camelCase'] = memoize(require('lodash/camelCase'));
 
@@ -22,4 +22,5 @@ export * from './bases/VersionControlledProcessor';
 export * from './connector/IDatabaseConnector';
 export * from './connector/KnexDatabaseConnector';
 export * from './DatabaseAddOn';
+export * from './interfaces';
 export * from './Types';

@@ -2,13 +2,12 @@ import { QueryBuilder, QueryBuilderSingle } from 'objection';
 
 import * as it from '../interfaces';
 import { IQueryBuilder } from './IQueryBuilder';
-import { EntityBase } from './EntityBase';
 
 
-export class TenantQueryBuilder<TEntity extends EntityBase, TModel extends IModelDTO, TUk = NameUk>
+export class TenantQueryBuilder<TEntity, TModel, TUk = NameUk>
 	implements IQueryBuilder<TEntity, TModel, TenantPk, TUk> {
 
-	constructor(private _EntityClass: typeof EntityBase) {
+	constructor(private _EntityClass: Newable) {
 	}
 
 
@@ -17,7 +16,7 @@ export class TenantQueryBuilder<TEntity extends EntityBase, TModel extends IMode
 	}
 
 	public buildDeleteHard(pk: TenantPk, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>): QueryBuilderSingle<number> {
-		return rawQuery.deleteById(this._toArr(pk, this._EntityClass.idProp));
+		return rawQuery.deleteById(this._toArr(pk, this._EntityClass['idProp']));
 	}
 
 	public buildExists(props: TUk, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryExistsOptions = {}): QueryBuilder<TEntity> {
@@ -25,7 +24,7 @@ export class TenantQueryBuilder<TEntity extends EntityBase, TModel extends IMode
 	}
 
 	public buildFind(pk: TenantPk, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryFindOptions = {}): QueryBuilder<TEntity> {
-		return rawQuery.findById(this._toArr(pk, this._EntityClass.idProp));
+		return rawQuery.findById(this._toArr(pk, this._EntityClass['idProp']));
 	}
 
 	public buildPage(pageIndex: number, pageSize: number, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryPageOptions = {}): QueryBuilder<TEntity> {
@@ -33,7 +32,7 @@ export class TenantQueryBuilder<TEntity extends EntityBase, TModel extends IMode
 	}
 
 	public buildPatch(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryPatchOptions = {}): QueryBuilder<number> {
-		return <any>rawQuery.patch(entity).whereComposite(this._EntityClass.idColumn, '=', this._toArr(entity, this._EntityClass.idProp));
+		return <any>rawQuery.patch(entity).whereComposite(this._EntityClass['idColumn'], '=', this._toArr(entity, this._EntityClass['idProp']));
 	}
 
 	public buildRecoverOpts(pk: TenantPk, prevOpts: it.RepositoryRecoverOptions, rawOpts: it.RepositoryRecoverOptions): it.RepositoryExistsOptions {
@@ -42,7 +41,7 @@ export class TenantQueryBuilder<TEntity extends EntityBase, TModel extends IMode
 	}
 
 	public buildUpdate(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryPatchOptions = {}): QueryBuilder<number> {
-		return <any>rawQuery.update(entity).whereComposite(this._EntityClass.idColumn, '=', this._toArr(entity, this._EntityClass.idProp));
+		return <any>rawQuery.update(entity).whereComposite(this._EntityClass['idColumn'], '=', this._toArr(entity, this._EntityClass['idProp']));
 	}
 
 

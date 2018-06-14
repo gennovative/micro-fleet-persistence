@@ -1,11 +1,11 @@
 import * as chai from 'chai';
 import * as spies from 'chai-spies';
 import * as _ from 'lodash';
-import { Model } from 'objection';
-import { AtomicSession, IConfigurationProvider, IDbConnectionDetail, constants } from '@micro-fleet/common-contracts';
-import { CriticalException } from '@micro-fleet/common-util';
+
+import { IConfigurationProvider, DbConnectionDetail, 
+	constants, CriticalException, Maybe } from '@micro-fleet/common';
 import { IDatabaseConnector, QueryCallback,
-	EntityBase, DatabaseAddOn } from '../app';
+	EntityBase, DatabaseAddOn, AtomicSession, KnexConnection } from '../app';
 
 import DB_DETAILS from './database-details';
 
@@ -17,8 +17,7 @@ const expect = chai.expect,
 	MODE_STRING = 'string',
 	MODE_CREDENTIALS = 'credentials',
 	CONN_FILE = `${process.cwd()}/database-addon-test.sqlite`,
-	CONN_STRING = 'msql://localhost@user:pass',
-	CLIENT_NAME = DbClient.POSTGRESQL;
+	CONN_STRING = 'msql://localhost@user:pass';
 
 class MockConfigAddOn implements IConfigurationProvider {
 	
@@ -29,34 +28,30 @@ class MockConfigAddOn implements IConfigurationProvider {
 		return true;
 	}
 
-	public get(key: string): number & boolean & string {
-		if (key == S.DB_NUM_CONN) {
-			return <any>1;
-		}
-
+	public get(key: string): Maybe<number | boolean | string> {
 		if (MODE_FILE == this._mode) {
 			switch (key) {
-				case S.DB_ENGINE + '0': return <any>DbClient.SQLITE3;
-				case S.DB_FILE + '0': return <any>CONN_FILE;
-				default: return null;
+				case S.DB_ENGINE: return new Maybe(DbClient.SQLITE3);
+				case S.DB_FILE: return new Maybe(CONN_FILE);
+				default: return new Maybe;
 			}
 		} else if (MODE_STRING == this._mode) {
 			switch (key) {
-				case S.DB_ENGINE + '0': return <any>DbClient.POSTGRESQL;
-				case S.DB_CONN_STRING + '0': return <any>CONN_STRING;
-				default: return null;
+				case S.DB_ENGINE: return new Maybe(DbClient.POSTGRESQL);
+				case S.DB_CONN_STRING: return new Maybe(CONN_STRING);
+				default: return new Maybe;
 			}
 		} else if (MODE_CREDENTIALS  == this._mode) {
 			switch (key) {
-				case S.DB_ENGINE + '0': return <any>DB_DETAILS.clientName;
-				case S.DB_HOST + '0': return <any>DB_DETAILS.host.address;
-				case S.DB_USER + '0': return <any>DB_DETAILS.host.user;
-				case S.DB_PASSWORD + '0': return <any>DB_DETAILS.host.password;
-				case S.DB_NAME + '0': return <any>DB_DETAILS.host.database;
-				default: return null;
+				case S.DB_ENGINE: return new Maybe(DB_DETAILS.clientName);
+				case S.DB_ADDRESS: return new Maybe(DB_DETAILS.host.address);
+				case S.DB_USER: return new Maybe(DB_DETAILS.host.user);
+				case S.DB_PASSWORD: return new Maybe(DB_DETAILS.host.password);
+				case S.DB_NAME: return new Maybe(DB_DETAILS.host.database);
+				default: return new Maybe;
 			}
 		}
-		return null;
+		return new Maybe;
 	}
 
 	public deadLetter(): Promise<void> {
@@ -80,14 +75,13 @@ class MockConfigAddOn implements IConfigurationProvider {
 }
 
 class MockDbConnector implements IDatabaseConnector {
-	private _connection;
+	private _connection: KnexConnection;
 
-	public get connection() {
+	public get connection(): KnexConnection {
 		return this._connection;
 	}
 
-	public init(detail: IDbConnectionDetail, name?: string): void {
-		this._connection = detail;
+	public init(detail: DbConnectionDetail): void {
 	}
 
 	public dispose(): Promise<void> {
@@ -99,13 +93,14 @@ class MockDbConnector implements IDatabaseConnector {
 	}
 }
 
-describe('DatabaseAddOn', () => {
+describe('DatabaseAddOn', function () {
+	// this.timeout(60000);
 
 	describe('init', () => {
-		it('should call connector.addConnection to configure database connection with database file', async () => {
+		it('should call connector.init to configure database connection with database file', async () => {
 			// Arrange
-			let dbAddOn = new DatabaseAddOn(new MockConfigAddOn(MODE_FILE), new MockDbConnector()),
-				addConnSpy = chai.spy.on(dbAddOn['_dbConnector'], 'addConnection');
+			const dbAddOn = new DatabaseAddOn(new MockConfigAddOn(MODE_FILE), new MockDbConnector());
+			const addConnSpy = chai.spy.on(dbAddOn['_dbConnector'], 'init');
 			
 			// Act
 			await dbAddOn.init();
@@ -115,10 +110,10 @@ describe('DatabaseAddOn', () => {
 			expect(addConnSpy).to.have.been.called.once;
 		});
 
-		it('should call connector.addConnection to configure database connection with connection string', async () => {
+		it('should call connector.init to configure database connection with connection string', async () => {
 			// Arrange
 			let dbAddOn = new DatabaseAddOn(new MockConfigAddOn(MODE_STRING), new MockDbConnector()),
-				addConnSpy = chai.spy.on(dbAddOn['_dbConnector'], 'addConnection');
+				addConnSpy = chai.spy.on(dbAddOn['_dbConnector'], 'init');
 			
 			// Act
 			await dbAddOn.init();
@@ -128,10 +123,10 @@ describe('DatabaseAddOn', () => {
 			expect(addConnSpy).to.have.been.called.once;
 		});
 
-		it('should call connector.addConnection to configure database connection with remote database', async () => {
+		it('should call connector.init to configure database connection with remote database', async () => {
 			// Arrange
 			let dbAddOn = new DatabaseAddOn(new MockConfigAddOn(MODE_CREDENTIALS), new MockDbConnector()),
-				addConnSpy = chai.spy.on(dbAddOn['_dbConnector'], 'addConnection');
+				addConnSpy = chai.spy.on(dbAddOn['_dbConnector'], 'init');
 			
 			// Act
 			await dbAddOn.init();

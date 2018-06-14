@@ -1,11 +1,11 @@
 /// <reference types="debug" />
 
 const debug: debug.IDebugger = require('debug')('MonoProcessor');
-import isEmpty from 'lodash/isEmpty';
+import isEmpty = require('lodash/isEmpty');
 
 import { QueryBuilder, QueryBuilderSingle } from 'objection';
-import moment from 'moment';
-import { DtoBase, MinorException, PagedArray } from '@micro-fleet/common';
+import * as moment from 'moment';
+import { MinorException, PagedArray, ModelAutoMapper } from '@micro-fleet/common';
 
 import * as it from '../interfaces';
 import { AtomicSession } from '../atom/AtomicSession';
@@ -13,7 +13,6 @@ import { IDatabaseConnector, QueryCallback } from '../connector/IDatabaseConnect
 import { IQueryBuilder } from './IQueryBuilder';
 import { MonoQueryBuilder } from './MonoQueryBuilder';
 import { TenantQueryBuilder } from './TenantQueryBuilder';
-import { EntityBase } from './EntityBase';
 
 
 export interface ProcessorOptions {
@@ -26,20 +25,20 @@ export interface ProcessorOptions {
 	triggerProps?: string[];
 }
 
-export class MonoProcessor<TEntity extends EntityBase, TModel extends DtoBase, TPk extends PkType = BigInt, TUk = NameUk> {
+export class MonoProcessor<TEntity, TModel, TPk extends PkType = BigInt, TUk = NameUk> {
 
 	/**
 	 * Gets array of non-primary unique property(ies).
 	 */
 	public get ukCol(): string[] {
-		return this._EntityClass.uniqColumn;
+		return this._EntityClass['uniqColumn'];
 	}
 
 	protected _queryBuilders: IQueryBuilder<TEntity, TModel, PkType, TUk>[];
 
 	constructor(
-		protected _EntityClass: typeof EntityBase,
-		protected _DtoClass: typeof DtoBase,
+		protected _EntityClass: Newable,
+		protected _DtoClass: Newable,
 		protected _dbConnector: IDatabaseConnector,
 		protected _options: ProcessorOptions = {}
 	) {
@@ -151,7 +150,7 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends DtoBase, T
 			opts.atomicSession)
 			.then(foundEnt => {
 				return foundEnt ? this.toDTO(foundEnt, false) : null;
-			});
+			}) as Promise<TModel>;
 	}
 
 	/**
@@ -265,11 +264,12 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends DtoBase, T
 	public toEntity(dto: TModel | TModel[] | Partial<TModel>, isPartial: boolean): TEntity | TEntity[] {
 		if (!dto) { return null; }
 
+		const translator = this._EntityClass['translator'] as ModelAutoMapper<TEntity>;
 		let entity;
 		if (isPartial) {
-			entity = this._EntityClass.translator.partial(dto);
+			entity = translator.partial(dto);
 		}
-		entity = this._EntityClass.translator.whole(dto);
+		entity = translator.whole(dto);
 
 		for (let prop of ['createdAt', 'updatedAt', 'deletedAt']) {
 			if (dto[prop]) {
@@ -286,12 +286,13 @@ export class MonoProcessor<TEntity extends EntityBase, TModel extends DtoBase, T
 	public toDTO(entity: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel | TModel[] {
 		if (!entity) { return null; }
 
+		const translator = this._EntityClass['translator'] as ModelAutoMapper<TModel>;
 		let dto;
 		if (isPartial) {
-			dto = this._DtoClass.translator.partial(entity, { enableValidation: false });
+			dto = translator.partial(entity, { enableValidation: false });
 		}
 		// Disable validation because it's unnecessary.
-		dto = this._DtoClass.translator.whole(entity, { enableValidation: false });
+		dto = translator.whole(entity, { enableValidation: false });
 
 		for (let prop of ['createdAt', 'updatedAt', 'deletedAt']) {
 			if (entity[prop]) {

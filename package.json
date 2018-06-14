@@ -41,6 +41,7 @@
 	"types": "./typings/app.d.ts",
 	"repository": "git@github.com:gennovative/micro-fleet-persistence.git",
 	"devDependencies": {
-		"@types/pg": "^7.4.9"
+		"@types/pg": "^7.4.9",
+		"sqlite3": "^4.0.0"
 	}
 }

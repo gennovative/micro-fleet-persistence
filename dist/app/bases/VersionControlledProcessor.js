@@ -8,14 +8,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const every = require('lodash/every');
-const isEmpty = require('lodash/isEmpty');
 const AtomicSessionFactory_1 = require("../atom/AtomicSessionFactory");
 const MonoProcessor_1 = require("./MonoProcessor");
 const VersionQueryBuilder_1 = require("./VersionQueryBuilder");
 class VersionControlledProcessor extends MonoProcessor_1.MonoProcessor {
-    constructor(EntityClass, dbConnector, options = {}) {
-        super(EntityClass, dbConnector, options);
+    constructor(EntityClass, DtoClass, dbConnector, options = {}) {
+        super(EntityClass, DtoClass, dbConnector, options);
         this._triggerProps = options.triggerProps;
         this._queryBuilders.push(new VersionQueryBuilder_1.VersionQueryBuilder(EntityClass));
         this._atomFac = new AtomicSessionFactory_1.AtomicSessionFactory(dbConnector);
@@ -29,18 +27,18 @@ class VersionControlledProcessor extends MonoProcessor_1.MonoProcessor {
             .then(() => model);
     }
     patch(model, opts = {}) {
-        if (this.isIntersect(Object.keys(model), this._triggerProps)) {
-            return this.saveAsNew(null, model);
+        if (this._isIntersect(Object.keys(model), this._triggerProps)) {
+            return this._saveAsNew(null, model);
         }
         return super.patch.apply(this, arguments);
     }
     update(model, opts = {}) {
-        if (this.isIntersect(Object.keys(model), this._triggerProps)) {
-            return this.saveAsNew(null, model);
+        if (this._isIntersect(Object.keys(model), this._triggerProps)) {
+            return this._saveAsNew(null, model);
         }
         return super.update.apply(this, arguments);
     }
-    saveAsNew(pk, updatedModel) {
+    _saveAsNew(pk, updatedModel) {
         const _super = name => super[name];
         return __awaiter(this, void 0, void 0, function* () {
             let source = yield this.findByPk(pk || updatedModel);
@@ -60,7 +58,7 @@ class VersionControlledProcessor extends MonoProcessor_1.MonoProcessor {
             return flow.closePipe();
         });
     }
-    isIntersect(arr1, arr2) {
+    _isIntersect(arr1, arr2) {
         for (let a of arr1) {
             if (arr2.includes(a)) {
                 return true;

@@ -1,35 +1,21 @@
 import { expect } from 'chai';
 
-import { InvalidArgumentException, MinorException } from '@micro-fleet/common-util';
-import { PagedArray, ModelAutoMapper, AtomicSession, constants } from '@micro-fleet/common-contracts';
+import { MinorException, PagedArray, ModelAutoMapper } from '@micro-fleet/common';
 import { IdGenerator } from '@micro-fleet/id-generator';
 
-import { EntityBase, QueryCallback, IDatabaseConnector,
+import { EntityBase, IDatabaseConnector,
 	KnexDatabaseConnector, AtomicSessionFactory, AtomicSessionFlow,
 	RepositoryBase } from '../app';
 import DB_DETAILS from './database-details';
 
-const { DbClient } = constants;
 
-
-const CONN_FILE = `${process.cwd()}/database-adapter-test.sqlite`,
-	CONN_FILE_2 = `${process.cwd()}/database-adapter-test-second.sqlite`,
-	// For SQLite3 file
-	// DB_TABLE = 'userdata',
-
-	// For PostgreSQL
-	DB_TABLE = 'userdata_tenant',
-
+const DB_TABLE = 'usersTenant',
 	IMPOSSIBLE_ID = '0';
 
 
-// Should put this in Types.ts
-const TYPE_USER_DTO = Symbol('UserDTO'),
-	TYPE_USER_ENT = Symbol('UserEntity');
+class UserTenantDTO implements ISoftDeletable {
 
-class UserTenantDTO implements IModelDTO, ISoftDeletable {
-
-	public static translator: ModelAutoMapper<UserTenantDTO> = new ModelAutoMapper(UserTenantDTO);
+	public static readonly translator: ModelAutoMapper<UserTenantDTO> = new ModelAutoMapper(UserTenantDTO);
 
 	// NOTE: Class properties must be initialized, otherwise they
 	// will disappear in transpiled code.
@@ -53,10 +39,11 @@ class UserTenantEntity extends EntityBase {
 	public static readonly idProp = ['id', 'tenantId'];
 	public static readonly uniqColumn = ['name'];
 
-	public static translator: ModelAutoMapper<UserTenantEntity> = new ModelAutoMapper(UserTenantEntity);
+	public static readonly translator: ModelAutoMapper<UserTenantEntity> = new ModelAutoMapper(UserTenantEntity);
 
 	// NOTE: Class properties must be initialized, otherwise they
 	// will disappear in transpiled code.
+	public id: BigInt = undefined;
 	public tenantId: BigInt = undefined;
 	public name: string = undefined;
 	public age: number = undefined;
@@ -70,7 +57,7 @@ class UserTenantRepo extends RepositoryBase<UserTenantEntity, UserTenantDTO, Ten
 	constructor(
 		dbConnector: IDatabaseConnector
 	) {
-		super(UserTenantEntity, dbConnector, {
+		super(UserTenantEntity, UserTenantDTO, dbConnector, {
 			isMultiTenancy: true
 		});
 		this._sessionFactory = new AtomicSessionFactory(dbConnector);
@@ -93,7 +80,7 @@ class UserTenantRepo extends RepositoryBase<UserTenantEntity, UserTenantDTO, Ten
 	}
 
 	private _counter = 0;
-	public firstOutput;
+	public firstOutput: any;
 	public failOnSecondTransaction(adam: UserTenantDTO, eva: UserTenantDTO): Promise<UserTenantDTO[]> {
 		return this._sessionFactory.startSession()
 			.pipe(atomicSession => this.create(adam, { atomicSession }))
@@ -125,18 +112,6 @@ class UserTenantRepo extends RepositoryBase<UserTenantEntity, UserTenantDTO, Ten
 			.closePipe();
 	}
 
-	public createAdamOnSecondConn(adam: UserTenantDTO): Promise<UserTenantDTO> {
-		return this._sessionFactory.startSession('sec')
-			.pipe(atomicSession => this.create(adam, { atomicSession }))
-			.closePipe();
-	}
-
-	public createAdamOnNonExistConn(adam: UserTenantDTO): Promise<UserTenantDTO> {
-		return this._sessionFactory.startSession('nonexist')
-			.pipe(atomicSession => this.create(adam, { atomicSession }))
-			.closePipe();
-	}
-
 	public createSessionPipe(adam: UserTenantDTO, eva: UserTenantDTO): AtomicSessionFlow {
 		return this._sessionFactory.startSession()
 			.pipe(atomicSession => this.create(adam, { atomicSession }))
@@ -161,27 +136,12 @@ class UserTenantRepo extends RepositoryBase<UserTenantEntity, UserTenantDTO, Ten
 			//.closePipe(); // Not closing pipe
 	}
 
-	public async findOnFirstConn(pk: TenantPk): Promise<UserTenantDTO> {
+	public async find(pk: TenantPk): Promise<UserTenantDTO> {
 		let foundEnt: UserTenantEntity = await this._processor.executeQuery(query => {
 			return query.findById(this._processor.toArr(pk, UserTenantEntity.idProp));
-			}, null, '0'); // Executing on first connection only.
+			}, null);
 
 		return this._processor.toDTO(foundEnt, false);
-	}
-
-	public async findOnSecondConn(pk: TenantPk): Promise<UserTenantDTO> {
-		let foundEnt: UserTenantEntity = await this._processor.executeQuery(query => {
-			return query.findById(this._processor.toArr(pk, UserTenantEntity.idProp));
-			}, null, 'sec'); // Executing on second connection (named 'sec').
-
-		return this._processor.toDTO(foundEnt, false);
-	}
-
-	public async deleteOnSecondConn(pk: TenantPk): Promise<UserTenantDTO> {
-		let affectedRows = await this._processor.executeQuery(query => {
-			return query.deleteById(this._processor.toArr(pk, UserTenantEntity.idProp));
-			}, null, 'sec');
-		return affectedRows;
 	}
 
 	public deleteAll(): Promise<void> {
@@ -195,9 +155,9 @@ let cachedDTO: UserTenantDTO,
 	idGen = new IdGenerator();
 
 
-// These test suites make real changes to SqlLite file or PostgreSQl server.
+// These test suites make real changes to database.
 describe('RepositoryBase-tenant', function() {
-	this.timeout(50000);
+	// this.timeout(50000);
 	
 	beforeEach('Initialize db adapter', () => {
 		dbConnector = new KnexDatabaseConnector();
@@ -217,17 +177,7 @@ describe('RepositoryBase-tenant', function() {
 		dbConnector = null;
 	});
 
-	describe('create with transaction', function () {
-		beforeEach(() => {
-			// Add second connection
-			let secondDb = Object.assign({}, DB_DETAILS);
-			secondDb.host = Object.assign({}, DB_DETAILS.host);
-			secondDb.host.database = 'unittestTwo';
-			dbConnector.init(secondDb); // Name this connection as 'sec'
-
-			usrRepo = new UserTenantRepo(dbConnector);
-		});
-
+	describe('create with transaction', () => {
 		it('should insert two rows on each database', async () => {
 			// Arrange
 			let modelOne = new UserTenantDTO(),
@@ -299,10 +249,10 @@ describe('RepositoryBase-tenant', function() {
 				// Act
 				let output = await usrRepo.createCoupleWithTransaction(modelOne, modelTwo);
 				expect(output).not.to.exist;
-			} catch (errors) {
+			} catch (error) {
 				// Assert
-				expect(errors).to.exist;
-				expect(errors.length).to.equal(2);
+				expect(error).to.exist;
+				expect(error.message).to.include('violates not-null constraint');
 			}
 			// Assert
 			let count = await usrRepo.countAll({
@@ -389,115 +339,6 @@ describe('RepositoryBase-tenant', function() {
 				expect(err.message).to.equal('Pipe has been closed!');
 			}
 		});
-
-		it('should throw error if executing on non-existing named connection', async () => {
-			// Arrange
-			let adam = new UserTenantDTO();
-			adam.id = idGen.nextBigInt().toString();
-			adam.tenantId = idGen.nextBigInt().toString();
-			adam.name = 'One';
-			adam.age = 11;
-
-			try {
-				// Act
-				let createdAdam = await usrRepo.createAdamOnNonExistConn(adam);
-				expect(createdAdam).not.to.exist;
-			} catch (err) {
-				expect(err).to.exist;
-				expect(err.message).to.equal('No transaction was created!');
-			}
-		});
-
-		it('should execute on named connection(s) only', async () => {
-			// Arrange
-			let adam = new UserTenantDTO();
-			adam.id = idGen.nextBigInt().toString();
-			adam.tenantId = idGen.nextBigInt().toString();
-			adam.name = 'One';
-			adam.age = 11;
-
-			try {
-				// Act
-				let createdAdam = await usrRepo.createAdamOnSecondConn(adam);
-				expect(createdAdam).to.exist;
-
-				let nonExistAdam = await usrRepo.findOnFirstConn({
-					id: createdAdam.id,
-					tenantId: createdAdam.tenantId
-				});
-				let refetchAdam = await usrRepo.findOnSecondConn({
-					id: createdAdam.id,
-					tenantId: createdAdam.tenantId
-				});
-				
-				// Assert: model is inserted on second connection, but not on the first one.
-				expect(nonExistAdam).not.to.exist;
-				expect(refetchAdam).to.exist;
-
-				// Clean up
-				await usrRepo.deleteOnSecondConn({
-					id: createdAdam.id,
-					tenantId: createdAdam.tenantId
-				});
-			} catch (err) {
-				console.error(err);
-				expect(err).not.to.exist;
-			}
-		});
-
-		it('should rollback all transactions if some transactions succeed but at least one transaction fails', async () => {
-			// Arrange
-			try {
-				await usrRepo.deleteAll();
-			} catch (ex) {
-			}
-
-			let modelOne = new UserTenantDTO(),
-				modelTwo = new UserTenantDTO();
-
-			modelOne.id = modelTwo.id = idGen.nextBigInt().toString();
-			modelOne.tenantId = idGen.nextBigInt().toString();
-			modelOne.name = 'One';
-			modelOne.age = 11;
-
-			modelTwo.tenantId = idGen.nextBigInt().toString();
-			modelTwo.name = 'Two';
-			modelTwo.age = 22;
-
-			try {
-				// Act
-				let output = await usrRepo.failOnSecondTransaction(modelOne, modelTwo);
-				expect(output).not.to.exist;
-
-			} catch (err) {
-				// Assert: The second transaction failed
-				expect(err).to.exist;
-				expect(err).to.be.instanceOf(MinorException);
-				expect(err.message).to.equal('Error on second transaction');
-			}
-
-			// Assert: The first transaction was successful...
-			let firstOutput = usrRepo.firstOutput;
-			expect(firstOutput).to.exist;
-			expect(firstOutput.length).to.equal(2);
-
-			expect(firstOutput[0].id).to.be.equal(modelOne.id);
-			expect(firstOutput[0].name).to.equal('One');
-
-			expect(firstOutput[1].id).to.be.equal(modelTwo.id);
-			expect(firstOutput[1].name).to.equal('Two');
-
-			// Assert: All transactions were rolled back.
-			let count = await usrRepo.countAll({
-				tenantId: modelOne.tenantId
-			});
-			expect(count).to.equal(0);
-
-			count = await usrRepo.countAll({
-				tenantId: modelTwo.tenantId
-			});
-			expect(count).to.equal(0);
-		});
 	});
 
 	describe('create without transaction', () => {
@@ -518,29 +359,6 @@ describe('RepositoryBase-tenant', function() {
 			expect(createdDTO.id).to.equal(model.id);
 			expect(createdDTO.name).to.equal(model.name);
 			expect(createdDTO.age).to.equal(model.age);
-		});
-
-		it('should throw error if not success on all connections', async () => {
-			// Arrange
-			let model = new UserTenantDTO(),
-				tenantId = idGen.nextBigInt().toString();
-			model.id = idGen.nextBigInt().toString();
-			model.tenantId = tenantId;
-			model.name = 'Hiri';
-			model.age = 29;
-
-			dbConnector.init({
-				clientName: DbClient.SQLITE3,
-				filePath: CONN_FILE_2,
-			});
-
-			// Act
-			try {
-				let createdDTO: UserTenantDTO = await usrRepo.create(model);
-				expect(createdDTO).to.be.null;
-			} catch (ex) {
-				expect(ex).to.be.not.null;
-			}
 		});
 	}); // END describe 'create'
 

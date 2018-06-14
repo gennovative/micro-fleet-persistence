@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const objection_1 = require("objection");
-const mapKeys_1 = require("lodash/mapKeys");
+const mapKeys = require("lodash/mapKeys");
 const snakeCase = global['snakeCase'];
 const camelCase = global['camelCase'];
 class EntityBase extends objection_1.Model {
@@ -11,19 +11,13 @@ class EntityBase extends objection_1.Model {
     static get tableName() {
         throw 'This method must be implemented by derived class!';
     }
-    /**
-     * @abstract
-     */
-    static get translator() {
-        throw 'This method must be implemented by derived class!';
-    }
     // public id: BigInt = undefined;
     /**
      * This is called when an object is serialized to database format.
      */
     $formatDatabaseJson(json) {
         json = super.$formatDatabaseJson(json);
-        return mapKeys_1.default(json, (value, key) => {
+        return mapKeys(json, (value, key) => {
             // Maps from "camelCase" to "snake_case" except special keyword.
             /* istanbul ignore if */
             if (key.indexOf('#') == 0) {
@@ -36,13 +30,19 @@ class EntityBase extends objection_1.Model {
      * This is called when an object is read from database.
      */
     $parseDatabaseJson(json) {
-        json = mapKeys_1.default(json, (value, key) => {
+        json = mapKeys(json, (value, key) => {
             // Maps from "snake_case" to "camelCase"
             return camelCase(key);
         });
         return super.$parseDatabaseJson(json);
     }
 }
+/**
+ * @abstract
+ * Function to convert other object to this class type.
+ * This method must be implemented by derived class!
+ */
+EntityBase.translator = undefined;
 /**
  * [ObjectionJS] Array of primary column names.
  */

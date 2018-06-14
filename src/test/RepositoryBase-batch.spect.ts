@@ -1,34 +1,22 @@
+/// <reference types="debug" />
+
+const debug: debug.IDebugger = require('debug')('MonoProcessor');
 import { expect } from 'chai';
 
-import { InvalidArgumentException, MinorException } from '@micro-fleet/common-util';
-import { PagedArray, ModelAutoMapper, AtomicSession, ISoftDelRepository, constants } from '@micro-fleet/common-contracts';
+import { MinorException, ModelAutoMapper } from '@micro-fleet/common';
 import { IdGenerator } from '@micro-fleet/id-generator';
 
-import { RepositoryBase, EntityBase, QueryCallback, IDatabaseConnector,
+import { RepositoryBase, EntityBase, ISoftDelRepository, IDatabaseConnector,
 		KnexDatabaseConnector, AtomicSessionFactory, AtomicSessionFlow } from '../app';
 import DB_DETAILS from './database-details';
 
-const { DbClient } = constants;
 
-
-const CONN_FILE = `${process.cwd()}/database-adapter-test.sqlite`,
-	CONN_FILE_2 = `${process.cwd()}/database-adapter-test-second.sqlite`,
-	// For SQLite3 file
-	// DB_TABLE = 'userdata',
-
-	// For PostgreSQL
-	DB_TABLE = 'userdata',
-
+const DB_TABLE = 'usersBatch',
 	IMPOSSIBLE_IDs = ['0', '-1'];
 
+class UserBatchDTO implements ISoftDeletable {
 
-// Should put this in Types.ts
-const TYPE_USER_DTO = Symbol('UserDTO'),
-	TYPE_USER_ENT = Symbol('UserEntity');
-
-class UserBatchDTO implements IModelDTO, ISoftDeletable {
-
-	public static translator: ModelAutoMapper<UserBatchDTO> = new ModelAutoMapper(UserBatchDTO);
+	public static readonly translator: ModelAutoMapper<UserBatchDTO> = new ModelAutoMapper(UserBatchDTO);
 
 	// NOTE: Class properties must be initialized, otherwise they
 	// will disappear in transpiled code.
@@ -50,10 +38,11 @@ class UserBatchEntity extends EntityBase {
 	public static readonly idColumn = ['id'];
 	public static readonly uniqColumn = ['name', 'age'];
 
-	public static translator: ModelAutoMapper<UserBatchEntity> = new ModelAutoMapper(UserBatchEntity);
+	public static readonly translator: ModelAutoMapper<UserBatchEntity> = new ModelAutoMapper(UserBatchEntity);
 
 	// NOTE: Class properties must be initialized, otherwise they
 	// will disappear in transpiled code.
+	public id: BigInt = undefined;
 	public name: string = undefined;
 	public age: number = undefined;
 	public deletedAt: string = undefined;
@@ -68,7 +57,7 @@ class UserBatchRepo
 	constructor(
 		dbConnector: IDatabaseConnector
 	) {
-		super(UserBatchEntity, dbConnector);
+		super(UserBatchEntity, UserBatchDTO, dbConnector);
 		this._sessionFactory = new AtomicSessionFactory(dbConnector);
 	}
 
@@ -88,7 +77,7 @@ class UserBatchRepo
 	public createTwoCouplesWithTransaction(adams: UserBatchDTO[], evas: UserBatchDTO[]): Promise<UserBatchDTO[]> {
 		return this._sessionFactory.startSession()
 			.pipe(atomicSession => {
-				console.log('Conn: ', atomicSession.knexConnection.customName);
+				debug('Creating Adam');
 				return this.create(adams, { atomicSession });
 			})
 			.pipe((atomicSession, createdAdams) => {
@@ -98,6 +87,7 @@ class UserBatchRepo
 					// Because when we come to this point, the previous task must have been successfull.
 					return Promise.reject('Cannot live without our husbands!');
 				}
+				debug('Creating Eva');
 				return this.create(evas, { atomicSession })
 					.then(createdEvas => [...createdAdams, ...createdEvas]);
 			})
@@ -137,12 +127,6 @@ class UserBatchRepo
 			.closePipe();
 	}
 
-	public createAdamsOnSecondConn(adams: UserBatchDTO[]): Promise<UserBatchDTO[]> {
-		return this._sessionFactory.startSession('sec')
-			.pipe(atomicSession => this.create(adams, { atomicSession }))
-			.closePipe();
-	}
-
 	public createSessionPipe(adams: UserBatchDTO[], evas: UserBatchDTO[]): AtomicSessionFlow {
 		return this._sessionFactory.startSession()
 			.pipe(atomicSession => this.create(adams, { atomicSession }))
@@ -167,29 +151,12 @@ class UserBatchRepo
 			//.closePipe(); // Not closing pipe
 	}
 
-	public async findOnFirstConn(id: BigInt): Promise<UserBatchDTO> {
+	public async find(id: BigInt): Promise<UserBatchDTO> {
 		let foundEnt: UserBatchEntity = await this._processor.executeQuery(query => {
 				return query.findById(id);
-			}, null, '0'); // Executing on first connection only.
+			}, null);
 
 		return this._processor.toDTO(foundEnt, false);
-	}
-
-	public async findOnSecondConn(id: BigInt): Promise<UserBatchDTO> {
-		let foundEnt: UserBatchEntity = await this._processor.executeQuery(query => {
-				return query.findById(id);
-			}, null, 'sec'); // Executing on second connection (named 'sec').
-
-		return this._processor.toDTO(foundEnt, false);
-	}
-
-	public async deleteOnSecondConn(ids: BigInt[]): Promise<number> {
-		let affectedRowArr = await Promise.all(ids.map(id => 
-			this._processor.executeQuery(query => {
-					return query.deleteById(id);
-				}, null, 'sec')
-		));
-		return affectedRowArr[0];
 	}
 
 	public deleteAll(): Promise<void> {
@@ -202,9 +169,9 @@ let cachedDTOs: UserBatchDTO[],
 	usrRepo: UserBatchRepo,
 	idGen = new IdGenerator();
 
-// These test suites make real changes to SqlLite file or PostgreSQl server.
+// These test suites make real changes to database.
 describe('RepositoryBase-batch', function() {
-	this.timeout(50000);
+	// this.timeout(50000);
 
 	beforeEach('Initialize db adapter', () => {
 		dbConnector = new KnexDatabaseConnector();
@@ -225,14 +192,6 @@ describe('RepositoryBase-batch', function() {
 	});
 
 	describe('create with transaction', () => {
-
-		beforeEach(() => {
-			// Add second connection
-			let secondDb = Object.assign({}, DB_DETAILS);
-			secondDb.host = Object.assign({}, DB_DETAILS.host);
-			secondDb.host.database = 'unittestTwo';
-			dbConnector.init(secondDb); // Name this connection as 'sec'
-		});
 
 		it('should insert four rows on each database', async () => {
 			// Arrange
@@ -307,17 +266,14 @@ describe('RepositoryBase-batch', function() {
 			evaTwo.name = null; // fail
 			evaTwo.age = 44;
 
-			let sources = [adamOne, adamTwo, evaOne, evaTwo];
-
 			try {
 				// Act
 				let output = await usrRepo.createTwoCouplesWithTransaction([adamOne, adamTwo], [evaOne, evaTwo]);
 				expect(output).not.to.exist;
-			} catch (errors) {
+			} catch (error) {
 				// Assert
-				expect(errors).to.exist;
-				console.error(errors);
-				expect(errors.length).to.equal(2);
+				expect(error).to.exist;
+				expect(error.message).to.include('violates not-null constraint');
 			}
 			// Assert
 			let count = await usrRepo.countAll();
@@ -347,13 +303,11 @@ describe('RepositoryBase-batch', function() {
 			evaTwo.name = 'Eva Two';
 			evaTwo.age = 44;
 
-			let sources = [adamOne, adamTwo, evaOne, evaTwo];
-
 			try {
 				// Act
 				let flow = usrRepo.createSessionPipe([adamOne, adamTwo], [evaOne, evaTwo]),
-					outputOne = await flow.closePipe(),
-					outputTwo = await flow.closePipe();
+					outputOne: any[] = await flow.closePipe(),
+					outputTwo: any[] = await flow.closePipe();
 
 				// Assert
 				expect(outputOne).to.exist;
@@ -391,101 +345,6 @@ describe('RepositoryBase-batch', function() {
 				expect(err.message).to.equal('Pipe has been closed!');
 			}
 		});
-
-		it('should execute on named connection(s) only', async () => {
-			// Arrange
-			let adamOne = new UserBatchDTO(),
-				adamTwo = new UserBatchDTO();
-
-			adamOne.id = idGen.nextBigInt().toString();
-			adamOne.name = 'Adam One';
-			adamOne.age = 11;
-
-			adamTwo.id = idGen.nextBigInt().toString();
-			adamTwo.name = 'Adam Two';
-			adamTwo.age = 22;
-
-			try {
-				// Act
-				let createdAdams = await usrRepo.createAdamsOnSecondConn([adamOne, adamTwo]);
-				expect(createdAdams).to.exist;
-				expect(createdAdams.length).to.equal(2);
-
-				let nonExistAdamOne = await usrRepo.findOnFirstConn(createdAdams[0].id),
-					nonExistAdamTwo = await usrRepo.findOnFirstConn(createdAdams[1].id);
-				let refetchAdamOne = await usrRepo.findOnSecondConn(createdAdams[0].id),
-					refetchAdamTwo = await usrRepo.findOnSecondConn(createdAdams[1].id);
-				
-				// Assert: model is inserted on second connection, but not on the first one.
-				expect(nonExistAdamOne).not.to.exist;
-				expect(nonExistAdamTwo).not.to.exist;
-				expect(refetchAdamOne).to.exist;
-				expect(refetchAdamTwo).to.exist;
-
-				// Clean up
-				await usrRepo.deleteOnSecondConn(createdAdams.map(u => u.id));
-			} catch (err) {
-				console.error(err);
-				expect(err).not.to.exist;
-			}
-		});
-
-		it('should rollback all transactions if some transactions succeed but at least one transaction fails', async () => {
-			// Arrange
-			try {
-				await usrRepo.deleteAll();
-			} catch (ex) {
-			}
-
-			let adamOne = new UserBatchDTO(),
-				adamTwo = new UserBatchDTO(),
-				evaOne = new UserBatchDTO(),
-				evaTwo = new UserBatchDTO();
-
-			adamOne.id = idGen.nextBigInt().toString();
-			adamOne.name = 'Adam One';
-			adamOne.age = 11;
-
-			adamTwo.id = idGen.nextBigInt().toString();
-			adamTwo.name = 'Adam Two';
-			adamTwo.age = 22;
-
-			evaOne.id = idGen.nextBigInt().toString();
-			evaOne.name = 'Eva One';
-			evaOne.age = 33;
-
-			evaTwo.id = idGen.nextBigInt().toString();
-			evaTwo.name = 'Eva Two';
-			evaTwo.age = 44;
-
-			let sources = [adamOne, adamTwo, evaOne, evaTwo];
-
-			try {
-				// Act
-				let output = await usrRepo.failOnSecondTransaction([adamOne, adamTwo], [evaOne, evaTwo]);
-				expect(output).not.to.exist;
-			} catch (err) {
-				// Assert: The second transaction failed
-				expect(err).to.exist;
-				console.error(err);
-				expect(err).to.be.instanceOf(MinorException);
-				expect(err.message).to.equal('Error on second transaction');
-			}
-
-			// Assert: The first transaction was successful...
-			let firstOutput = usrRepo.firstOutput;
-			expect(firstOutput).to.exist;
-			expect(firstOutput.length).to.equal(4);
-			firstOutput.forEach((u, i) => {
-				expect(u.id).to.equal(sources[i].id);
-				expect(u.name).to.equal(sources[i].name);
-				expect(u.age).to.equal(sources[i].age);
-			});
-
-			// Assert: All transactions were rolled back.
-			let count = await usrRepo.countAll();
-			expect(count).to.equal(0);
-		});
 	});
 
 	describe('create without transaction', () => {
@@ -514,32 +373,6 @@ describe('RepositoryBase-batch', function() {
 				expect(u.name).to.equal(sources[i].name);
 				expect(u.age).to.equal(sources[i].age);
 			});
-		});
-
-		it('should throw error if not success on all connections', async () => {
-			// Arrange
-			let modelOne = new UserBatchDTO();
-			modelOne.id = idGen.nextBigInt().toString();
-			modelOne.name = 'One';
-			modelOne.age = 29;
-
-			let modelTwo = new UserBatchDTO();
-			modelTwo.id = idGen.nextBigInt().toString();
-			modelTwo.name = 'Two';
-			modelTwo.age = 92;
-
-			dbConnector.init({
-				clientName: DbClient.SQLITE3,
-				filePath: CONN_FILE_2,
-			});
-
-			// Act
-			try {
-				let createdDTOs = await usrRepo.create([modelOne, modelTwo]);
-				expect(createdDTOs).to.be.null;
-			} catch (ex) {
-				expect(ex).to.be.not.null;
-			}
 		});
 	}); // END describe 'create'
 

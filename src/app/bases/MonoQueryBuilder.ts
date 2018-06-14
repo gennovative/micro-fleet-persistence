@@ -2,13 +2,12 @@ import { QueryBuilder, QueryBuilderSingle } from 'objection';
 
 import * as it from '../interfaces';
 import { IQueryBuilder } from './IQueryBuilder';
-import { EntityBase } from './EntityBase';
 
 
-export class MonoQueryBuilder<TEntity extends EntityBase, TModel extends IModelDTO, TUk = NameUk> 
+export class MonoQueryBuilder<TEntity, TModel, TUk = NameUk> 
 	implements IQueryBuilder<TEntity, TModel, BigInt, TUk> {
 
-	constructor(private _EntityClass: typeof EntityBase) {
+	constructor(private _EntityClass: Newable) {
 	}
 
 
@@ -26,7 +25,7 @@ export class MonoQueryBuilder<TEntity extends EntityBase, TModel extends IModelD
 			// .whereComposite(this._EntityClass.uniqColumn, '=', this.toArr(uniqVals, this._EntityClass.uniqColumn));
 		if (uniqVals && uniqVals.length) {
 			q = q.where(builder => {
-				this._EntityClass.uniqColumn.forEach((c, i) => {
+				(this._EntityClass['uniqColumn'] as string[]).forEach((c, i) => {
 					let v = uniqVals[i];
 					if (v === null) {
 						builder.orWhereNull(c);

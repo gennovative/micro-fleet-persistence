@@ -16,7 +16,7 @@ class MonoQueryBuilder {
         // .whereComposite(this._EntityClass.uniqColumn, '=', this.toArr(uniqVals, this._EntityClass.uniqColumn));
         if (uniqVals && uniqVals.length) {
             q = q.where(builder => {
-                this._EntityClass.uniqColumn.forEach((c, i) => {
+                this._EntityClass['uniqColumn'].forEach((c, i) => {
                     let v = uniqVals[i];
                     if (v === null) {
                         builder.orWhereNull(c);

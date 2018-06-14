@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const pg_1 = require("pg");
+// import * as moment from 'moment';
 // PostgreSQL data type OID
 const TIMESTAMPTZ_OID = 1184, // Timestamp without timezone
 TIMESTAMP_OID = 1114, // Timestamp with timezone

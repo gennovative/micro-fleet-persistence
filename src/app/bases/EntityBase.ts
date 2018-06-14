@@ -1,5 +1,5 @@
 import { Model } from 'objection';
-import mapKeys from 'lodash/mapKeys';
+import mapKeys = require('lodash/mapKeys');
 
 import { ModelAutoMapper } from '@micro-fleet/common';
 
@@ -18,10 +18,10 @@ export abstract class EntityBase extends Model {
 
 	/**
 	 * @abstract
+	 * Function to convert other object to this class type.
+	 * This method must be implemented by derived class!
 	 */
-	public static get translator(): ModelAutoMapper<EntityBase> {
-		throw 'This method must be implemented by derived class!';
-	}
+	public static readonly translator: ModelAutoMapper<any> = undefined;
 
 	/**
 	 * [ObjectionJS] Array of primary column names.

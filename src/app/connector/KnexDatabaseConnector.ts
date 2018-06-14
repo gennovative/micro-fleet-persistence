@@ -52,7 +52,7 @@ export class KnexDatabaseConnector implements IDatabaseConnector {
 	/**
 	 * @see IDatabaseConnector.prepare
 	 */
-	public prepare<TEntity extends EntityBase>(EntityClass: typeof EntityBase, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any> {
+	public prepare<TEntity extends EntityBase>(EntityClass: Newable, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any> {
 		Guard.assertIsNotEmpty(this._connection, 'Must call addConnection() before executing any query.');
 		if (atomicSession) {
 			return this._prepareTransactionalQuery(EntityClass, callback, atomicSession);
@@ -84,15 +84,15 @@ export class KnexDatabaseConnector implements IDatabaseConnector {
 		throw new MinorException('No database settings!');
 	}
 
-	private _prepareSimpleQuery<TEntity extends EntityBase>(EntityClass: typeof EntityBase, callback: QueryCallback<TEntity>): Promise<any> {
+	private _prepareSimpleQuery<TEntity extends EntityBase>(EntityClass: Newable, callback: QueryCallback<TEntity>): Promise<any> {
 		const BoundClass: any = EntityClass['bindKnex'](this._connection);
 		const query = BoundClass['query']();
-		return callback(query, BoundClass);
+		return callback(query, BoundClass) as Promise<any>;
 	}
 
-	private _prepareTransactionalQuery<TEntity>(EntityClass: typeof EntityBase, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any> {
+	private _prepareTransactionalQuery<TEntity>(EntityClass: Newable, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any> {
 		const BoundClass: any = EntityClass['bindKnex'](atomicSession.knexConnection);
-		return callback(BoundClass['query'](atomicSession.knexTransaction), BoundClass);
+		return callback(BoundClass['query'](atomicSession.knexTransaction), BoundClass) as Promise<any>;
 	}
 
 }

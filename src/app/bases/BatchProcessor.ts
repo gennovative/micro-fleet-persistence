@@ -1,15 +1,14 @@
 import moment from 'moment';
-import { DtoBase, PagedArray } from '@micro-fleet/common';
+import { PagedArray } from '@micro-fleet/common';
 
 import * as it from '../interfaces';
 import { AtomicSession } from '../atom/AtomicSession';
 import { AtomicSessionFactory } from '../atom/AtomicSessionFactory';
 import { IDatabaseConnector, QueryCallback } from '../connector/IDatabaseConnector';
-import { EntityBase } from './EntityBase';
 import { MonoProcessor } from './MonoProcessor';
 
 
-export class BatchProcessor<TEntity extends EntityBase, TModel extends DtoBase, TPk extends PkType = BigInt, TUk = NameUk> {
+export class BatchProcessor<TEntity, TModel, TPk extends PkType = BigInt, TUk = NameUk> {
 
 	/**
 	 * Gets array of non-primary unique property(ies).
@@ -141,7 +140,7 @@ export class BatchProcessor<TEntity extends EntityBase, TModel extends DtoBase, 
 	/**
 	 * @see MonoProcessor.executeQuery
 	 */
-	public executeQuery(callback: QueryCallback<TEntity>, atomicSession?: AtomicSession, name: string = '0'): Promise<any> {
+	public executeQuery(callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any> {
 		return this._mono.executeQuery.apply(this._mono, arguments);
 	}
 

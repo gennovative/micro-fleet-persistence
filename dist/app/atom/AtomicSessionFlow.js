@@ -9,8 +9,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const objection_1 = require("objection");
-const common_util_1 = require("@micro-fleet/common-util");
-const common_contracts_1 = require("@micro-fleet/common-contracts");
+const common_1 = require("@micro-fleet/common");
+const AtomicSession_1 = require("./AtomicSession");
 /**
  * Provides method to execute queries on many database connections, but still make
  * sure those queries are wrapped in transactions.
@@ -20,10 +20,10 @@ class AtomicSessionFlow {
      *
      * @param {string[]} names Only executes the queries on connections with specified names.
      */
-    constructor(_dbConnector, names) {
+    constructor(_dbConnector) {
         this._dbConnector = _dbConnector;
         this._tasks = [];
-        this.initSession();
+        this._initSession();
     }
     /**
      * Checks if it is possible to call "pipe()".
@@ -41,17 +41,17 @@ class AtomicSessionFlow {
             this._finalPromise = new Promise((resolve, reject) => __awaiter(this, void 0, void 0, function* () {
                 this._abortFn = reject;
                 try {
-                    let transPromises = yield this._initPromise;
+                    let { transProm } = yield this._initPromise;
                     // Clean up
                     this._initPromise = null;
                     // Start executing enqueued tasks
-                    this.loop();
+                    this._loop();
                     // Waits for all transaction to complete,
                     // but only takes output from primary (first) one.
                     // `transPromises` resolves when `resolveAllTransactions` is called,
                     // and reject when ``rejectAllTransactions()` is called.
-                    let outputs = yield Promise.all(transPromises);
-                    resolve(outputs[0]);
+                    let outputs = yield transProm;
+                    resolve(outputs);
                 }
                 // Error on init transaction
                 catch (err) {
@@ -67,24 +67,29 @@ class AtomicSessionFlow {
      */
     pipe(task) {
         if (this.isPipeClosed) {
-            throw new common_util_1.MinorException('Pipe has been closed!');
+            throw new common_1.MinorException('Pipe has been closed!');
         }
         this._tasks.push(task);
         return this;
     }
-    initSession() {
+    _initSession() {
         const knexConn = this._dbConnector.connection;
-        return this._initPromise = objection_1.transaction(knexConn, trans => {
-            this._session = new common_contracts_1.AtomicSession(knexConn, trans);
-            return null;
+        return this._initPromise = new Promise(resolve => {
+            const transProm = objection_1.transaction(knexConn, trans => {
+                this._session = new AtomicSession_1.AtomicSession(knexConn, trans);
+                // Avoid passing a promise to resolve(),
+                // as it will wait forever
+                resolve({ transProm });
+                return null;
+            });
         });
     }
-    doTask(prevOutput) {
+    _doTask(prevOutput) {
         let task = this._tasks.shift();
         prevOutput = prevOutput || [];
         if (!task) {
             // When there's no more task, we commit all transactions.
-            this.resolveTransactions(prevOutput);
+            this._resolveTransactions(prevOutput);
             return null;
         }
         // return this.collectTasksOutputs(task, prevOutputs);
@@ -127,24 +132,26 @@ class AtomicSessionFlow {
         });
     }
     //*/
-    loop(prevOutput) {
-        let prevWorks = this.doTask(prevOutput);
-        if (!prevWorks) {
-            return;
-        }
-        prevWorks
-            .then(prev => {
-            this.loop(prev);
-        })
-            .catch(err => this.rejectTransactions(err))
-            // This catches both promise errors and AtomicSessionFlow's errors.
-            .catch(this._abortFn);
+    _loop(prevOutput) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let prevWorks = this._doTask(prevOutput);
+            if (!prevWorks) {
+                return;
+            }
+            prevWorks
+                .then(prev => {
+                return this._loop(prev);
+            })
+                .catch(err => this._rejectTransactions(err))
+                // This catches both promise errors and AtomicSessionFlow's errors.
+                .catch(this._abortFn);
+        });
     }
-    resolveTransactions(output) {
+    _resolveTransactions(output) {
         this._session.knexTransaction.commit(output);
         this._session = this._tasks = null; // Clean up
     }
-    rejectTransactions(error) {
+    _rejectTransactions(error) {
         this._session.knexTransaction.rollback(error);
         this._session = this._tasks = null; // Clean up
     }

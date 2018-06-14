@@ -1,6 +1,5 @@
-import { constants } from '@micro-fleet/common-contracts';
+import { constants } from '@micro-fleet/common';
 const { DbClient } = constants;
-
 
 export default {
 	clientName: DbClient.POSTGRESQL,

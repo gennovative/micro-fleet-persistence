@@ -1,5 +1,5 @@
 import * as knex from 'knex';
-import { QueryBuilder } from 'objection';
+import { QueryBuilder, QueryBuilderBase } from 'objection';
 import { DbConnectionDetail } from '@micro-fleet/common';
 
 import { AtomicSession } from '../atom/AtomicSession';
@@ -16,9 +16,10 @@ export interface KnexConnection extends knex {
 /**
  * Invoked when a request for getting query is replied.
  * @param {QueryBuilder} queryBuilder A query that is bound to a connection.
- * @param {Class extends EntityBase} boundEntityClass A class that is bound to a connection.
+ * @param {Class} boundEntityClass A class that is bound to a connection.
  */
-export type QueryCallback<TEntity> = (queryBuilder: QueryBuilder<TEntity>, boundEntityClass?: typeof EntityBase) => Promise<any>;
+export type QueryCallback<TEntity> = (queryBuilder: QueryBuilder<TEntity>, boundEntityClass?: Newable) => QueryCallbackReturn<TEntity>;
+export type QueryCallbackReturn<TEntity> = QueryBuilderBase<TEntity> | QueryBuilderBase<number> | Promise<any>;
 
 /**
  * Helps with managing multiple database connections and executing same query with all
@@ -56,5 +57,5 @@ export interface IDatabaseConnector {
 	 * 
 	 * @return {Promise} A promise returned by the `callback`.
 	 */
-	prepare<TEntity extends EntityBase>(EntityClass: typeof EntityBase, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any>;
+	prepare<TEntity extends EntityBase>(EntityClass: Newable, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any>;
 }

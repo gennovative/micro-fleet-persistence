@@ -1,36 +1,21 @@
 import { expect } from 'chai';
 
-import { InvalidArgumentException, MinorException } from '@micro-fleet/common-util';
-import { PagedArray, ModelAutoMapper, AtomicSession, constants } from '@micro-fleet/common-contracts';
+import { MinorException, PagedArray, ModelAutoMapper } from '@micro-fleet/common';
 import { IdGenerator } from '@micro-fleet/id-generator';
 
 import {
-	RepositoryBase, EntityBase, QueryCallback, IDatabaseConnector,
+	RepositoryBase, EntityBase, IDatabaseConnector,
 	KnexDatabaseConnector, AtomicSessionFactory, AtomicSessionFlow
 } from '../app';
 import DB_DETAILS from './database-details';
 
-const { DbClient } = constants;
 
-
-const CONN_FILE = `${process.cwd()}/database-adapter-test.sqlite`,
-	CONN_FILE_2 = `${process.cwd()}/database-adapter-test-second.sqlite`,
-	// For SQLite3 file
-	// DB_TABLE = 'userdata',
-
-	// For PostgreSQL
-	DB_TABLE = 'userdata_version',
-
+const DB_TABLE = 'userdata_version',
 	IMPOSSIBLE_ID = '0';
 
+class UserVersionDTO implements ISoftDeletable, IVersionControlled {
 
-// Should put this in Types.ts
-const TYPE_USER_DTO = Symbol('UserVersionDTO'),
-	TYPE_USER_ENT = Symbol('UserVersionEntity');
-
-class UserVersionDTO implements IModelDTO, ISoftDeletable, IVersionControlled {
-
-	public static translator: ModelAutoMapper<UserVersionDTO> = new ModelAutoMapper(UserVersionDTO);
+	public static readonly translator: ModelAutoMapper<UserVersionDTO> = new ModelAutoMapper(UserVersionDTO);
 
 	// NOTE: Class properties must be initialized, otherwise they
 	// will disappear in transpiled code.
@@ -54,10 +39,11 @@ class UserVersionEntity extends EntityBase {
 	public static readonly idColumn = ['id'];
 	public static readonly uniqColumn = ['name', 'age'];
 
-	public static translator: ModelAutoMapper<UserVersionEntity> = new ModelAutoMapper(UserVersionEntity);
+	public static readonly translator: ModelAutoMapper<UserVersionEntity> = new ModelAutoMapper(UserVersionEntity);
 
 	// NOTE: Class properties must be initialized, otherwise they
 	// will disappear in transpiled code.
+	public id: BigInt = undefined;
 	public name: string = undefined;
 	public age: number = undefined;
 	public deletedAt: string = undefined;
@@ -73,7 +59,7 @@ class UserVersionRepo extends RepositoryBase<UserVersionEntity, UserVersionDTO> 
 	constructor(
 		dbConnector: IDatabaseConnector
 	) {
-		super(UserVersionEntity, dbConnector, {
+		super(UserVersionEntity, UserVersionDTO, dbConnector, {
 			isVersionControlled: true,
 			triggerProps: ['name']
 		});
@@ -97,7 +83,7 @@ class UserVersionRepo extends RepositoryBase<UserVersionEntity, UserVersionDTO> 
 	}
 
 	private _counter = 0;
-	public firstOutput;
+	public firstOutput: any;
 	public failOnSecondTransaction(adam: UserVersionDTO, eva: UserVersionDTO): Promise<UserVersionDTO[]> {
 		return this._sessionFactory.startSession()
 			.pipe(atomicSession => this.create(adam, { atomicSession }))
@@ -129,18 +115,6 @@ class UserVersionRepo extends RepositoryBase<UserVersionEntity, UserVersionDTO> 
 			.closePipe();
 	}
 
-	public createAdamOnSecondConn(adam: UserVersionDTO): Promise<UserVersionDTO> {
-		return this._sessionFactory.startSession('sec')
-			.pipe(atomicSession => this.create(adam, { atomicSession }))
-			.closePipe();
-	}
-
-	public createAdamOnNonExistConn(adam: UserVersionDTO): Promise<UserVersionDTO> {
-		return this._sessionFactory.startSession('nonexist')
-			.pipe(atomicSession => this.create(adam, { atomicSession }))
-			.closePipe();
-	}
-
 	public createSessionPipe(adam: UserVersionDTO, eva: UserVersionDTO): AtomicSessionFlow {
 		return this._sessionFactory.startSession()
 			.pipe(atomicSession => this.create(adam, { atomicSession }))
@@ -165,27 +139,12 @@ class UserVersionRepo extends RepositoryBase<UserVersionEntity, UserVersionDTO> 
 		//.closePipe(); // Not closing pipe
 	}
 
-	public async findOnFirstConn(id: BigInt): Promise<UserVersionDTO> {
+	public async find(id: BigInt): Promise<UserVersionDTO> {
 		let foundEnt: UserVersionEntity = await this._processor.executeQuery(query => {
 			return query.findById(id);
-		}, null, '0'); // Executing on first connection only.
+		}, null);
 
 		return this._processor.toDTO(foundEnt, false);
-	}
-
-	public async findOnSecondConn(id: BigInt): Promise<UserVersionDTO> {
-		let foundEnt: UserVersionEntity = await this._processor.executeQuery(query => {
-			return query.findById(id);
-		}, null, 'sec'); // Executing on second connection (named 'sec').
-
-		return this._processor.toDTO(foundEnt, false);
-	}
-
-	public async deleteOnSecondConn(id: BigInt): Promise<UserVersionDTO> {
-		let affectedRows = await this._processor.executeQuery(query => {
-			return query.deleteById(id);
-		}, null, 'sec');
-		return affectedRows;
 	}
 
 	public deleteAll(): Promise<void> {

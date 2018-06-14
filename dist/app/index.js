@@ -7,12 +7,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 if (!Reflect || typeof Reflect['hasOwnMetadata'] !== 'function') {
     require('reflect-metadata');
 }
-const memoize_1 = require("lodash/memoize");
-global['snakeCase'] = memoize_1.default(require('lodash/snakeCase'));
-global['camelCase'] = memoize_1.default(require('lodash/camelCase'));
+const memoize = require("lodash/memoize");
+global['snakeCase'] = memoize(require('lodash/snakeCase'));
+global['camelCase'] = memoize(require('lodash/camelCase'));
 require("./convert-utc");
 __export(require("./atom/AtomicSessionFactory"));
 __export(require("./atom/AtomicSessionFlow"));
+__export(require("./atom/AtomicSession"));
 __export(require("./bases/BatchProcessor"));
 __export(require("./bases/EntityBase"));
 __export(require("./bases/MonoProcessor"));

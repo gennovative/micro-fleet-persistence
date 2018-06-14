@@ -20,12 +20,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var _a;
-"use strict";
-const common_contracts_1 = require("@micro-fleet/common-contracts");
-const common_util_1 = require("@micro-fleet/common-util");
+const common_1 = require("@micro-fleet/common");
 const Types_1 = require("./Types");
-const { DbSettingKeys: S } = common_contracts_1.constants;
+const { DbSettingKeys: S } = common_1.constants;
 /**
  * Initializes database connections.
  */
@@ -33,14 +30,14 @@ let DatabaseAddOn = class DatabaseAddOn {
     constructor(_configProvider, _dbConnector) {
         this._configProvider = _configProvider;
         this._dbConnector = _dbConnector;
-        common_util_1.Guard.assertArgDefined('_configProvider', _configProvider);
-        common_util_1.Guard.assertArgDefined('_dbConnector', _dbConnector);
+        common_1.Guard.assertArgDefined('_configProvider', _configProvider);
+        common_1.Guard.assertArgDefined('_dbConnector', _dbConnector);
     }
     /**
      * @see IServiceAddOn.init
      */
     init() {
-        this.addConnections();
+        this._prepareConnection();
         return Promise.resolve();
     }
     /**
@@ -59,54 +56,54 @@ let DatabaseAddOn = class DatabaseAddOn {
             this._configProvider = null;
         });
     }
-    addConnections() {
-        let nConn = this._configProvider.get(S.DB_NUM_CONN), connDetail;
-        for (let i = 0; i < nConn; ++i) {
-            connDetail = this.buildConnDetails(i);
-            if (!connDetail) {
-                continue;
-            }
-            this._dbConnector.init(connDetail);
+    _prepareConnection() {
+        const connDetail = this._buildConnDetails();
+        if (!connDetail.hasValue) {
+            throw new common_1.CriticalException('No database settings!');
         }
-        if (!this._dbConnector.connection) {
-            throw new common_util_1.CriticalException('No database settings!');
-        }
+        this._dbConnector.init(connDetail.value);
     }
-    buildConnDetails(connIdx) {
-        let provider = this._configProvider, cnnDetail = {
-            clientName: provider.get(S.DB_ENGINE + connIdx) // Must belong to `DbClient`
-        }, value;
+    _buildConnDetails() {
+        const provider = this._configProvider;
+        const clientName = provider.get(S.DB_ENGINE); // Must belong to `DbClient`
+        if (!clientName.hasValue) {
+            return new common_1.Maybe;
+        }
+        const cnnDetail = {
+            clientName: clientName.value
+        };
+        let setting;
         // 1st priority: connect to a local file.
-        value = provider.get(S.DB_FILE + connIdx);
-        if (value) {
-            cnnDetail.filePath = value;
-            return cnnDetail;
+        setting = provider.get(S.DB_FILE);
+        if (setting.hasValue) {
+            cnnDetail.filePath = setting.value;
+            return new common_1.Maybe(cnnDetail);
         }
         // 2nd priority: connect with a connection string.
-        value = provider.get(S.DB_CONN_STRING + connIdx);
-        if (value) {
-            cnnDetail.connectionString = value;
-            return cnnDetail;
+        setting = provider.get(S.DB_CONN_STRING);
+        if (setting.hasValue) {
+            cnnDetail.connectionString = setting.value;
+            return new common_1.Maybe(cnnDetail);
         }
         // Last priority: connect with host credentials.
-        value = provider.get(S.DB_HOST + connIdx);
-        if (value) {
+        setting = provider.get(S.DB_ADDRESS);
+        if (setting.hasValue) {
             cnnDetail.host = {
-                address: provider.get(S.DB_HOST + connIdx),
-                user: provider.get(S.DB_USER + connIdx),
-                password: provider.get(S.DB_PASSWORD + connIdx),
-                database: provider.get(S.DB_NAME + connIdx),
+                address: provider.get(S.DB_ADDRESS).value,
+                user: provider.get(S.DB_USER).value,
+                password: provider.get(S.DB_PASSWORD).value,
+                database: provider.get(S.DB_NAME).value,
             };
-            return cnnDetail;
+            return new common_1.Maybe(cnnDetail);
         }
-        return null;
+        return new common_1.Maybe;
     }
 };
 DatabaseAddOn = __decorate([
-    common_util_1.injectable(),
-    __param(0, common_util_1.inject(common_contracts_1.Types.CONFIG_PROVIDER)),
-    __param(1, common_util_1.inject(Types_1.Types.DB_CONNECTOR)),
-    __metadata("design:paramtypes", [typeof (_a = typeof common_contracts_1.IConfigurationProvider !== "undefined" && common_contracts_1.IConfigurationProvider) === "function" && _a || Object, Object])
+    common_1.injectable(),
+    __param(0, common_1.inject(common_1.Types.CONFIG_PROVIDER)),
+    __param(1, common_1.inject(Types_1.Types.DB_CONNECTOR)),
+    __metadata("design:paramtypes", [Object, Object])
 ], DatabaseAddOn);
 exports.DatabaseAddOn = DatabaseAddOn;
 //# sourceMappingURL=DatabaseAddOn.js.map

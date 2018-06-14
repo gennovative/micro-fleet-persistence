@@ -1,15 +1,14 @@
-import { Guard, PagedArray, DtoBase, injectable, unmanaged } from '@micro-fleet/common';
+import { Guard, PagedArray, injectable, unmanaged } from '@micro-fleet/common';
 
 import * as it from '../interfaces';
 import { IDatabaseConnector } from '../connector/IDatabaseConnector';
-import { EntityBase } from './EntityBase';
 import { MonoProcessor, ProcessorOptions } from './MonoProcessor';
 import { BatchProcessor } from './BatchProcessor';
 import { VersionControlledProcessor } from './VersionControlledProcessor';
 
 
 
-export interface RepositoryBaseOptions<TEntity extends EntityBase, TModel extends IModelDTO, TPk extends PkType = BigInt, TUk = NameUk>
+export interface RepositoryBaseOptions<TEntity, TModel, TPk extends PkType = BigInt, TUk = NameUk>
 		extends ProcessorOptions {
 	/**
 	 * Used by default version-controlled processor and default batch processor.
@@ -29,15 +28,17 @@ export interface RepositoryBaseOptions<TEntity extends EntityBase, TModel extend
 
 
 @injectable()
-export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends DtoBase, TPk extends PkType = BigInt, TUk = NameUk>
+export abstract class RepositoryBase<TEntity, TModel, TPk extends PkType = BigInt, TUk = NameUk>
 	implements it.ISoftDelRepository<TModel, TPk, TUk> {
 
 	protected _processor: BatchProcessor<TEntity, TModel, TPk, TUk>;
 
-	constructor( @unmanaged() EntityClass: typeof EntityBase, @unmanaged() DtoClass: typeof DtoBase,
+	constructor( @unmanaged() EntityClass: Newable, @unmanaged() DtoClass: Newable,
 			@unmanaged() dbConnector: IDatabaseConnector, @unmanaged() options: RepositoryBaseOptions<TEntity, TModel, TPk, TUk> = {}) {
 		Guard.assertArgDefined('EntityClass', EntityClass);
+		Guard.assertIsTruthy(EntityClass['tableName'] && EntityClass['translator'], 'Param "EntityClass" must inherit base class "EntityBase"!');
 		Guard.assertArgDefined('DtoClass', DtoClass);
+		Guard.assertIsTruthy(DtoClass['translator'], 'Param "DtoClass" must inherit base class "DtoBase"!');
 		Guard.assertArgDefined('dbConnector', dbConnector);
 		let crud: any;
 		if (options.isVersionControlled) {

@@ -10,14 +10,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const debug = require('debug')('MonoProcessor');
-const isEmpty_1 = require("lodash/isEmpty");
-const moment_1 = require("moment");
+const isEmpty = require("lodash/isEmpty");
+const moment = require("moment");
 const common_1 = require("@micro-fleet/common");
 const MonoQueryBuilder_1 = require("./MonoQueryBuilder");
 const TenantQueryBuilder_1 = require("./TenantQueryBuilder");
 class MonoProcessor {
-    constructor(_EntityClass, _dbConnector, _options = {}) {
+    constructor(_EntityClass, _DtoClass, _dbConnector, _options = {}) {
         this._EntityClass = _EntityClass;
+        this._DtoClass = _DtoClass;
         this._dbConnector = _dbConnector;
         this._options = _options;
         this._queryBuilders = [new MonoQueryBuilder_1.MonoQueryBuilder(_EntityClass)];
@@ -29,13 +30,13 @@ class MonoProcessor {
      * Gets array of non-primary unique property(ies).
      */
     get ukCol() {
-        return this._EntityClass.uniqColumn;
+        return this._EntityClass['uniqColumn'];
     }
     /**
      * Gets current date time in UTC.
      */
     get utcNow() {
-        return moment_1.default(new Date()).utc();
+        return moment(new Date()).utc();
     }
     /**
      * @see IRepository.countAll
@@ -70,7 +71,7 @@ class MonoProcessor {
      * @see ISoftDelRepository.deleteSoft
      */
     deleteSoft(pk, opts = {}) {
-        return this.setDeleteState(pk, true, opts);
+        return this._setDeleteState(pk, true, opts);
     }
     /**
      * @see IRepository.deleteHard
@@ -131,7 +132,7 @@ class MonoProcessor {
                 debug('PAGE: %s', q.toSql());
                 return q;
             }, opts.atomicSession);
-            if (!foundList || isEmpty_1.default(foundList.results)) {
+            if (!foundList || isEmpty(foundList.results)) {
                 return null;
             }
             dtoList = this.toDTO(foundList.results, false);
@@ -179,7 +180,7 @@ class MonoProcessor {
             if (yield this.exists(model, options)) {
                 throw new common_1.MinorException('DUPLICATE_UNIQUE_KEY');
             }
-            return this.setDeleteState(pk, false, opts);
+            return this._setDeleteState(pk, false, opts);
         });
     }
     /**
@@ -205,7 +206,7 @@ class MonoProcessor {
      * Executing an query
      */
     executeQuery(callback, atomicSession) {
-        return this.prepare(callback, atomicSession);
+        return this._prepare(callback, atomicSession);
     }
     /**
      * Translates from DTO model(s) to entity model(s).
@@ -214,14 +215,15 @@ class MonoProcessor {
         if (!dto) {
             return null;
         }
+        const translator = this._EntityClass['translator'];
         let entity;
         if (isPartial) {
-            entity = this._EntityClass.translator.partial(dto);
+            entity = translator.partial(dto);
         }
-        entity = this._EntityClass.translator.whole(dto);
+        entity = translator.whole(dto);
         for (let prop of ['createdAt', 'updatedAt', 'deletedAt']) {
             if (dto[prop]) {
-                entity[prop] = moment_1.default.utc(dto[prop]).format();
+                entity[prop] = moment.utc(dto[prop]).format();
             }
         }
         return entity;
@@ -233,15 +235,16 @@ class MonoProcessor {
         if (!entity) {
             return null;
         }
+        const translator = this._EntityClass['translator'];
         let dto;
         if (isPartial) {
-            dto = this._EntityClass.translator.partial(entity, { enableValidation: false });
+            dto = translator.partial(entity, { enableValidation: false });
         }
         // Disable validation because it's unnecessary.
-        dto = this._EntityClass.translator.whole(entity, { enableValidation: false });
+        dto = translator.whole(entity, { enableValidation: false });
         for (let prop of ['createdAt', 'updatedAt', 'deletedAt']) {
             if (entity[prop]) {
-                dto[prop] = moment_1.default.utc(entity[prop]).toDate();
+                dto[prop] = moment.utc(entity[prop]).toDate();
             }
         }
         return dto;
@@ -257,10 +260,10 @@ class MonoProcessor {
     /**
      * @see IDatabaseConnector.query
      */
-    prepare(callback, atomicSession) {
+    _prepare(callback, atomicSession) {
         return this._dbConnector.prepare(this._EntityClass, callback, atomicSession);
     }
-    buildDeleteState(pk, isDel) {
+    _buildDeleteState(pk, isDel) {
         let deletedAt = (isDel ? this.utcNow.format() : null);
         if (this._options.isMultiTenancy) {
             return Object.assign(pk, { deletedAt });
@@ -272,8 +275,8 @@ class MonoProcessor {
             };
         }
     }
-    setDeleteState(pk, isDel, opts = {}) {
-        let delta = this.buildDeleteState(pk, isDel);
+    _setDeleteState(pk, isDel, opts = {}) {
+        let delta = this._buildDeleteState(pk, isDel);
         return this.executeQuery(query => {
             // let q = this.buildPatch(delta, query, opts);
             let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
