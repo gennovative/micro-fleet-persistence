@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 
-import { MinorException, PagedArray, ModelAutoMapper } from '@micro-fleet/common';
+import { MinorException, PagedArray, ModelAutoMapper,
+	DtoBase } from '@micro-fleet/common';
 import { IdGenerator } from '@micro-fleet/id-generator';
 
 import { EntityBase, IDatabaseConnector,
@@ -13,7 +14,7 @@ const DB_TABLE = 'usersTenant',
 	IMPOSSIBLE_ID = '0';
 
 
-class UserTenantDTO implements ISoftDeletable {
+class UserTenantDTO extends DtoBase implements ISoftDeletable {
 
 	public static readonly translator: ModelAutoMapper<UserTenantDTO> = new ModelAutoMapper(UserTenantDTO);
 

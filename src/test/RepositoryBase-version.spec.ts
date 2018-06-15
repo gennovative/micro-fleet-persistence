@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 
-import { MinorException, PagedArray, ModelAutoMapper } from '@micro-fleet/common';
+import { MinorException, PagedArray, ModelAutoMapper, 
+	DtoBase } from '@micro-fleet/common';
 import { IdGenerator } from '@micro-fleet/id-generator';
 
 import {
@@ -13,7 +14,7 @@ import DB_DETAILS from './database-details';
 const DB_TABLE = 'userdata_version',
 	IMPOSSIBLE_ID = '0';
 
-class UserVersionDTO implements ISoftDeletable, IVersionControlled {
+class UserVersionDTO extends DtoBase implements ISoftDeletable, IVersionControlled {
 
 	public static readonly translator: ModelAutoMapper<UserVersionDTO> = new ModelAutoMapper(UserVersionDTO);
 
