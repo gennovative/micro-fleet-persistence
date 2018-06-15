@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const objection_1 = require("objection");
-const mapKeys = require("lodash/mapKeys");
+const mapKeys = require('lodash/mapKeys');
 const snakeCase = global['snakeCase'];
 const camelCase = global['camelCase'];
 class EntityBase extends objection_1.Model {

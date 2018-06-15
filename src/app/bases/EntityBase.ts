@@ -1,5 +1,5 @@
 import { Model } from 'objection';
-import mapKeys = require('lodash/mapKeys');
+const mapKeys = require('lodash/mapKeys');
 
 import { ModelAutoMapper } from '@micro-fleet/common';
 

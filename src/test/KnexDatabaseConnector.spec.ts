@@ -24,8 +24,8 @@ class DummyEntity extends EntityBase {
 	}
 }
 
-describe.only('KnexDatabaseConnector', function () {
-	this.timeout(50000);
+describe('KnexDatabaseConnector', function () {
+	// this.timeout(50000);
 
 	describe('addConnection', () => {
 		it('should configure connection with file name settings', async () => {
@@ -157,20 +157,10 @@ describe.only('KnexDatabaseConnector', function () {
 	}); // END describe 'dispose'
 
 	describe('prepare', () => {
-		it('should execute query with all connections', async () => {
+		it('should execute query with established connection', async () => {
 			// Arrange
 			let dbConnector = new KnexDatabaseConnector(),
 				callMe = chai.spy();
-
-			dbConnector.init({
-				clientName: DbClient.SQLITE3,
-				filePath: CONN_FILE
-			});
-
-			// dbConnector.addConnection({
-			// 	clientName: DbClient.SQLITE3,
-			// 	filePath: CONN_FILE
-			// });
 
 			dbConnector.init(DB_DETAILS);
 
@@ -181,7 +171,7 @@ describe.only('KnexDatabaseConnector', function () {
 			});
 
 			// Assert
-			expect(callMe).to.be.called.twice;
+			expect(callMe).to.be.called.once;
 			await dbConnector.dispose();
 		});
 
@@ -191,16 +181,6 @@ describe.only('KnexDatabaseConnector', function () {
 				callMe = chai.spy(),
 				oldKnex = DummyEntity.knex(),
 				newKnex = null;
-
-			dbConnector.init({
-				clientName: DbClient.SQLITE3,
-				filePath: CONN_FILE
-			});
-
-			// dbConnector.addConnection({
-			// 	clientName: DbClient.SQLITE3,
-			// 	filePath: CONN_FILE
-			// });
 
 			dbConnector.init(DB_DETAILS);
 
@@ -214,7 +194,7 @@ describe.only('KnexDatabaseConnector', function () {
 			});
 
 			// Assert
-			expect(callMe).to.be.called.twice;
+			expect(callMe).to.be.called.once;
 			await dbConnector.dispose();
 		});
 	}); // END describe 'prepare'
