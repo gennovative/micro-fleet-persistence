@@ -21,6 +21,10 @@
 		"objection": "~0.8",
 		"pg": "~7.0"
 	},
+	"devDependencies": {
+		"@types/pg": "~7.4",
+		"sqlite3": "~4.0"
+	},
 	"peerDependencies": {
 		"@micro-fleet/common": "~1.2",
 		"@micro-fleet/service-communication": "~0.2"
@@ -39,9 +43,5 @@
 	"private": false,
 	"main": "./dist/app/index.js",
 	"types": "./typings/app.d.ts",
-	"repository": "git@github.com:gennovative/micro-fleet-persistence.git",
-	"devDependencies": {
-		"@types/pg": "^7.4.9",
-		"sqlite3": "^4.0.0"
-	}
+	"repository": "git@github.com:gennovative/micro-fleet-persistence.git"
 }

@@ -11,14 +11,6 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const common_1 = require("@micro-fleet/common");
 const MonoProcessor_1 = require("./MonoProcessor");
@@ -44,10 +36,8 @@ let RepositoryBase = class RepositoryBase {
     /**
      * @see IRepository.countAll
      */
-    countAll(opts = {}) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return this._processor.countAll(opts);
-        });
+    async countAll(opts = {}) {
+        return this._processor.countAll(opts);
     }
     /**
      * @see IRepository.create
@@ -70,10 +60,8 @@ let RepositoryBase = class RepositoryBase {
     /**
      * @see IRepository.exists
      */
-    exists(props, opts = {}) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return this._processor.exists(props, opts);
-        });
+    async exists(props, opts = {}) {
+        return this._processor.exists(props, opts);
     }
     /**
      * @see IRepository.findByPk
@@ -84,10 +72,8 @@ let RepositoryBase = class RepositoryBase {
     /**
      * @see IRepository.page
      */
-    page(pageIndex, pageSize, opts = {}) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return this._processor.page(pageIndex, pageSize, opts);
-        });
+    async page(pageIndex, pageSize, opts = {}) {
+        return this._processor.page(pageIndex, pageSize, opts);
     }
     /**
      * @see IRepository.patch
@@ -98,10 +84,8 @@ let RepositoryBase = class RepositoryBase {
     /**
      * @see ISoftDelRepository.recover
      */
-    recover(pk, opts = {}) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return this._processor.recover(pk, opts);
-        });
+    async recover(pk, opts = {}) {
+        return this._processor.recover(pk, opts);
     }
     /**
      * @see IRepository.update

@@ -26,11 +26,10 @@
 			],
 			// Automatically stop program after launch.
 			"stopOnEntry": false,
-			// Workspace relative or absolute path to the runtime executable to be used. Default is the runtime executable on the PATH.
 			"runtimeExecutable": null,
 			"cwd": "${workspaceRoot}",
 			"outFiles": [],
-			"sourceMaps": true
+			"sourceMaps": false
 		},
 		{
 			"type": "node",

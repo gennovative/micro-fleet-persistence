@@ -1,13 +1,5 @@
 "use strict";
 /// <reference types="debug" />
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const debug = require('debug')('MonoProcessor');
 const isEmpty = require("lodash/isEmpty");
@@ -41,20 +33,18 @@ class MonoProcessor {
     /**
      * @see IRepository.countAll
      */
-    countAll(opts = {}) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let result = yield this.executeQuery((query) => {
-                // let q = this.buildCountAll(query, opts);
-                let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
-                    return currBuilder.buildCountAll(prevQuery, query.clone(), opts);
-                }, null);
-                debug('COUNT ALL: %s', q.toSql());
-                return q;
-            }, opts.atomicSession);
-            // In case with Postgres, `count` returns a bigint type which will be a String 
-            // and not a Number.
-            return +(result[0]['total']);
-        });
+    async countAll(opts = {}) {
+        let result = await this.executeQuery((query) => {
+            // let q = this.buildCountAll(query, opts);
+            let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
+                return currBuilder.buildCountAll(prevQuery, query.clone(), opts);
+            }, null);
+            debug('COUNT ALL: %s', q.toSql());
+            return q;
+        }, opts.atomicSession);
+        // In case with Postgres, `count` returns a bigint type which will be a String 
+        // and not a Number.
+        return +(result[0]['total']);
     }
     /**
      * @see IRepository.create
@@ -89,18 +79,16 @@ class MonoProcessor {
     /**
      * @see IRepository.exists
      */
-    exists(props, opts = {}) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let result = yield this.executeQuery(query => {
-                // let q = this.buildExists(props, query, opts);
-                let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
-                    return currBuilder.buildExists(this.toArr(props, this.ukCol), prevQuery, query.clone(), opts);
-                }, null);
-                debug('EXIST: %s', q.toSql());
-                return q;
-            }, opts.atomicSession);
-            return result[0]['total'] != 0;
-        });
+    async exists(props, opts = {}) {
+        let result = await this.executeQuery(query => {
+            // let q = this.buildExists(props, query, opts);
+            let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
+                return currBuilder.buildExists(this.toArr(props, this.ukCol), prevQuery, query.clone(), opts);
+            }, null);
+            debug('EXIST: %s', q.toSql());
+            return q;
+        }, opts.atomicSession);
+        return result[0]['total'] != 0;
     }
     /**
      * @see IRepository.findByPk
@@ -121,23 +109,21 @@ class MonoProcessor {
     /**
      * @see IRepository.page
      */
-    page(pageIndex, pageSize, opts = {}) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let foundList, dtoList;
-            foundList = yield this.executeQuery(query => {
-                // let q = this.buildPage(pageIndex, pageSize, query, opts);
-                let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
-                    return currBuilder.buildPage(pageIndex, pageSize, prevQuery, query.clone(), opts);
-                }, null);
-                debug('PAGE: %s', q.toSql());
-                return q;
-            }, opts.atomicSession);
-            if (!foundList || isEmpty(foundList.results)) {
-                return null;
-            }
-            dtoList = this.toDTO(foundList.results, false);
-            return new common_1.PagedArray(foundList.total, ...dtoList);
-        });
+    async page(pageIndex, pageSize, opts = {}) {
+        let foundList, dtoList;
+        foundList = await this.executeQuery(query => {
+            // let q = this.buildPage(pageIndex, pageSize, query, opts);
+            let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
+                return currBuilder.buildPage(pageIndex, pageSize, prevQuery, query.clone(), opts);
+            }, null);
+            debug('PAGE: %s', q.toSql());
+            return q;
+        }, opts.atomicSession);
+        if (!foundList || isEmpty(foundList.results)) {
+            return null;
+        }
+        dtoList = this.toDTO(foundList.results, false);
+        return new common_1.PagedArray(foundList.total, ...dtoList);
     }
     /**
      * @see IRepository.patch
@@ -163,25 +149,23 @@ class MonoProcessor {
     /**
      * @see ISoftDelRepository.recover
      */
-    recover(pk, opts = {}) {
-        return __awaiter(this, void 0, void 0, function* () {
-            // let options = this.buildRecoverOpts(pk, opts),
-            let options = this._queryBuilders.reduce((prevOpts, currBuilder) => {
-                return currBuilder.buildRecoverOpts(pk, prevOpts, opts);
-            }, null);
-            // Fetch the recovered record
-            let model = yield this.findByPk(pk, options);
-            // If record doesn't exist
-            if (!model) {
-                return 0;
-            }
-            // If another ACTIVE record with same unique keys exists
-            options.includeDeleted = false;
-            if (yield this.exists(model, options)) {
-                throw new common_1.MinorException('DUPLICATE_UNIQUE_KEY');
-            }
-            return this._setDeleteState(pk, false, opts);
-        });
+    async recover(pk, opts = {}) {
+        // let options = this.buildRecoverOpts(pk, opts),
+        let options = this._queryBuilders.reduce((prevOpts, currBuilder) => {
+            return currBuilder.buildRecoverOpts(pk, prevOpts, opts);
+        }, null);
+        // Fetch the recovered record
+        let model = await this.findByPk(pk, options);
+        // If record doesn't exist
+        if (!model) {
+            return 0;
+        }
+        // If another ACTIVE record with same unique keys exists
+        options.includeDeleted = false;
+        if (await this.exists(model, options)) {
+            throw new common_1.MinorException('DUPLICATE_UNIQUE_KEY');
+        }
+        return this._setDeleteState(pk, false, opts);
     }
     /**
      * @see IRepository.update
