@@ -13,6 +13,8 @@ const { DbSettingKeys: S } = constants;
 @injectable()
 export class DatabaseAddOn implements IServiceAddOn {
 	
+	public readonly name: string = 'DatabaseAddOn';
+
 	constructor(
 		@inject(ConT.CONFIG_PROVIDER) private _configProvider: IConfigurationProvider,
 		@inject(T.DB_CONNECTOR) private _dbConnector: IDatabaseConnector

@@ -21,6 +21,8 @@ const expect = chai.expect,
 
 class MockConfigAddOn implements IConfigurationProvider {
 	
+	public readonly name: string = 'MockConfigProvider';
+
 	constructor(private _mode: string = MODE_CREDENTIALS) {
 	}
 

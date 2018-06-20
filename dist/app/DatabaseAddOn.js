@@ -22,6 +22,7 @@ let DatabaseAddOn = class DatabaseAddOn {
     constructor(_configProvider, _dbConnector) {
         this._configProvider = _configProvider;
         this._dbConnector = _dbConnector;
+        this.name = 'DatabaseAddOn';
         common_1.Guard.assertArgDefined('_configProvider', _configProvider);
         common_1.Guard.assertArgDefined('_dbConnector', _dbConnector);
     }

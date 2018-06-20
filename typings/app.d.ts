@@ -117,7 +117,8 @@ declare module '@micro-fleet/persistence/dist/app/DatabaseAddOn' {
 	 * Initializes database connections.
 	 */
 	export class DatabaseAddOn implements IServiceAddOn {
-	    	    	    constructor(_configProvider: IConfigurationProvider, _dbConnector: IDatabaseConnector);
+	    	    	    readonly name: string;
+	    constructor(_configProvider: IConfigurationProvider, _dbConnector: IDatabaseConnector);
 	    /**
 	     * @see IServiceAddOn.init
 	     */
