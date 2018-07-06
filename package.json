@@ -30,9 +30,6 @@
 		"@micro-fleet/common": "~1.2",
 		"@micro-fleet/service-communication": "~0.2"
 	},
-	"publishConfig": {
-		"access": "public"
-	},
 	"author": {
 		"name": "gennovative",
 		"url": "https://github.com/gennovative"
