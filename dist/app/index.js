@@ -23,5 +23,6 @@ __export(require("./bases/TenantQueryBuilder"));
 __export(require("./bases/VersionControlledProcessor"));
 __export(require("./connector/KnexDatabaseConnector"));
 __export(require("./DatabaseAddOn"));
+__export(require("./register-addon"));
 __export(require("./Types"));
 //# sourceMappingURL=index.js.map

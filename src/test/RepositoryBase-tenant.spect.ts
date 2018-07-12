@@ -151,6 +151,7 @@ class UserTenantRepo extends RepositoryBase<UserTenantEntity, UserTenantDTO, Ten
 }
 
 let cachedDTO: UserTenantDTO,
+	cachedTenantId: string,
 	dbConnector: IDatabaseConnector,
 	usrRepo: UserTenantRepo,
 	idGen = new IdGenerator();
@@ -590,7 +591,9 @@ describe('RepositoryBase-tenant', function() {
 		});
 	}); // END describe 'delete (hard)'
 	
-	describe('page', () => {
+	describe('page', function() {
+		this.timeout(5000);
+
 		it('Should return `null` if there is no records', async () => {
 			// Arrange
 			const PAGE = 1,
@@ -614,10 +617,12 @@ describe('RepositoryBase-tenant', function() {
 				SIZE = 10,
 				TOTAL = SIZE * 2;
 			let model: UserTenantDTO,
-				tenantId = idGen.nextBigInt().toString();
+				tenantId = cachedTenantId = idGen.nextBigInt().toString();
 
 			// Deletes all from DB
 			await usrRepo.deleteAll();
+
+			const createJobs = [];
 
 			for (let i = 0; i < TOTAL; i++) {
 				model = new UserTenantDTO();
@@ -625,8 +630,10 @@ describe('RepositoryBase-tenant', function() {
 				model.tenantId = tenantId;
 				model.name = 'Hiri' + i;
 				model.age = Math.ceil(29 * Math.random());
-				cachedDTO = await usrRepo.create(model);
+				createJobs.push(usrRepo.create(model));
 			}
+
+			await Promise.all(createJobs);
 
 			// Act
 			let models: PagedArray<UserTenantDTO> = await usrRepo.page(PAGE, SIZE, {
@@ -644,7 +651,7 @@ describe('RepositoryBase-tenant', function() {
 		it('Should return a positive number if there are records in database.', async () => {
 			// Act
 			let count = await usrRepo.countAll({
-				tenantId: cachedDTO.tenantId
+				tenantId: cachedTenantId
 			});
 
 			// Assert
@@ -657,7 +664,7 @@ describe('RepositoryBase-tenant', function() {
 
 			// Act
 			let count = await usrRepo.countAll({
-				tenantId: cachedDTO.tenantId
+				tenantId: cachedTenantId
 			});
 
 			// Assert

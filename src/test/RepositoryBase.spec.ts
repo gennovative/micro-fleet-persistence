@@ -543,7 +543,9 @@ describe('RepositoryBase', function() {
 		});
 	}); // END describe 'delete'
 	
-	describe('page', () => {
+	describe('page', function() {
+		this.timeout(5000);
+
 		it('Should return `null` if there is no records', async () => {
 			// Arrange
 			const PAGE = 1,
@@ -571,13 +573,17 @@ describe('RepositoryBase', function() {
 			// Deletes all from DB
 			await usrRepo.deleteAll();
 
+			const createJobs = [];
+
 			for (let i = 0; i < TOTAL; i++) {
 				model = new UserDTO();
 				model.id = idGen.nextBigInt().toString();
 				model.name = 'Hiri' + i;
 				model.age = Math.ceil(29 * Math.random());
-				await usrRepo.create(model);
+				createJobs.push(usrRepo.create(model));
 			}
+
+			await Promise.all(createJobs);
 
 			// Act
 			let models: PagedArray<UserDTO> = await usrRepo.page(PAGE, SIZE);

@@ -1,5 +1,5 @@
 import { IConfigurationProvider, DbConnectionDetail, Types as ConT, constants,
-	injectable, inject, Guard, CriticalException, Maybe } from '@micro-fleet/common';
+	injectable, lazyInject, CriticalException, Maybe } from '@micro-fleet/common';
 
 import { IDatabaseConnector } from './connector/IDatabaseConnector';
 import { Types as T } from './Types';
@@ -15,12 +15,15 @@ export class DatabaseAddOn implements IServiceAddOn {
 	
 	public readonly name: string = 'DatabaseAddOn';
 
-	constructor(
-		@inject(ConT.CONFIG_PROVIDER) private _configProvider: IConfigurationProvider,
-		@inject(T.DB_CONNECTOR) private _dbConnector: IDatabaseConnector
-	) {
-		Guard.assertArgDefined('_configProvider', _configProvider);
-		Guard.assertArgDefined('_dbConnector', _dbConnector);
+	@lazyInject(ConT.CONFIG_PROVIDER) 
+	private _configProvider: IConfigurationProvider;
+
+	@lazyInject(T.DB_CONNECTOR)
+	private _dbConnector: IDatabaseConnector;
+
+
+	constructor() {
+
 	}
 
 	/**

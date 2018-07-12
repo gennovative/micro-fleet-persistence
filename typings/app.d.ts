@@ -111,14 +111,12 @@ declare module '@micro-fleet/persistence/dist/app/Types' {
 
 }
 declare module '@micro-fleet/persistence/dist/app/DatabaseAddOn' {
-	import { IConfigurationProvider } from '@micro-fleet/common';
-	import { IDatabaseConnector } from '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector';
 	/**
 	 * Initializes database connections.
 	 */
 	export class DatabaseAddOn implements IServiceAddOn {
-	    	    	    readonly name: string;
-	    constructor(_configProvider: IConfigurationProvider, _dbConnector: IDatabaseConnector);
+	    readonly name: string;
+	    	    	    constructor();
 	    /**
 	     * @see IServiceAddOn.init
 	     */
@@ -687,6 +685,11 @@ declare module '@micro-fleet/persistence/dist/app/connector/KnexDatabaseConnecto
 	    	    	    	}
 
 }
+declare module '@micro-fleet/persistence/dist/app/register-addon' {
+	import { DatabaseAddOn } from '@micro-fleet/persistence/dist/app/DatabaseAddOn';
+	export function registerDbAddOn(): DatabaseAddOn;
+
+}
 declare module '@micro-fleet/persistence' {
 	import '@micro-fleet/persistence/dist/app/convert-utc';
 	export * from '@micro-fleet/persistence/dist/app/atom/AtomicSessionFactory';
@@ -704,6 +707,7 @@ declare module '@micro-fleet/persistence' {
 	export * from '@micro-fleet/persistence/dist/app/connector/KnexDatabaseConnector';
 	export * from '@micro-fleet/persistence/dist/app/DatabaseAddOn';
 	export * from '@micro-fleet/persistence/dist/app/interfaces';
+	export * from '@micro-fleet/persistence/dist/app/register-addon';
 	export * from '@micro-fleet/persistence/dist/app/Types';
 
 }

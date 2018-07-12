@@ -23,4 +23,5 @@ export * from './connector/IDatabaseConnector';
 export * from './connector/KnexDatabaseConnector';
 export * from './DatabaseAddOn';
 export * from './interfaces';
+export * from './register-addon';
 export * from './Types';

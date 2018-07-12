@@ -8,9 +8,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var __param = (this && this.__param) || function (paramIndex, decorator) {
-    return function (target, key) { decorator(target, key, paramIndex); }
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const common_1 = require("@micro-fleet/common");
 const Types_1 = require("./Types");
@@ -19,12 +16,8 @@ const { DbSettingKeys: S } = common_1.constants;
  * Initializes database connections.
  */
 let DatabaseAddOn = class DatabaseAddOn {
-    constructor(_configProvider, _dbConnector) {
-        this._configProvider = _configProvider;
-        this._dbConnector = _dbConnector;
+    constructor() {
         this.name = 'DatabaseAddOn';
-        common_1.Guard.assertArgDefined('_configProvider', _configProvider);
-        common_1.Guard.assertArgDefined('_dbConnector', _dbConnector);
     }
     /**
      * @see IServiceAddOn.init
@@ -90,11 +83,17 @@ let DatabaseAddOn = class DatabaseAddOn {
         return new common_1.Maybe;
     }
 };
+__decorate([
+    common_1.lazyInject(common_1.Types.CONFIG_PROVIDER),
+    __metadata("design:type", Object)
+], DatabaseAddOn.prototype, "_configProvider", void 0);
+__decorate([
+    common_1.lazyInject(Types_1.Types.DB_CONNECTOR),
+    __metadata("design:type", Object)
+], DatabaseAddOn.prototype, "_dbConnector", void 0);
 DatabaseAddOn = __decorate([
     common_1.injectable(),
-    __param(0, common_1.inject(common_1.Types.CONFIG_PROVIDER)),
-    __param(1, common_1.inject(Types_1.Types.DB_CONNECTOR)),
-    __metadata("design:paramtypes", [Object, Object])
+    __metadata("design:paramtypes", [])
 ], DatabaseAddOn);
 exports.DatabaseAddOn = DatabaseAddOn;
 //# sourceMappingURL=DatabaseAddOn.js.map

@@ -101,9 +101,13 @@ describe('DatabaseAddOn', function () {
 	describe('init', () => {
 		it('should call connector.init to configure database connection with database file', async () => {
 			// Arrange
-			const dbAddOn = new DatabaseAddOn(new MockConfigAddOn(MODE_FILE), new MockDbConnector());
-			const addConnSpy = chai.spy.on(dbAddOn['_dbConnector'], 'init');
-			
+			// const dbAddOn = new DatabaseAddOn(new MockConfigAddOn(MODE_FILE), new MockDbConnector());
+			const dbAddOn = new DatabaseAddOn();
+			const connector = new MockDbConnector();
+			const addConnSpy = chai.spy.on(connector, 'init');
+			dbAddOn['_dbConnector'] = connector;
+			dbAddOn['_configProvider'] = new MockConfigAddOn(MODE_FILE);
+
 			// Act
 			await dbAddOn.init();
 
@@ -114,9 +118,12 @@ describe('DatabaseAddOn', function () {
 
 		it('should call connector.init to configure database connection with connection string', async () => {
 			// Arrange
-			let dbAddOn = new DatabaseAddOn(new MockConfigAddOn(MODE_STRING), new MockDbConnector()),
-				addConnSpy = chai.spy.on(dbAddOn['_dbConnector'], 'init');
-			
+			const dbAddOn = new DatabaseAddOn();
+			const connector = new MockDbConnector();
+			const addConnSpy = chai.spy.on(connector, 'init');
+			dbAddOn['_dbConnector'] = connector;
+			dbAddOn['_configProvider'] = new MockConfigAddOn(MODE_STRING);
+
 			// Act
 			await dbAddOn.init();
 
@@ -127,9 +134,12 @@ describe('DatabaseAddOn', function () {
 
 		it('should call connector.init to configure database connection with remote database', async () => {
 			// Arrange
-			let dbAddOn = new DatabaseAddOn(new MockConfigAddOn(MODE_CREDENTIALS), new MockDbConnector()),
-				addConnSpy = chai.spy.on(dbAddOn['_dbConnector'], 'init');
-			
+			const dbAddOn = new DatabaseAddOn();
+			const connector = new MockDbConnector();
+			const addConnSpy = chai.spy.on(connector, 'init');
+			dbAddOn['_dbConnector'] = connector;
+			dbAddOn['_configProvider'] = new MockConfigAddOn(MODE_CREDENTIALS);
+
 			// Act
 			await dbAddOn.init();
 
@@ -140,9 +150,13 @@ describe('DatabaseAddOn', function () {
 
 		it('should throw exception if there is no settings for database connection', async () => {
 			// Arrange
-			let dbAddOn = new DatabaseAddOn(new MockConfigAddOn(''), new MockDbConnector()),
-				exception: CriticalException = null,
-				isSuccess = false;
+			const dbAddOn = new DatabaseAddOn();
+			const connector = new MockDbConnector();
+			dbAddOn['_dbConnector'] = connector;
+			dbAddOn['_configProvider'] = new MockConfigAddOn('');
+			
+			let isSuccess = false;
+			let exception: CriticalException = null;
 
 			// Act
 			try {
@@ -159,12 +173,14 @@ describe('DatabaseAddOn', function () {
 			expect(exception.message).to.equal('No database settings!');
 		});
 	}); // describe 'init'
-	
+
 	describe('dispose', () => {
 		it('should release all resources', async () => {
 			// Arrange
-			let dbAddOn = new DatabaseAddOn(new MockConfigAddOn(MODE_FILE), new MockDbConnector()),
+			let dbAddOn = new DatabaseAddOn(),
 				callMe = chai.spy();
+			dbAddOn['_configProvider'] = new MockConfigAddOn(MODE_FILE);
+			dbAddOn['_dbConnector'] = new MockDbConnector();
 
 			// Act
 			await dbAddOn.init();
@@ -172,6 +188,7 @@ describe('DatabaseAddOn', function () {
 
 			// Assert
 			_.forOwn(dbAddOn, (value, key) => {
+				if ('name' === key) { return; }
 				callMe();
 				expect(dbAddOn[key], key).to.be.null;
 			});
