@@ -3,6 +3,10 @@
 ### 2.1.0 (Coming soon)
 - **RepositoryBase** will supports version controlling.
 
+### 2.0.5
+
+### 2.0.4
+
 ### 2.0.3
 - Converted from internal project to Github one.
 - Removed support for multiple connections. From now on, each instance of database connector only manages one connection.
