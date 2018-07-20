@@ -264,7 +264,7 @@ describe.skip('RepositoryBase-version', function () {
 			let isExisting: boolean = await usrRepo.exists({
 					name: cachedDTO.name
 				}, {
-					includeDeleted: true
+					excludeDeleted: false
 				});
 
 			// Assert
@@ -345,6 +345,7 @@ describe.skip('RepositoryBase-version', function () {
 		});
 	}); // END describe 'update'
 
+	/*
 	describe('delete (soft)', () => {
 		it('should return a possitive number and the record is still in database', async () => {
 			// Act
@@ -398,6 +399,7 @@ describe.skip('RepositoryBase-version', function () {
 			}
 		});
 	});
+	//*/
 
 	describe('delete (hard)', () => {
 		it('should return a possitive number if found', async () => {
@@ -434,7 +436,7 @@ describe.skip('RepositoryBase-version', function () {
 
 			// Act
 			let models: PagedArray<UserVersionDTO> = await usrRepo.page(PAGE, SIZE, {
-				includeDeleted: true
+				excludeDeleted: false
 			});
 
 			// Assert
@@ -483,7 +485,7 @@ describe.skip('RepositoryBase-version', function () {
 			await usrRepo.deleteAll();
 
 			// Act
-			let count = await usrRepo.countAll({ includeDeleted: true });
+			let count = await usrRepo.countAll({ excludeDeleted: false });
 
 			// Assert
 			expect(count).to.equal(0);

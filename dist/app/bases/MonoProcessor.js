@@ -161,7 +161,7 @@ class MonoProcessor {
             return 0;
         }
         // If another ACTIVE record with same unique keys exists
-        options.includeDeleted = false;
+        options.excludeDeleted = true;
         if (await this.exists(model, options)) {
             throw new common_1.MinorException('DUPLICATE_UNIQUE_KEY');
         }

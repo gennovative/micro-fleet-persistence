@@ -37,7 +37,7 @@ class UserTenantEntity extends EntityBase {
 	}
 
 	public static readonly idColumn = ['id', 'tenant_id'];
-	public static readonly idProp = ['id', 'tenantId'];
+	// public static readonly idProp = ['id', 'tenantId'];
 	public static readonly uniqColumn = ['name'];
 
 	public static readonly translator: ModelAutoMapper<UserTenantEntity> = new ModelAutoMapper(UserTenantEntity);
@@ -483,6 +483,7 @@ describe('RepositoryBase-tenant', function() {
 		});
 	}); // END describe 'update'
 
+	/*
 	describe('delete (soft)', () => {
 		it('should return a possitive number and the record is still in database', async () => {
 			// Act
@@ -554,6 +555,7 @@ describe('RepositoryBase-tenant', function() {
 			expect(affectedRows).to.be.equal(0);
 		});
 	}); // END describe 'recover'
+	//*/
 
 	describe('delete (hard)', () => {
 		it('should return a possitive number if found', async () => {

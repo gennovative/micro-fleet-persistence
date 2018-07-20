@@ -19,6 +19,7 @@ __export(require("./bases/EntityBase"));
 __export(require("./bases/MonoProcessor"));
 __export(require("./bases/MonoQueryBuilder"));
 __export(require("./bases/RepositoryBase"));
+__export(require("./bases/SoftDelRepositoryBase"));
 __export(require("./bases/TenantQueryBuilder"));
 __export(require("./bases/VersionControlledProcessor"));
 __export(require("./connector/KnexDatabaseConnector"));

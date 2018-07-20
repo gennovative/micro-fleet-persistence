@@ -46,12 +46,6 @@ let RepositoryBase = class RepositoryBase {
         return this._processor.create(model, opts);
     }
     /**
-     * @see ISoftDelRepository.deleteSoft
-     */
-    deleteSoft(pk, opts = {}) {
-        return this._processor.deleteSoft(pk, opts);
-    }
-    /**
      * @see IRepository.deleteHard
      */
     deleteHard(pk, opts = {}) {
@@ -80,12 +74,6 @@ let RepositoryBase = class RepositoryBase {
      */
     patch(model, opts = {}) {
         return this._processor.patch(model, opts);
-    }
-    /**
-     * @see ISoftDelRepository.recover
-     */
-    async recover(pk, opts = {}) {
-        return this._processor.recover(pk, opts);
     }
     /**
      * @see IRepository.update

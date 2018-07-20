@@ -6,7 +6,7 @@ import { expect } from 'chai';
 import { MinorException, ModelAutoMapper, DtoBase } from '@micro-fleet/common';
 import { IdGenerator } from '@micro-fleet/id-generator';
 
-import { RepositoryBase, EntityBase, ISoftDelRepository, IDatabaseConnector,
+import { RepositoryBase, EntityBase, IRepository, IDatabaseConnector,
 		KnexDatabaseConnector, AtomicSessionFactory, AtomicSessionFlow } from '../app';
 import DB_DETAILS from './database-details';
 
@@ -50,7 +50,7 @@ class UserBatchEntity extends EntityBase {
 
 class UserBatchRepo 
 	extends RepositoryBase<UserBatchEntity, UserBatchDTO>
-	implements ISoftDelRepository<UserBatchDTO> {
+	implements IRepository<UserBatchDTO> {
 	
 	private _sessionFactory: AtomicSessionFactory;
 
@@ -499,6 +499,7 @@ describe('RepositoryBase-batch', function() {
 		});
 	}); // END describe 'update'
 
+	/*
 	describe('delete (soft)', () => {
 		it('should return a possitive number and the record is still in database', async () => {
 			// Act
@@ -551,6 +552,7 @@ describe('RepositoryBase-batch', function() {
 			expect(affectedRows).to.be.equal(1);
 		});
 	}); // END describe 'recover'
+	//*/
 
 	describe('delete (hard)', () => {
 		it('should return a possitive number if found', async () => {

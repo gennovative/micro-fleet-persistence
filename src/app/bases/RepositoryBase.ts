@@ -29,7 +29,7 @@ export interface RepositoryBaseOptions<TEntity, TModel, TPk extends PkType = Big
 
 @injectable()
 export abstract class RepositoryBase<TEntity, TModel, TPk extends PkType = BigInt, TUk = NameUk>
-	implements it.ISoftDelRepository<TModel, TPk, TUk> {
+	implements it.IRepository<TModel, TPk, TUk> {
 
 	protected _processor: BatchProcessor<TEntity, TModel, TPk, TUk>;
 
@@ -66,13 +66,6 @@ export abstract class RepositoryBase<TEntity, TModel, TPk extends PkType = BigIn
 	}
 
 	/**
-	 * @see ISoftDelRepository.deleteSoft
-	 */
-	public deleteSoft(pk: TPk | TPk[], opts: it.RepositoryDeleteOptions = {}): Promise<number> {
-		return this._processor.deleteSoft(pk, opts);
-	}
-
-	/**
 	 * @see IRepository.deleteHard
 	 */
 	public deleteHard(pk: TPk | TPk[], opts: it.RepositoryDeleteOptions = {}): Promise<number> {
@@ -105,13 +98,6 @@ export abstract class RepositoryBase<TEntity, TModel, TPk extends PkType = BigIn
 	 */
 	public patch(model: Partial<TModel> | Partial<TModel>[], opts: it.RepositoryPatchOptions = {}): Promise<Partial<TModel> & Partial<TModel>[]> {
 		return this._processor.patch(model, opts);
-	}
-
-	/**
-	 * @see ISoftDelRepository.recover
-	 */
-	public async recover(pk: TPk | TPk[], opts: it.RepositoryRecoverOptions = {}): Promise<number> {
-		return this._processor.recover(pk, opts);
 	}
 
 	/**

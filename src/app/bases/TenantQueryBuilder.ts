@@ -7,7 +7,10 @@ import { IQueryBuilder } from './IQueryBuilder';
 export class TenantQueryBuilder<TEntity, TModel, TUk = NameUk>
 	implements IQueryBuilder<TEntity, TModel, TenantPk, TUk> {
 
+	private _pkProps: string[];
+
 	constructor(private _EntityClass: Newable) {
+		this._pkProps = this._EntityClass['idProp'];
 	}
 
 
@@ -16,7 +19,7 @@ export class TenantQueryBuilder<TEntity, TModel, TUk = NameUk>
 	}
 
 	public buildDeleteHard(pk: TenantPk, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>): QueryBuilderSingle<number> {
-		return rawQuery.deleteById(this._toArr(pk, this._EntityClass['idProp']));
+		return rawQuery.deleteById(this._toArr(pk, this._pkProps));
 	}
 
 	public buildExists(props: TUk, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryExistsOptions = {}): QueryBuilder<TEntity> {
@@ -24,7 +27,7 @@ export class TenantQueryBuilder<TEntity, TModel, TUk = NameUk>
 	}
 
 	public buildFind(pk: TenantPk, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryFindOptions = {}): QueryBuilder<TEntity> {
-		return rawQuery.findById(this._toArr(pk, this._EntityClass['idProp']));
+		return rawQuery.findById(this._toArr(pk, this._pkProps));
 	}
 
 	public buildPage(pageIndex: number, pageSize: number, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryPageOptions = {}): QueryBuilder<TEntity> {
@@ -32,7 +35,7 @@ export class TenantQueryBuilder<TEntity, TModel, TUk = NameUk>
 	}
 
 	public buildPatch(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryPatchOptions = {}): QueryBuilder<number> {
-		return <any>rawQuery.patch(entity).whereComposite(this._EntityClass['idColumn'], '=', this._toArr(entity, this._EntityClass['idProp']));
+		return <any>rawQuery.patch(entity).whereComposite(this._EntityClass['idColumn'], '=', this._toArr(entity, this._pkProps));
 	}
 
 	public buildRecoverOpts(pk: TenantPk, prevOpts: it.RepositoryRecoverOptions, rawOpts: it.RepositoryRecoverOptions): it.RepositoryExistsOptions {
@@ -41,7 +44,7 @@ export class TenantQueryBuilder<TEntity, TModel, TUk = NameUk>
 	}
 
 	public buildUpdate(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryPatchOptions = {}): QueryBuilder<number> {
-		return <any>rawQuery.update(entity).whereComposite(this._EntityClass['idColumn'], '=', this._toArr(entity, this._EntityClass['idProp']));
+		return <any>rawQuery.update(entity).whereComposite(this._EntityClass['idColumn'], '=', this._toArr(entity, this._pkProps));
 	}
 
 

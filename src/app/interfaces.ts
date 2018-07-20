@@ -22,10 +22,10 @@ export interface RepositoryOptions {
 
 export interface RepositoryExistsOptions extends RepositoryOptions {
 	/**
-	 * Whether to include records marked as soft-deleted.
+	 * Whether to exclude records marked as soft-deleted.
 	 * Default to `false`.
 	 */
-	includeDeleted?: boolean;
+	excludeDeleted?: boolean;
 
 	/**
 	 * Tenant ID.

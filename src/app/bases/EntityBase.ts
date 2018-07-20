@@ -37,7 +37,9 @@ export abstract class EntityBase extends Model {
 	 * Same with `idColumn`, but transform snakeCase to camelCase.
 	 * Should be overriden (['id', 'tenantId']) for composite PK.
 	 */
-	public static readonly idProp = EntityBase.idColumn.map<string>(camelCase);
+	public static get idProp(): string[] {
+		return this.idColumn.map<string>(camelCase);
+	}
 
 
 	// public id: BigInt = undefined;

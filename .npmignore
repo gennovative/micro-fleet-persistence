@@ -1,10 +1,13 @@
+.nyc_output
 .vscode
 coverage
+database
 dist/test
 dist/**/*.map
 src
 .editorconfig
 .gitignore
-gulpfile.js
+CHANGELOG.md
 tsconfig.json
 tslint.json
+**/*.log

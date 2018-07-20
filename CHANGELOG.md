@@ -3,6 +3,10 @@
 ### 2.1.0 (Coming soon)
 - **RepositoryBase** will supports version controlling.
 
+### 2.0.6
+- Split some functions in `RepositoryBase` to `SoftDelRepositoryBase`.
+- Changed `includeDeleted` to `excludeDeleted` in repository options.
+
 ### 2.0.5
 
 ### 2.0.4

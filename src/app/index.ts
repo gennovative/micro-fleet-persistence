@@ -17,6 +17,7 @@ export * from './bases/IQueryBuilder';
 export * from './bases/MonoProcessor';
 export * from './bases/MonoQueryBuilder';
 export * from './bases/RepositoryBase';
+export * from './bases/SoftDelRepositoryBase';
 export * from './bases/TenantQueryBuilder';
 export * from './bases/VersionControlledProcessor';
 export * from './connector/IDatabaseConnector';

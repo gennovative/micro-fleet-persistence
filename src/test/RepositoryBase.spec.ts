@@ -349,7 +349,7 @@ describe('RepositoryBase', function() {
 				name: cachedDTO.name,
 				age: 123
 			}, {
-				includeDeleted: true
+				excludeDeleted: false
 			});
 
 			// Assert
@@ -464,6 +464,7 @@ describe('RepositoryBase', function() {
 		});
 	}); // END describe 'update'
 
+	/*
 	describe('delete (soft)', () => {
 		it('should return a possitive number and the record is still in database', async () => {
 			// Act
@@ -518,6 +519,7 @@ describe('RepositoryBase', function() {
 			}
 		});
 	});
+	//*/
 
 	describe('delete (hard)', () => {
 		it('should return a possitive number if found', async () => {
@@ -556,7 +558,7 @@ describe('RepositoryBase', function() {
 
 			// Act
 			let models: PagedArray<UserDTO> = await usrRepo.page(PAGE, SIZE, {
-				includeDeleted: true
+				excludeDeleted: false
 			});
 
 			// Assert
@@ -609,7 +611,7 @@ describe('RepositoryBase', function() {
 			await usrRepo.deleteAll();
 
 			// Act
-			let count = await usrRepo.countAll({ includeDeleted: true });
+			let count = await usrRepo.countAll({ excludeDeleted: false });
 
 			// Assert
 			expect(count).to.equal(0);

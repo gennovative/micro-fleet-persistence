@@ -7,13 +7,16 @@ import { IQueryBuilder } from './IQueryBuilder';
 export class MonoQueryBuilder<TEntity, TModel, TUk = NameUk> 
 	implements IQueryBuilder<TEntity, TModel, BigInt, TUk> {
 
+	private _pkProp: string;
+
 	constructor(private _EntityClass: Newable) {
+		this._pkProp = this._EntityClass['idProp'][0];
 	}
 
 
 	public buildCountAll(prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryCountAllOptions): QueryBuilder<TEntity> {
-		let q = rawQuery.count('id as total');
-		return (opts.includeDeleted) ? q : q.whereNull('deleted_at');
+		const q = rawQuery.count(`${this._pkProp} as total`);
+		return (opts.excludeDeleted) ? q.whereNull('deleted_at') : q;
 	}
 
 	public buildDeleteHard(pk: BigInt, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>): QueryBuilderSingle<number> {
@@ -21,8 +24,7 @@ export class MonoQueryBuilder<TEntity, TModel, TUk = NameUk>
 	}
 
 	public buildExists(uniqVals: any[], prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryExistsOptions): QueryBuilder<TEntity> {
-		let q = rawQuery.count('id as total');
-			// .whereComposite(this._EntityClass.uniqColumn, '=', this.toArr(uniqVals, this._EntityClass.uniqColumn));
+		let q = rawQuery.count(`${this._pkProp} as total`);
 		if (uniqVals && uniqVals.length) {
 			q = q.where(builder => {
 				(this._EntityClass['uniqColumn'] as string[]).forEach((c, i) => {
@@ -35,7 +37,7 @@ export class MonoQueryBuilder<TEntity, TModel, TUk = NameUk>
 				});
 			});
 		}
-		return (opts.includeDeleted) ? q : q.whereNull('deleted_at');
+		return (opts.excludeDeleted) ? q.whereNull('deleted_at') : q;
 	}
 
 	public buildFind(pk: BigInt, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryFindOptions = {}): QueryBuilder<TEntity> {
@@ -48,21 +50,21 @@ export class MonoQueryBuilder<TEntity, TModel, TUk = NameUk>
 			let direction = opts.sortType || 'asc';
 			q = q.orderBy(opts.sortBy, direction);
 		}
-		return (opts.includeDeleted) ? q : q.whereNull('deleted_at');
+		return (opts.excludeDeleted) ? q.whereNull('deleted_at') : q;
 	}
 
 	public buildPatch(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryPatchOptions): QueryBuilder<number> {
-		return rawQuery.patch(entity).where('id', entity['id']);
+		return rawQuery.patch(entity).where(this._pkProp, entity[this._pkProp]);
 	}
 
 	public buildRecoverOpts(pk: BigInt, prevOpts: it.RepositoryRecoverOptions, rawOpts: it.RepositoryRecoverOptions): it.RepositoryExistsOptions {
 		return {
-			includeDeleted: true,
+			excludeDeleted: false,
 		};
 	}
 
 	public buildUpdate(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryPatchOptions): QueryBuilder<number> {
-		return rawQuery.update(entity).where('id', entity['id']);
+		return rawQuery.update(entity).where(this._pkProp, entity[this._pkProp]);
 	}
 
 }

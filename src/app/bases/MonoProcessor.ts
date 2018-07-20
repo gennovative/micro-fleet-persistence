@@ -221,7 +221,7 @@ export class MonoProcessor<TEntity, TModel, TPk extends PkType = BigInt, TUk = N
 		if (!model) { return 0; }
 
 		// If another ACTIVE record with same unique keys exists
-		options.includeDeleted = false;
+		options.excludeDeleted = true;
 		if (await this.exists(<any>model, options)) {
 			throw new MinorException('DUPLICATE_UNIQUE_KEY');
 		}
