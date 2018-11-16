@@ -46,7 +46,7 @@ export class AtomicSessionFlow {
 			this._finalPromise = new Promise(async (resolve, reject) => {
 				this._abortFn = reject;
 				try {
-					let {transProm} = await this._initPromise;
+					const {transProm} = await this._initPromise;
 					// Clean up
 					this._initPromise = null;
 
@@ -57,7 +57,7 @@ export class AtomicSessionFlow {
 					// but only takes output from primary (first) one.
 					// `transPromises` resolves when `resolveAllTransactions` is called,
 					// and reject when ``rejectAllTransactions()` is called.
-					let outputs = await transProm;
+					const outputs = await transProm;
 					resolve(outputs);
 				}
 				// Error on init transaction
@@ -96,7 +96,7 @@ export class AtomicSessionFlow {
 	}
 
 	private _doTask(prevOutput: any): Promise<any[]> {
-		let task = this._tasks.shift();
+		const task = this._tasks.shift();
 		prevOutput = prevOutput || [];
 
 		if (!task) {
@@ -109,46 +109,8 @@ export class AtomicSessionFlow {
 		return task(this._session, prevOutput);
 	}
 
-	/*
-	private collectTasksOutputs(task, prevOutputs): Promise<any> {
-		// Unlike Promise.all(), this promise collects all query errors.
-		return new Promise((resolve, reject) => {
-			let i = 0,
-				session = this._session,
-				results = [],
-				errors = [];
-
-			// Execute each task on all sessions (transactions).
-			// for (let s of sessions) {
-				task.call(null, this._session, prevOutputs[i])
-					.then(r => {
-						// Collect results
-						results.push(r);
-						if (++i == sLen) {
-							// If there is at least one error,
-							// all transactions are marked as failure.
-							if (errors.length) {
-								reject(errors.length == 1 ? errors[0] : errors);
-							} else {
-								// All transactions are marked as success
-								// only when all of them finish without error.
-								resolve(results);
-							}
-						}
-					})
-					.catch(er => {
-						errors.push(er);
-						// Collect error from all queries.
-						if (++i == sLen) {
-							reject(errors.length == 1 ? errors[0] : errors);
-						}
-					});
-		});
-	}
-	//*/
-
 	private async _loop(prevOutput?: any): Promise<void> {
-		let prevWorks = this._doTask(prevOutput);
+		const prevWorks = this._doTask(prevOutput);
 		if (!prevWorks) {
 			return;
 		}

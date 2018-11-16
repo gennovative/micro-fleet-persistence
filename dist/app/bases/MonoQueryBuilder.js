@@ -17,7 +17,7 @@ class MonoQueryBuilder {
         if (uniqVals && uniqVals.length) {
             q = q.where(builder => {
                 this._EntityClass['uniqColumn'].forEach((c, i) => {
-                    let v = uniqVals[i];
+                    const v = uniqVals[i];
                     if (v === null) {
                         builder.orWhereNull(c);
                     }
@@ -35,7 +35,7 @@ class MonoQueryBuilder {
     buildPage(pageIndex, pageSize, prevQuery, rawQuery, opts) {
         let q = rawQuery.page(pageIndex, pageSize);
         if (opts.sortBy) {
-            let direction = opts.sortType || 'asc';
+            const direction = opts.sortType || 'asc';
             q = q.orderBy(opts.sortBy, direction);
         }
         return (opts.excludeDeleted) ? q.whereNull('deleted_at') : q;

@@ -177,7 +177,7 @@ describe('DatabaseAddOn', function () {
 	describe('dispose', () => {
 		it('should release all resources', async () => {
 			// Arrange
-			let dbAddOn = new DatabaseAddOn(),
+			const dbAddOn = new DatabaseAddOn(),
 				callMe = chai.spy();
 			dbAddOn['_configProvider'] = new MockConfigAddOn(MODE_FILE);
 			dbAddOn['_dbConnector'] = new MockDbConnector();

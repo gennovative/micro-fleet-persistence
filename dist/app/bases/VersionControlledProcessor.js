@@ -11,7 +11,7 @@ class VersionControlledProcessor extends MonoProcessor_1.MonoProcessor {
         this._atomFac = new AtomicSessionFactory_1.AtomicSessionFactory(dbConnector);
     }
     create(model, opts = {}) {
-        let entity = this.toEntity(model, false);
+        const entity = this.toEntity(model, false);
         if (!entity['version']) {
             entity['version'] = model['version'] = 1;
         }
@@ -31,18 +31,18 @@ class VersionControlledProcessor extends MonoProcessor_1.MonoProcessor {
         return super.update.apply(this, arguments);
     }
     async _saveAsNew(pk, updatedModel) {
-        let source = await this.findByPk(pk || updatedModel);
+        const source = await this.findByPk(pk || updatedModel);
         if (!source) {
             return null;
         }
-        let flow = this._atomFac.startSession();
+        const flow = this._atomFac.startSession();
         flow
             .pipe(s => {
             updatedModel['isMain'] = false;
             return super.patch(updatedModel);
         })
             .pipe(s => {
-            let clone = Object.assign({}, source, updatedModel, { version: source['version'] + 1 });
+            const clone = Object.assign({}, source, updatedModel, { version: source['version'] + 1 });
             return this.create(clone);
         });
         return flow.closePipe();

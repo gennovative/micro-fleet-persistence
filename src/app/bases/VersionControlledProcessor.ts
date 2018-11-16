@@ -22,7 +22,7 @@ export class VersionControlledProcessor<TEntity, TModel, TPk extends PkType, TUk
 
 
 	public create(model: TModel, opts: it.RepositoryCreateOptions = {}): Promise<TModel & TModel[]> {
-		let entity = this.toEntity(model, false) as TEntity;
+		const entity = this.toEntity(model, false) as TEntity;
 		if (!entity['version']) {
 			entity['version'] = model['version'] = 1;
 		}
@@ -47,17 +47,17 @@ export class VersionControlledProcessor<TEntity, TModel, TPk extends PkType, TUk
 
 
 	private async _saveAsNew(pk: TPk, updatedModel: TModel | Partial<TModel>): Promise<TModel> {
-		let source: TModel = await this.findByPk(pk || <any>updatedModel);
+		const source: TModel = await this.findByPk(pk || <any>updatedModel);
 		if (!source) { return null; }
 
-		let flow = this._atomFac.startSession();
+		const flow = this._atomFac.startSession();
 		flow
 			.pipe(s => {
 				updatedModel['isMain'] = false;
 				return super.patch(updatedModel);
 			})
 			.pipe(s => {
-				let clone = Object.assign({}, source, updatedModel, { version: source['version'] + 1 });
+				const clone = Object.assign({}, source, updatedModel, { version: source['version'] + 1 });
 				return this.create(clone);
 			});
 		return flow.closePipe();

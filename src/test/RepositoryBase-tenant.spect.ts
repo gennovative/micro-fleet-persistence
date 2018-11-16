@@ -138,7 +138,7 @@ class UserTenantRepo extends RepositoryBase<UserTenantEntity, UserTenantDTO, Ten
 	}
 
 	public async find(pk: TenantPk): Promise<UserTenantDTO> {
-		let foundEnt: UserTenantEntity = await this._processor.executeQuery(query => {
+		const foundEnt: UserTenantEntity = await this._processor.executeQuery(query => {
 			return query.findById(this._processor.toArr(pk, UserTenantEntity.idProp));
 			}, null);
 
@@ -182,7 +182,7 @@ describe('RepositoryBase-tenant', function() {
 	describe('create with transaction', () => {
 		it('should insert two rows on each database', async () => {
 			// Arrange
-			let modelOne = new UserTenantDTO(),
+			const modelOne = new UserTenantDTO(),
 				modelTwo = new UserTenantDTO();
 
 			modelOne.id = idGen.nextBigInt().toString();
@@ -197,10 +197,10 @@ describe('RepositoryBase-tenant', function() {
 
 			try {
 				// Act
-				let output = await usrRepo.createCoupleWithTransaction(modelOne, modelTwo);
+				const output = await usrRepo.createCoupleWithTransaction(modelOne, modelTwo);
 				expect(output).to.exist;
 
-				let [createdOne, createdTwo] = output;
+				const [createdOne, createdTwo] = output;
 				// Assert
 				expect(createdOne).to.exist;
 				expect(createdTwo).to.exist;
@@ -235,7 +235,7 @@ describe('RepositoryBase-tenant', function() {
 			} catch (ex) {
 			}
 
-			let modelOne = new UserTenantDTO(),
+			const modelOne = new UserTenantDTO(),
 				modelTwo = new UserTenantDTO();
 
 			modelOne.id = modelTwo.id = idGen.nextBigInt().toString();
@@ -249,7 +249,7 @@ describe('RepositoryBase-tenant', function() {
 
 			try {
 				// Act
-				let output = await usrRepo.createCoupleWithTransaction(modelOne, modelTwo);
+				const output = await usrRepo.createCoupleWithTransaction(modelOne, modelTwo);
 				expect(output).not.to.exist;
 			} catch (error) {
 				// Assert
@@ -270,7 +270,7 @@ describe('RepositoryBase-tenant', function() {
 
 		it('should resolve same result if calling `closePipe` multiple times', async () => {
 			// Arrange
-			let modelOne = new UserTenantDTO(),
+			const modelOne = new UserTenantDTO(),
 				modelTwo = new UserTenantDTO();
 
 			modelOne.id = modelTwo.id = idGen.nextBigInt().toString();
@@ -284,7 +284,7 @@ describe('RepositoryBase-tenant', function() {
 
 			try {
 				// Act
-				let flow = usrRepo.createSessionPipe(modelOne, modelTwo),
+				const flow = usrRepo.createSessionPipe(modelOne, modelTwo),
 					outputOne = await flow.closePipe(),
 					outputTwo = await flow.closePipe();
 
@@ -313,7 +313,7 @@ describe('RepositoryBase-tenant', function() {
 
 		it('should throw error if calling `pipe` after `closePipe`', () => {
 			// Arrange
-			let modelOne = new UserTenantDTO(),
+			const modelOne = new UserTenantDTO(),
 				modelTwo = new UserTenantDTO();
 
 			modelOne.id = modelTwo.id = idGen.nextBigInt().toString();
@@ -327,7 +327,7 @@ describe('RepositoryBase-tenant', function() {
 
 			try {
 				// Act
-				let flow = usrRepo.createEmptyPipe(modelOne, modelTwo);
+				const flow = usrRepo.createEmptyPipe(modelOne, modelTwo);
 
 				flow.closePipe();
 				flow.pipe(s => {
@@ -346,7 +346,7 @@ describe('RepositoryBase-tenant', function() {
 	describe('create without transaction', () => {
 		it('should insert a row to database without transaction', async () => {
 			// Arrange
-			let model = new UserTenantDTO(),
+			const model = new UserTenantDTO(),
 				tenantId = idGen.nextBigInt().toString();
 			model.id = idGen.nextBigInt().toString();
 			model.tenantId = tenantId;
@@ -354,7 +354,7 @@ describe('RepositoryBase-tenant', function() {
 			model.age = 29;
 
 			// Act
-			let createdDTO: UserTenantDTO = cachedDTO = await usrRepo.create(model);
+			const createdDTO: UserTenantDTO = cachedDTO = await usrRepo.create(model);
 
 			// Assert
 			expect(createdDTO).to.be.not.null;
@@ -367,7 +367,7 @@ describe('RepositoryBase-tenant', function() {
 	describe('find', () => {
 		it('should return an model instance if found', async () => {
 			// Act
-			let foundDTO: UserTenantDTO = await usrRepo.findByPk({
+			const foundDTO: UserTenantDTO = await usrRepo.findByPk({
 				id: cachedDTO.id,
 				tenantId: cachedDTO.tenantId
 			});
@@ -381,7 +381,7 @@ describe('RepositoryBase-tenant', function() {
 
 		it('should return `null` if not found', async () => {
 			// Act
-			let model: UserTenantDTO = await usrRepo.findByPk({
+			const model: UserTenantDTO = await usrRepo.findByPk({
 				id: IMPOSSIBLE_ID,
 				tenantId: '0'
 			});
@@ -394,10 +394,10 @@ describe('RepositoryBase-tenant', function() {
 	describe('patch', () => {
 		it('should return an object with updated properties if found', async () => {
 			// Arrange
-			let newAge = 45;
+			const newAge = 45;
 
 			// Act
-			let partial: Partial<UserTenantDTO> = await usrRepo.patch({
+			const partial: Partial<UserTenantDTO> = await usrRepo.patch({
 					id: cachedDTO.id,
 					tenantId: cachedDTO.tenantId,
 					age: newAge
@@ -418,10 +418,10 @@ describe('RepositoryBase-tenant', function() {
 
 		it('should return `null` if not found', async () => {
 			// Arrange
-			let newAge = 45;
+			const newAge = 45;
 
 			// Act
-			let partial: Partial<UserTenantDTO> = await usrRepo.patch({
+			const partial: Partial<UserTenantDTO> = await usrRepo.patch({
 					id: IMPOSSIBLE_ID,
 					tenantId: '0',
 					age: newAge
@@ -441,12 +441,12 @@ describe('RepositoryBase-tenant', function() {
 	describe('update', () => {
 		it('should return an updated model if found', async () => {
 			// Arrange
-			let newName = 'Brian',
+			const newName = 'Brian',
 				updatedDTO: UserTenantDTO = Object.assign(new UserTenantDTO, cachedDTO);
 			updatedDTO.name = newName;
 
 			// Act
-			let modified: UserTenantDTO = await usrRepo.update(updatedDTO),
+			const modified: UserTenantDTO = await usrRepo.update(updatedDTO),
 				refetchedDTO: UserTenantDTO = await usrRepo.findByPk({
 					id: cachedDTO.id,
 					tenantId: cachedDTO.tenantId
@@ -464,13 +464,13 @@ describe('RepositoryBase-tenant', function() {
 
 		it('should return `null` if not found', async () => {
 			// Arrange
-			let newName = 'Brian',
+			const newName = 'Brian',
 				updatedDTO: UserTenantDTO = Object.assign(new UserTenantDTO, cachedDTO);
 			updatedDTO.id = IMPOSSIBLE_ID;
 			updatedDTO.name = newName;
 
 			// Act
-			let modified: UserTenantDTO = await usrRepo.update(updatedDTO),
+			const modified: UserTenantDTO = await usrRepo.update(updatedDTO),
 				refetchedDTO: UserTenantDTO = await usrRepo.findByPk({
 					id: updatedDTO.id,
 					tenantId: updatedDTO.tenantId
@@ -487,7 +487,7 @@ describe('RepositoryBase-tenant', function() {
 	describe('delete (soft)', () => {
 		it('should return a possitive number and the record is still in database', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.deleteSoft({
+			const affectedRows: number = await usrRepo.deleteSoft({
 					id: cachedDTO.id,
 					tenantId: cachedDTO.tenantId
 				}),
@@ -505,7 +505,7 @@ describe('RepositoryBase-tenant', function() {
 
 		it('should return number of affected rows', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.deleteSoft([{
+			const affectedRows: number = await usrRepo.deleteSoft([{
 					id: cachedDTO.id,
 					tenantId: cachedDTO.tenantId
 				}, {
@@ -528,7 +528,7 @@ describe('RepositoryBase-tenant', function() {
 	describe('recover', () => {
 		it('should return a possitive number if success', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.recover({
+			const affectedRows: number = await usrRepo.recover({
 					id: cachedDTO.id,
 					tenantId: cachedDTO.tenantId
 				}),
@@ -546,7 +546,7 @@ describe('RepositoryBase-tenant', function() {
 		
 		it('should return 0 if no affected records', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.recover({
+			const affectedRows: number = await usrRepo.recover({
 				id: cachedDTO.id,
 				tenantId: IMPOSSIBLE_ID
 			});
@@ -560,7 +560,7 @@ describe('RepositoryBase-tenant', function() {
 	describe('delete (hard)', () => {
 		it('should return a possitive number if found', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.deleteHard({
+			const affectedRows: number = await usrRepo.deleteHard({
 					id: cachedDTO.id,
 					tenantId: cachedDTO.tenantId
 				}),
@@ -577,7 +577,7 @@ describe('RepositoryBase-tenant', function() {
 
 		it('should return 0 if not found', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.deleteHard({
+			const affectedRows: number = await usrRepo.deleteHard({
 					id: IMPOSSIBLE_ID,
 					tenantId: '0'
 				}),
@@ -605,7 +605,7 @@ describe('RepositoryBase-tenant', function() {
 			await usrRepo.deleteAll();
 
 			// Act
-			let models: PagedArray<UserTenantDTO> = await usrRepo.page(PAGE, SIZE, {
+			const models: PagedArray<UserTenantDTO> = await usrRepo.page(PAGE, SIZE, {
 				tenantId: '0'
 			});
 
@@ -618,14 +618,14 @@ describe('RepositoryBase-tenant', function() {
 			const PAGE = 1,
 				SIZE = 10,
 				TOTAL = SIZE * 2;
-			let model: UserTenantDTO,
-				tenantId = cachedTenantId = idGen.nextBigInt().toString();
+			const tenantId = cachedTenantId = idGen.nextBigInt().toString();
 
 			// Deletes all from DB
 			await usrRepo.deleteAll();
 
 			const createJobs = [];
 
+			let model: UserTenantDTO;
 			for (let i = 0; i < TOTAL; i++) {
 				model = new UserTenantDTO();
 				model.id = idGen.nextBigInt().toString();
@@ -638,7 +638,7 @@ describe('RepositoryBase-tenant', function() {
 			await Promise.all(createJobs);
 
 			// Act
-			let models: PagedArray<UserTenantDTO> = await usrRepo.page(PAGE, SIZE, {
+			const models: PagedArray<UserTenantDTO> = await usrRepo.page(PAGE, SIZE, {
 				tenantId: tenantId
 			});
 
@@ -652,7 +652,7 @@ describe('RepositoryBase-tenant', function() {
 	describe('countAll', () => {
 		it('Should return a positive number if there are records in database.', async () => {
 			// Act
-			let count = await usrRepo.countAll({
+			const count = await usrRepo.countAll({
 				tenantId: cachedTenantId
 			});
 
@@ -665,7 +665,7 @@ describe('RepositoryBase-tenant', function() {
 			await usrRepo.deleteAll();
 
 			// Act
-			let count = await usrRepo.countAll({
+			const count = await usrRepo.countAll({
 				tenantId: cachedTenantId
 			});
 

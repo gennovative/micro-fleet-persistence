@@ -34,9 +34,8 @@ class MonoProcessor {
      * @see IRepository.countAll
      */
     async countAll(opts = {}) {
-        let result = await this.executeQuery((query) => {
-            // let q = this.buildCountAll(query, opts);
-            let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
+        const result = await this.executeQuery((query) => {
+            const q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
                 return currBuilder.buildCountAll(prevQuery, query.clone(), opts);
             }, null);
             debug('COUNT ALL: %s', q.toSql());
@@ -53,7 +52,7 @@ class MonoProcessor {
         if (model.hasOwnProperty('createdAt')) {
             model['createdAt'] = model['updatedAt'] = this.utcNow.toDate();
         }
-        let entity = this.toEntity(model, false);
+        const entity = this.toEntity(model, false);
         return this.executeQuery(query => query.insert(entity), opts.atomicSession)
             .then(() => model);
     }
@@ -68,8 +67,7 @@ class MonoProcessor {
      */
     deleteHard(pk, opts = {}) {
         return this.executeQuery(query => {
-            // let q = this.buildDeleteHard(pk, query);
-            let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
+            const q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
                 return currBuilder.buildDeleteHard(pk, prevQuery, query.clone());
             }, null);
             debug('HARD DELETE: %s', q.toSql());
@@ -80,9 +78,8 @@ class MonoProcessor {
      * @see IRepository.exists
      */
     async exists(props, opts = {}) {
-        let result = await this.executeQuery(query => {
-            // let q = this.buildExists(props, query, opts);
-            let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
+        const result = await this.executeQuery(query => {
+            const q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
                 return currBuilder.buildExists(this.toArr(props, this.ukCol), prevQuery, query.clone(), opts);
             }, null);
             debug('EXIST: %s', q.toSql());
@@ -95,8 +92,7 @@ class MonoProcessor {
      */
     findByPk(pk, opts = {}) {
         return this.executeQuery(query => {
-            // let q = this.buildFind(pk, query);
-            let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
+            const q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
                 return currBuilder.buildFind(pk, prevQuery, query.clone(), opts);
             }, null);
             debug('FIND BY (%s): %s', pk, q.toSql());
@@ -111,9 +107,9 @@ class MonoProcessor {
      */
     async page(pageIndex, pageSize, opts = {}) {
         let foundList, dtoList;
+        pageIndex = Math.max(0, pageIndex - 1);
         foundList = await this.executeQuery(query => {
-            // let q = this.buildPage(pageIndex, pageSize, query, opts);
-            let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
+            const q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
                 return currBuilder.buildPage(pageIndex, pageSize, prevQuery, query.clone(), opts);
             }, null);
             debug('PAGE: %s', q.toSql());
@@ -129,15 +125,14 @@ class MonoProcessor {
      * @see IRepository.patch
      */
     patch(model, opts = {}) {
-        let entity = this.toEntity(model, true);
+        const entity = this.toEntity(model, true);
         // We check property in "entity" because the "model" here is partial.
         if (entity.hasOwnProperty('updatedAt')) {
             model['updatedAt'] = this.utcNow.toDate();
             entity['updatedAt'] = this.utcNow.format();
         }
         return this.executeQuery(query => {
-            // let q = this.buildPatch(entity, query, opts);
-            let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
+            const q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
                 return currBuilder.buildPatch(entity, prevQuery, query.clone(), opts);
             }, null);
             debug('PATCH (%o): %s', entity, q.toSql());
@@ -150,12 +145,11 @@ class MonoProcessor {
      * @see ISoftDelRepository.recover
      */
     async recover(pk, opts = {}) {
-        // let options = this.buildRecoverOpts(pk, opts),
-        let options = this._queryBuilders.reduce((prevOpts, currBuilder) => {
+        const options = this._queryBuilders.reduce((prevOpts, currBuilder) => {
             return currBuilder.buildRecoverOpts(pk, prevOpts, opts);
         }, null);
         // Fetch the recovered record
-        let model = await this.findByPk(pk, options);
+        const model = await this.findByPk(pk, options);
         // If record doesn't exist
         if (!model) {
             return 0;
@@ -174,10 +168,9 @@ class MonoProcessor {
         if (model.hasOwnProperty('updatedAt')) {
             model['updatedAt'] = this.utcNow.toDate();
         }
-        let entity = this.toEntity(model, false);
+        const entity = this.toEntity(model, false);
         return this.executeQuery((query) => {
-            // let q = this.buildUpdate(entity, query, opts);
-            let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
+            const q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
                 return currBuilder.buildUpdate(entity, prevQuery, query.clone(), opts);
             }, null);
             debug('UPDATE (%o): %s', entity, q.toSql());
@@ -204,7 +197,7 @@ class MonoProcessor {
         if (isPartial) {
             entity = translator.partial(dto);
         }
-        entity = translator.whole(dto);
+        entity = translator.whole(dto, { enableValidation: false });
         for (let prop of ['createdAt', 'updatedAt', 'deletedAt']) {
             if (dto[prop]) {
                 entity[prop] = moment.utc(dto[prop]).format();
@@ -219,7 +212,7 @@ class MonoProcessor {
         if (!entity) {
             return null;
         }
-        const translator = this._EntityClass['translator'];
+        const translator = this._DtoClass['translator'];
         let dto;
         if (isPartial) {
             dto = translator.partial(entity, { enableValidation: false });
@@ -248,7 +241,7 @@ class MonoProcessor {
         return this._dbConnector.prepare(this._EntityClass, callback, atomicSession);
     }
     _buildDeleteState(pk, isDel) {
-        let deletedAt = (isDel ? this.utcNow.format() : null);
+        const deletedAt = (isDel ? this.utcNow.format() : null);
         if (this._options.isMultiTenancy) {
             return Object.assign(pk, { deletedAt });
         }
@@ -260,10 +253,9 @@ class MonoProcessor {
         }
     }
     _setDeleteState(pk, isDel, opts = {}) {
-        let delta = this._buildDeleteState(pk, isDel);
+        const delta = this._buildDeleteState(pk, isDel);
         return this.executeQuery(query => {
-            // let q = this.buildPatch(delta, query, opts);
-            let q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
+            const q = this._queryBuilders.reduce((prevQuery, currBuilder) => {
                 return currBuilder.buildPatch(delta, prevQuery, query.clone(), opts);
             }, null);
             debug('DEL STATE (%s): %s', isDel, q.toSql());

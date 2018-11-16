@@ -155,7 +155,7 @@ export class BatchProcessor<TEntity, TModel, TPk extends PkType = BigInt, TUk = 
 			);
 		}
 
-		let flow = this._atomFac.startSession();
+		const flow = this._atomFac.startSession();
 		flow.pipe(s => Promise.all(
 			inputs.map(ip => func.call(this, ip, { atomicSession: s }))
 		));

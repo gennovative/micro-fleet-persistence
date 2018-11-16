@@ -11,10 +11,9 @@ exports.up = function(knex, Promise) {
 		const schema = knex.schema;
 		await schema.dropTableIfExists('users');
 		await schema.createTable('users', tbl => {
-			tbl.bigInteger('id');
+			tbl.bigInteger('id').primary();
 			tbl.string('name').notNullable();
 			tbl.integer('age');
-			// tbl.timestamp('deleted_at');
 			tbl.timestamp('created_at', true);
 			tbl.timestamp('updated_at', true);
 		});
@@ -24,7 +23,7 @@ exports.up = function(knex, Promise) {
 		const schema = knex.schema;
 		await schema.dropTableIfExists('usersSoftDel');
 		await schema.createTable('usersSoftDel', tbl => {
-			tbl.bigInteger('id');
+			tbl.bigInteger('id').primary();
 			tbl.string('name').notNullable();
 			tbl.integer('age');
 			tbl.timestamp('deleted_at', true);
@@ -37,7 +36,7 @@ exports.up = function(knex, Promise) {
 		const schema = knex.schema;
 		await schema.dropTableIfExists('usersBatch');
 		await schema.createTable('usersBatch', tbl => {
-			tbl.bigInteger('id');
+			tbl.bigInteger('id').primary();
 			tbl.string('name').notNullable();
 			tbl.integer('age');
 			tbl.timestamp('deleted_at', true);
@@ -53,6 +52,7 @@ exports.up = function(knex, Promise) {
 			tbl.string('name').notNullable();
 			tbl.integer('age');
 			tbl.timestamp('deleted_at', true);
+			tbl.primary(['id', 'tenant_id']);
 		});
 	}
 };

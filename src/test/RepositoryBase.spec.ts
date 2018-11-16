@@ -140,7 +140,7 @@ class UserRepo extends RepositoryBase<UserEntity, UserDTO, BigInt, NameAgeUk> {
 	}
 
 	public async find(id: BigInt): Promise<UserDTO> {
-		let foundEnt: UserEntity = await this._processor.executeQuery(query => {
+		const foundEnt: UserEntity = await this._processor.executeQuery(query => {
 				return query.findById(id);
 			}, null); // Executing on first connection only.
 
@@ -183,7 +183,7 @@ describe('RepositoryBase', function() {
 
 		it('should insert two rows on each database', async () => {
 			// Arrange
-			let modelOne = new UserDTO(),
+			const modelOne = new UserDTO(),
 				modelTwo = new UserDTO();
 			modelOne.id = idGen.nextBigInt().toString();
 			modelOne.name = 'One';
@@ -195,10 +195,10 @@ describe('RepositoryBase', function() {
 
 			try {
 				// Act
-				let output = await usrRepo.createCoupleWithTransaction(modelOne, modelTwo);
+				const output = await usrRepo.createCoupleWithTransaction(modelOne, modelTwo);
 				expect(output).to.exist;
 
-				let [createdOne, createdTwo] = output;
+				const [createdOne, createdTwo] = output;
 				// Assert
 				expect(createdOne).to.exist;
 				expect(createdOne.id).to.be.equal(modelOne.id);
@@ -232,7 +232,7 @@ describe('RepositoryBase', function() {
 			} catch (ex) {
 			}
 
-			let modelOne = new UserDTO(),
+			const modelOne = new UserDTO(),
 				modelTwo = new UserDTO();
 			modelOne.id = idGen.nextBigInt().toString();
 			modelOne.name = 'One';
@@ -244,7 +244,7 @@ describe('RepositoryBase', function() {
 
 			try {
 				// Act
-				let output = await usrRepo.createCoupleWithTransaction(modelOne, modelTwo);
+				const output = await usrRepo.createCoupleWithTransaction(modelOne, modelTwo);
 				expect(output).not.to.exist;
 			} catch (error) {
 				// Assert
@@ -252,13 +252,13 @@ describe('RepositoryBase', function() {
 				expect(error.message).to.include('violates not-null constraint');
 			}
 			// Assert
-			let count = await usrRepo.countAll();
+			const count = await usrRepo.countAll();
 			expect(count).to.equal(0);
 		});
 
 		it('should resolve same result if calling `closePipe` multiple times', async () => {
 			// Arrange
-			let modelOne = new UserDTO(),
+			const modelOne = new UserDTO(),
 				modelTwo = new UserDTO();
 			modelOne.id = idGen.nextBigInt().toString();
 			modelOne.name = 'One';
@@ -270,7 +270,7 @@ describe('RepositoryBase', function() {
 
 			try {
 				// Act
-				let flow = usrRepo.createSessionPipe(modelOne, modelTwo),
+				const flow = usrRepo.createSessionPipe(modelOne, modelTwo),
 					outputOne = await flow.closePipe(),
 					outputTwo = await flow.closePipe();
 
@@ -293,7 +293,7 @@ describe('RepositoryBase', function() {
 
 		it('should throw error if calling `pipe` after `closePipe`', () => {
 			// Arrange
-			let modelOne = new UserDTO(),
+			const modelOne = new UserDTO(),
 				modelTwo = new UserDTO();
 			modelOne.id = idGen.nextBigInt().toString();
 			modelOne.name = 'One';
@@ -305,7 +305,7 @@ describe('RepositoryBase', function() {
 
 			try {
 				// Act
-				let flow = usrRepo.createEmptyPipe(modelOne, modelTwo);
+				const flow = usrRepo.createEmptyPipe(modelOne, modelTwo);
 
 				flow.closePipe();
 				flow.pipe(s => {
@@ -324,13 +324,13 @@ describe('RepositoryBase', function() {
 	describe('create without transaction', () => {
 		it('should insert a row to database without transaction', async () => {
 			// Arrange
-			let model = new UserDTO();
+			const model = new UserDTO();
 			model.id = idGen.nextBigInt().toString();
 			model.name = 'Hiri';
 			model.age = 39;
 
 			// Act
-			let createdDTO: UserDTO = cachedDTO = await usrRepo.create(model);
+			const createdDTO: UserDTO = cachedDTO = await usrRepo.create(model);
 
 			// Assert
 			expect(createdDTO).to.be.not.null;
@@ -340,12 +340,27 @@ describe('RepositoryBase', function() {
 			expect(createdDTO.createdAt).to.be.instanceof(Date);
 			expect(createdDTO.updatedAt).to.be.instanceof(Date);
 		});
+
+		it('should return DTO instance if success', async () => {
+			// Arrange
+			const model = new UserDTO();
+			model.id = idGen.nextBigInt().toString();
+			model.name = 'Hiri';
+			model.age = 39;
+
+			// Act
+			const createdDTO: UserDTO = cachedDTO = await usrRepo.create(model);
+
+			// Assert
+			expect(createdDTO).to.be.not.null;
+			expect(createdDTO).to.be.instanceOf(UserDTO);
+		});
 	}); // END describe 'create'
 
 	describe('exists', () => {
 		it('should return `true` if found', async () => {
 			// Act
-			let isExisting: boolean = await usrRepo.exists({ 
+			const isExisting: boolean = await usrRepo.exists({ 
 				name: cachedDTO.name,
 				age: 123
 			}, {
@@ -358,7 +373,7 @@ describe('RepositoryBase', function() {
 
 		it('should return `false` if not found', async () => {
 			// Act
-			let isExisting: boolean = await usrRepo.exists({
+			const isExisting: boolean = await usrRepo.exists({
 				name: IMPOSSIBLE_ID
 			});
 
@@ -370,7 +385,7 @@ describe('RepositoryBase', function() {
 	describe('findByPk', () => {
 		it('should return an model instance if found', async () => {
 			// Act
-			let foundDTO: UserDTO = await usrRepo.findByPk(cachedDTO.id);
+			const foundDTO: UserDTO = await usrRepo.findByPk(cachedDTO.id);
 
 			// Assert
 			expect(foundDTO).to.be.not.null;
@@ -379,9 +394,18 @@ describe('RepositoryBase', function() {
 			expect(foundDTO.age).to.equal(cachedDTO.age);
 		});
 
+		it('should return DTO instance if success', async () => {
+			// Act
+			const foundDTO: UserDTO = await usrRepo.findByPk(cachedDTO.id);
+
+			// Assert
+			expect(foundDTO).to.be.not.null;
+			expect(foundDTO).to.be.instanceOf(UserDTO);
+		});
+
 		it('should return `null` if not found', async () => {
 			// Act
-			let model: UserDTO = await usrRepo.findByPk(IMPOSSIBLE_ID);
+			const model: UserDTO = await usrRepo.findByPk(IMPOSSIBLE_ID);
 
 			// Assert
 			expect(model).to.be.null;
@@ -391,10 +415,10 @@ describe('RepositoryBase', function() {
 	describe('patch', () => {
 		it('should return an object with updated properties if found', async () => {
 			// Arrange
-			let newAge = 45;
+			const newAge = 45;
 
 			// Act
-			let partial: Partial<UserDTO> = await usrRepo.patch({ id: cachedDTO.id, age: newAge}),
+			const partial: Partial<UserDTO> = await usrRepo.patch({ id: cachedDTO.id, age: newAge}),
 				refetchedDTO: UserDTO = await usrRepo.findByPk(cachedDTO.id);
 
 			// Assert
@@ -410,10 +434,10 @@ describe('RepositoryBase', function() {
 
 		it('should return `null` if not found', async () => {
 			// Arrange
-			let newAge = 45;
+			const newAge = 45;
 
 			// Act
-			let partial: Partial<UserDTO> = await usrRepo.patch({ id: IMPOSSIBLE_ID, age: newAge}),
+			const partial: Partial<UserDTO> = await usrRepo.patch({ id: IMPOSSIBLE_ID, age: newAge}),
 				refetchedDTO: UserDTO = await usrRepo.findByPk(IMPOSSIBLE_ID);
 			
 			// Assert
@@ -426,12 +450,12 @@ describe('RepositoryBase', function() {
 	describe('update', () => {
 		it('should return an updated model if found', async () => {
 			// Arrange
-			let newName = 'Brian',
+			const newName = 'Brian',
 				updatedDTO: UserDTO = Object.assign(new UserDTO, cachedDTO);
 			updatedDTO.name = newName;
 
 			// Act
-			let modified: UserDTO = await usrRepo.update(updatedDTO),
+			const modified: UserDTO = await usrRepo.update(updatedDTO),
 				refetchedDTO: UserDTO = await usrRepo.findByPk(cachedDTO.id);
 
 			// Assert
@@ -446,15 +470,29 @@ describe('RepositoryBase', function() {
 			expect(refetchedDTO.updatedAt).to.be.instanceof(Date);
 		});
 
+		it('should return DTO instance if found', async () => {
+			// Arrange
+			const newName = 'Vincent',
+				updatedDTO: UserDTO = Object.assign(new UserDTO, cachedDTO);
+			updatedDTO.name = newName;
+
+			// Act
+			const modified: UserDTO = await usrRepo.update(updatedDTO);
+
+			// Assert
+			expect(modified).to.exist;
+			expect(modified).to.be.instanceOf(UserDTO);
+		});
+
 		it('should return `null` if not found', async () => {
 			// Arrange
-			let newName = 'Brian',
+			const newName = 'Brian',
 				updatedDTO: UserDTO = Object.assign(new UserDTO, cachedDTO);
 			updatedDTO.id = IMPOSSIBLE_ID;
 			updatedDTO.name = newName;
 
 			// Act
-			let modified: UserDTO = await usrRepo.update(updatedDTO),
+			const modified: UserDTO = await usrRepo.update(updatedDTO),
 				refetchedDTO: UserDTO = await usrRepo.findByPk(updatedDTO.id);
 
 			// Assert
@@ -468,7 +506,7 @@ describe('RepositoryBase', function() {
 	describe('delete (soft)', () => {
 		it('should return a possitive number and the record is still in database', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.deleteSoft(cachedDTO.id),
+			const affectedRows: number = await usrRepo.deleteSoft(cachedDTO.id),
 				refetchedDTO: UserDTO = await usrRepo.findByPk(cachedDTO.id);
 
 			// Assert
@@ -481,7 +519,7 @@ describe('RepositoryBase', function() {
 
 		it('should return 0 if no affected records', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.deleteSoft(IMPOSSIBLE_ID);
+			const affectedRows: number = await usrRepo.deleteSoft(IMPOSSIBLE_ID);
 
 			// Assert
 			expect(affectedRows).to.be.equal(0);
@@ -491,7 +529,7 @@ describe('RepositoryBase', function() {
 	describe('recover', () => {
 		it('should return a possitive number if success', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.recover(cachedDTO.id),
+			const affectedRows: number = await usrRepo.recover(cachedDTO.id),
 				refetchedDTO: UserDTO = await usrRepo.findByPk(cachedDTO.id);
 
 			// Assert
@@ -502,7 +540,7 @@ describe('RepositoryBase', function() {
 
 		it('should return 0 if no affected records', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.recover(IMPOSSIBLE_ID);
+			const affectedRows: number = await usrRepo.recover(IMPOSSIBLE_ID);
 
 			// Assert
 			expect(affectedRows).to.be.equal(0);
@@ -511,7 +549,7 @@ describe('RepositoryBase', function() {
 		it('should throw error if there is an active record with same unique keys', async () => {
 			// Act
 			try {
-				let affectedRows: number = await usrRepo.recover(cachedDTO.id);
+				const affectedRows: number = await usrRepo.recover(cachedDTO.id);
 				expect(affectedRows).not.to.exist;
 			} catch (ex) {
 				expect(ex).to.be.instanceOf(MinorException);
@@ -524,7 +562,7 @@ describe('RepositoryBase', function() {
 	describe('delete (hard)', () => {
 		it('should return a possitive number if found', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.deleteHard(cachedDTO.id),
+			const affectedRows: number = await usrRepo.deleteHard(cachedDTO.id),
 				refetchedDTO: UserDTO = await usrRepo.findByPk(cachedDTO.id);
 
 			// Assert
@@ -535,7 +573,7 @@ describe('RepositoryBase', function() {
 
 		it('should return 0 if not found', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.deleteHard(IMPOSSIBLE_ID),
+			const affectedRows: number = await usrRepo.deleteHard(IMPOSSIBLE_ID),
 				refetchedDTO: UserDTO = await usrRepo.findByPk(IMPOSSIBLE_ID);
 
 			// Assert
@@ -557,7 +595,7 @@ describe('RepositoryBase', function() {
 			await usrRepo.deleteAll();
 
 			// Act
-			let models: PagedArray<UserDTO> = await usrRepo.page(PAGE, SIZE, {
+			const models: PagedArray<UserDTO> = await usrRepo.page(PAGE, SIZE, {
 				excludeDeleted: false
 			});
 
@@ -565,9 +603,48 @@ describe('RepositoryBase', function() {
 			expect(models).to.be.null;
 		});
 
-		it('Should return specified number of items if there are more records in database', async () => {
+		it('Should return first page for pageIndex=1', async () => {
 			// Arrange
 			const PAGE = 1,
+				SIZE = 10,
+				TOTAL = SIZE * 2;
+			const firstPageModel: UserDTO[] = [];
+			let model: UserDTO;
+
+			// Deletes all from DB
+			await usrRepo.deleteAll();
+
+			const createJobs = [];
+
+			for (let i = 0; i < TOTAL; ++i) {
+				model = new UserDTO();
+				model.id = idGen.nextBigInt().toString();
+				model.name = 'Hiri' + i;
+				model.age = Math.ceil(29 * Math.random());
+				firstPageModel.push(model);
+				createJobs.push(usrRepo.create(model));
+			}
+
+			await Promise.all(createJobs);
+
+			// Act
+			const fetchedModels: PagedArray<UserDTO> = await usrRepo.page(PAGE, SIZE,
+				{
+					sortBy: 'id'
+				});
+
+			// Assert
+			expect(fetchedModels.length).to.be.equal(SIZE);
+			for (let i = 0; i < SIZE; ++i) {
+				expect(fetchedModels[i].id).to.equal(firstPageModel[i].id);
+				expect(fetchedModels[i].name).to.equal(firstPageModel[i].name);
+				expect(fetchedModels[i].age).to.equal(firstPageModel[i].age);
+			}
+		});
+
+		it('Should return specified number of items if there are more records in database', async () => {
+			// Arrange
+			const PAGE = 2,
 				SIZE = 10,
 				TOTAL = SIZE * 2;
 			let model: UserDTO;
@@ -577,7 +654,7 @@ describe('RepositoryBase', function() {
 
 			const createJobs = [];
 
-			for (let i = 0; i < TOTAL; i++) {
+			for (let i = 0; i < TOTAL; ++i) {
 				model = new UserDTO();
 				model.id = idGen.nextBigInt().toString();
 				model.name = 'Hiri' + i;
@@ -588,19 +665,52 @@ describe('RepositoryBase', function() {
 			await Promise.all(createJobs);
 
 			// Act
-			let models: PagedArray<UserDTO> = await usrRepo.page(PAGE, SIZE);
+			const models: PagedArray<UserDTO> = await usrRepo.page(PAGE, SIZE);
 
 			// Assert
 			expect(models).to.be.not.null;
 			expect(models.length).to.be.equal(SIZE);
 			expect(models.total).to.be.equal(TOTAL);
 		});
+
+		it('should return DTO instance if found', async () => {
+			// Arrange
+			const PAGE = 1,
+				SIZE = 10;
+			const firstPageModel: UserDTO[] = [];
+			let model: UserDTO;
+
+			// Deletes all from DB
+			await usrRepo.deleteAll();
+
+			const createJobs = [];
+
+			for (let i = 0; i < SIZE; ++i) {
+				model = new UserDTO();
+				model.id = idGen.nextBigInt().toString();
+				model.name = 'Hiri' + i;
+				model.age = Math.ceil(29 * Math.random());
+				firstPageModel.push(model);
+				createJobs.push(usrRepo.create(model));
+			}
+
+			await Promise.all(createJobs);
+
+			// Act
+			const fetchedModels: PagedArray<UserDTO> = await usrRepo.page(PAGE, SIZE);
+
+			// Assert
+			expect(
+				fetchedModels.every(m => m instanceof UserDTO)
+			).to.be.true;
+		});
+
 	}); // END describe 'page'
 
 	describe('countAll', () => {
 		it('Should return a positive number if there are records in database.', async () => {
 			// Act
-			let count = await usrRepo.countAll();
+			const count = await usrRepo.countAll();
 
 			// Assert
 			expect(count).to.be.greaterThan(0);
@@ -611,7 +721,7 @@ describe('RepositoryBase', function() {
 			await usrRepo.deleteAll();
 
 			// Act
-			let count = await usrRepo.countAll({ excludeDeleted: false });
+			const count = await usrRepo.countAll({ excludeDeleted: false });
 
 			// Assert
 			expect(count).to.equal(0);

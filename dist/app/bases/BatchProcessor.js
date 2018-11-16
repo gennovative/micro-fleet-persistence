@@ -117,7 +117,7 @@ class BatchProcessor {
         if (opts.atomicSession) {
             return Promise.all(inputs.map(ip => func.call(this, ip, { atomicSession: opts.atomicSession })));
         }
-        let flow = this._atomFac.startSession();
+        const flow = this._atomFac.startSession();
         flow.pipe(s => Promise.all(inputs.map(ip => func.call(this, ip, { atomicSession: s }))));
         return flow.closePipe();
     }

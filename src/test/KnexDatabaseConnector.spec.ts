@@ -31,8 +31,8 @@ describe('KnexDatabaseConnector', function () {
 	describe('addConnection', () => {
 		it('should configure connection with file name settings', async () => {
 			// Arrange
-			let dbConnector = new KnexDatabaseConnector(),
-				expectedSettings;
+			const dbConnector = new KnexDatabaseConnector();
+			let expectedSettings;
 
 			expectedSettings = {
 					client: DbClient.SQLITE3,
@@ -60,7 +60,7 @@ describe('KnexDatabaseConnector', function () {
 
 		it('should configure connection with connection string', async () => {
 			// Arrange
-			let dbConnector = new KnexDatabaseConnector(),
+			const dbConnector = new KnexDatabaseConnector(),
 				expectedSettings = {
 					client: DbClient.POSTGRESQL,
 					useNullAsDefault: true,
@@ -83,7 +83,7 @@ describe('KnexDatabaseConnector', function () {
 
 		it('should configure connection with host credentials', async () => {
 			// Arrange
-			let dbConnector = new KnexDatabaseConnector(),
+			const dbConnector = new KnexDatabaseConnector(),
 				expectedSettings = {
 					client: DB_DETAILS.clientName,
 					useNullAsDefault: true,
@@ -109,8 +109,8 @@ describe('KnexDatabaseConnector', function () {
 
 		it('should throw exception if there is no settings for database connection', async () => {
 			// Arrange
-			let dbConnector = new KnexDatabaseConnector(),
-				exception: MinorException = null,
+			const dbConnector = new KnexDatabaseConnector();
+			let exception: MinorException = null,
 				isSuccess = false;
 			dbConnector['_knex'] = <any>chai.spy(() => {
 				return {};
@@ -137,8 +137,8 @@ describe('KnexDatabaseConnector', function () {
 	describe('dispose', () => {
 		it('should release all resources', async () => {
 			// Arrange
-			let dbConnector = new KnexDatabaseConnector(),
-				callMe = chai.spy();
+			const dbConnector = new KnexDatabaseConnector();
+			let callMe = chai.spy();
 
 			dbConnector.init({
 				clientName: DbClient.SQLITE3,
@@ -160,8 +160,8 @@ describe('KnexDatabaseConnector', function () {
 	describe('prepare', () => {
 		it('should execute query with established connection', async () => {
 			// Arrange
-			let dbConnector = new KnexDatabaseConnector(),
-				callMe = chai.spy();
+			const dbConnector = new KnexDatabaseConnector();
+			const callMe = chai.spy();
 
 			dbConnector.init(DB_DETAILS);
 
@@ -178,10 +178,10 @@ describe('KnexDatabaseConnector', function () {
 
 		it('should bind entity class with each added knex connection', async () => {
 			// Arrange
-			let dbConnector = new KnexDatabaseConnector(),
+			const dbConnector = new KnexDatabaseConnector(),
 				callMe = chai.spy(),
-				oldKnex = DummyEntity.knex(),
-				newKnex = null;
+				oldKnex = DummyEntity.knex();
+			let newKnex = null;
 
 			dbConnector.init(DB_DETAILS);
 

@@ -92,7 +92,7 @@ class UserVersionRepo extends RepositoryBase<UserVersionEntity, UserVersionDTO> 
 				this._counter++;
 				// If this is transaction of the second connection
 				if (this._counter == 2) {
-					return new Promise((resolve, reject) => {
+					return new Promise((_, reject) => {
 						// Delay here to let first transaction to finish,
 						// but throw MinorException before it resolves.
 						setTimeout(() => {
@@ -100,7 +100,7 @@ class UserVersionRepo extends RepositoryBase<UserVersionEntity, UserVersionDTO> 
 						}, 100);
 					});
 				} else {
-					return new Promise((resolve, reject) => {
+					return new Promise((resolve, _) => {
 						this.create(eva, { atomicSession })
 							.then(createdEva => {
 								this.firstOutput = [createdAdam, createdEva];
@@ -141,7 +141,7 @@ class UserVersionRepo extends RepositoryBase<UserVersionEntity, UserVersionDTO> 
 	}
 
 	public async find(id: BigInt): Promise<UserVersionDTO> {
-		let foundEnt: UserVersionEntity = await this._processor.executeQuery(query => {
+		const foundEnt: UserVersionEntity = await this._processor.executeQuery(query => {
 			return query.findById(id);
 		}, null);
 
@@ -183,13 +183,13 @@ describe.skip('RepositoryBase-version', function () {
 	describe('create', () => {
 		it('should insert with version number', async () => {
 			// Arrange
-			let model = new UserVersionDTO();
+			const model = new UserVersionDTO();
 			model.id = idGen.nextBigInt().toString();
 			model.name = 'Hiri';
 			model.age = 29;
 
 			// Act
-			let createdDTO: UserVersionDTO = cachedDTO = await usrRepo.create(model);
+			const createdDTO: UserVersionDTO = cachedDTO = await usrRepo.create(model);
 
 			// Assert
 			expect(createdDTO).to.be.not.null;
@@ -202,7 +202,7 @@ describe.skip('RepositoryBase-version', function () {
 		/*
 		it('should throw error if not success on all connections', async () => {
 			// Arrange
-			let model = new UserVersionDTO();
+			const model = new UserVersionDTO();
 			model.id = idGen.nextBigInt().toString();
 			model.name = 'Hiri';
 			model.age = 29;
@@ -214,7 +214,7 @@ describe.skip('RepositoryBase-version', function () {
 
 			// Act
 			try {
-				let createdDTO: UserVersionDTO = await usrRepo.create(model);
+				const createdDTO: UserVersionDTO = await usrRepo.create(model);
 				expect(createdDTO).to.be.null;
 			} catch (ex) {
 				expect(ex).to.be.not.null;
@@ -226,10 +226,10 @@ describe.skip('RepositoryBase-version', function () {
 	describe('patch', () => {
 		it('should create new version if trigger properties is modified', async () => {
 			// Arrange
-			let newName = 'Kara';
+			const newName = 'Kara';
 
 			// Act
-			let partial: Partial<UserVersionDTO> = await usrRepo.patch({ id: cachedDTO.id, name: newName }),
+			const partial: Partial<UserVersionDTO> = await usrRepo.patch({ id: cachedDTO.id, name: newName }),
 				refetchedDTO: UserVersionDTO = await usrRepo.findByPk(cachedDTO.id);
 
 			// Assert
@@ -245,10 +245,10 @@ describe.skip('RepositoryBase-version', function () {
 
 		it('should return `null` if not found', async () => {
 			// Arrange
-			let newAge = 45;
+			const newAge = 45;
 
 			// Act
-			let partial: Partial<UserVersionDTO> = await usrRepo.patch({ id: IMPOSSIBLE_ID, age: newAge }),
+			const partial: Partial<UserVersionDTO> = await usrRepo.patch({ id: IMPOSSIBLE_ID, age: newAge }),
 				refetchedDTO: UserVersionDTO = await usrRepo.findByPk(IMPOSSIBLE_ID);
 
 			// Assert
@@ -261,7 +261,7 @@ describe.skip('RepositoryBase-version', function () {
 	describe('exists', () => {
 		it('should return `true` if found', async () => {
 			// Act
-			let isExisting: boolean = await usrRepo.exists({
+			const isExisting: boolean = await usrRepo.exists({
 					name: cachedDTO.name
 				}, {
 					excludeDeleted: false
@@ -273,7 +273,7 @@ describe.skip('RepositoryBase-version', function () {
 
 		it('should return `false` if not found', async () => {
 			// Act
-			let isExisting: boolean = await usrRepo.exists({
+			const isExisting: boolean = await usrRepo.exists({
 				name: IMPOSSIBLE_ID
 			});
 
@@ -285,7 +285,7 @@ describe.skip('RepositoryBase-version', function () {
 	describe('findByPk', () => {
 		it('should return an model instance if found', async () => {
 			// Act
-			let foundDTO: UserVersionDTO = await usrRepo.findByPk(cachedDTO.id);
+			const foundDTO: UserVersionDTO = await usrRepo.findByPk(cachedDTO.id);
 
 			// Assert
 			expect(foundDTO).to.be.not.null;
@@ -297,7 +297,7 @@ describe.skip('RepositoryBase-version', function () {
 
 		it('should return `null` if not found', async () => {
 			// Act
-			let model: UserVersionDTO = await usrRepo.findByPk(IMPOSSIBLE_ID);
+			const model: UserVersionDTO = await usrRepo.findByPk(IMPOSSIBLE_ID);
 
 			// Assert
 			expect(model).to.be.null;
@@ -307,12 +307,12 @@ describe.skip('RepositoryBase-version', function () {
 	describe('update', () => {
 		it('should create new version if trigger properties is modified', async () => {
 			// Arrange
-			let newName = 'Brian',
+			const newName = 'Brian',
 				updatedDTO: UserVersionDTO = Object.assign(new UserVersionDTO, cachedDTO);
 			updatedDTO.name = newName;
 
 			// Act
-			let modified: UserVersionDTO = await usrRepo.update(updatedDTO),
+			const modified: UserVersionDTO = await usrRepo.update(updatedDTO),
 				refetchedDTO: UserVersionDTO = await usrRepo.findByPk(cachedDTO.id);
 
 			// Assert
@@ -329,13 +329,13 @@ describe.skip('RepositoryBase-version', function () {
 
 		it('should return `null` if not found', async () => {
 			// Arrange
-			let newName = 'Brian',
+			const newName = 'Brian',
 				updatedDTO: UserVersionDTO = Object.assign(new UserVersionDTO, cachedDTO);
 			updatedDTO.id = IMPOSSIBLE_ID;
 			updatedDTO.name = newName;
 
 			// Act
-			let modified: UserVersionDTO = await usrRepo.update(updatedDTO),
+			const modified: UserVersionDTO = await usrRepo.update(updatedDTO),
 				refetchedDTO: UserVersionDTO = await usrRepo.findByPk(updatedDTO.id);
 
 			// Assert
@@ -349,7 +349,7 @@ describe.skip('RepositoryBase-version', function () {
 	describe('delete (soft)', () => {
 		it('should return a possitive number and the record is still in database', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.deleteSoft(cachedDTO.id),
+			const affectedRows: number = await usrRepo.deleteSoft(cachedDTO.id),
 				refetchedDTO: UserVersionDTO = await usrRepo.findByPk(cachedDTO.id);
 
 			// Assert
@@ -361,7 +361,7 @@ describe.skip('RepositoryBase-version', function () {
 
 		it('should return 0 if no affected records', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.deleteSoft(IMPOSSIBLE_ID);
+			const affectedRows: number = await usrRepo.deleteSoft(IMPOSSIBLE_ID);
 
 			// Assert
 			expect(affectedRows).to.be.equal(0);
@@ -371,7 +371,7 @@ describe.skip('RepositoryBase-version', function () {
 	describe('recover', () => {
 		it('should return a possitive number if success', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.recover(cachedDTO.id),
+			const affectedRows: number = await usrRepo.recover(cachedDTO.id),
 				refetchedDTO: UserVersionDTO = await usrRepo.findByPk(cachedDTO.id);
 
 			// Assert
@@ -382,7 +382,7 @@ describe.skip('RepositoryBase-version', function () {
 
 		it('should return 0 if no affected records', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.recover(IMPOSSIBLE_ID);
+			const affectedRows: number = await usrRepo.recover(IMPOSSIBLE_ID);
 
 			// Assert
 			expect(affectedRows).to.be.equal(0);
@@ -391,7 +391,7 @@ describe.skip('RepositoryBase-version', function () {
 		it('should throw error if there is an active record with same unique keys', async () => {
 			// Act
 			try {
-				let affectedRows: number = await usrRepo.recover(cachedDTO.id);
+				const affectedRows: number = await usrRepo.recover(cachedDTO.id);
 				expect(affectedRows).not.to.exist;
 			} catch (ex) {
 				expect(ex).to.be.instanceOf(MinorException);
@@ -404,7 +404,7 @@ describe.skip('RepositoryBase-version', function () {
 	describe('delete (hard)', () => {
 		it('should return a possitive number if found', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.deleteHard(cachedDTO.id),
+			const affectedRows: number = await usrRepo.deleteHard(cachedDTO.id),
 				refetchedDTO: UserVersionDTO = await usrRepo.findByPk(cachedDTO.id);
 
 			// Assert
@@ -415,7 +415,7 @@ describe.skip('RepositoryBase-version', function () {
 
 		it('should return 0 if not found', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.deleteHard(IMPOSSIBLE_ID),
+			const affectedRows: number = await usrRepo.deleteHard(IMPOSSIBLE_ID),
 				refetchedDTO: UserVersionDTO = await usrRepo.findByPk(IMPOSSIBLE_ID);
 
 			// Assert
@@ -435,7 +435,7 @@ describe.skip('RepositoryBase-version', function () {
 			await usrRepo.deleteAll();
 
 			// Act
-			let models: PagedArray<UserVersionDTO> = await usrRepo.page(PAGE, SIZE, {
+			const models: PagedArray<UserVersionDTO> = await usrRepo.page(PAGE, SIZE, {
 				excludeDeleted: false
 			});
 
@@ -462,7 +462,7 @@ describe.skip('RepositoryBase-version', function () {
 			}
 
 			// Act
-			let models: PagedArray<UserVersionDTO> = await usrRepo.page(PAGE, SIZE);
+			const models: PagedArray<UserVersionDTO> = await usrRepo.page(PAGE, SIZE);
 
 			// Assert
 			expect(models).to.be.not.null;
@@ -474,7 +474,7 @@ describe.skip('RepositoryBase-version', function () {
 	describe('countAll', () => {
 		it('Should return a positive number if there are records in database.', async () => {
 			// Act
-			let count = await usrRepo.countAll();
+			const count = await usrRepo.countAll();
 
 			// Assert
 			expect(count).to.be.greaterThan(0);
@@ -485,7 +485,7 @@ describe.skip('RepositoryBase-version', function () {
 			await usrRepo.deleteAll();
 
 			// Act
-			let count = await usrRepo.countAll({ excludeDeleted: false });
+			const count = await usrRepo.countAll({ excludeDeleted: false });
 
 			// Assert
 			expect(count).to.equal(0);

@@ -61,10 +61,9 @@ export class MonoProcessor<TEntity, TModel, TPk extends PkType = BigInt, TUk = N
 	 * @see IRepository.countAll
 	 */
 	public async countAll(opts: it.RepositoryCountAllOptions = {}): Promise<number> {
-		let result = await this.executeQuery(
+		const result = await this.executeQuery(
 			(query: QueryBuilder<TEntity>) => {
-				// let q = this.buildCountAll(query, opts);
-				let q = this._queryBuilders.reduce<QueryBuilder<TEntity>>((prevQuery, currBuilder) => {
+				const q = this._queryBuilders.reduce<QueryBuilder<TEntity>>((prevQuery, currBuilder) => {
 					return currBuilder.buildCountAll(prevQuery, query.clone(), opts); 
 				}, null);
 				debug('COUNT ALL: %s', q.toSql());
@@ -85,7 +84,7 @@ export class MonoProcessor<TEntity, TModel, TPk extends PkType = BigInt, TUk = N
 		if (model.hasOwnProperty('createdAt')) {
 			model['createdAt'] = model['updatedAt'] = this.utcNow.toDate();
 		}
-		let entity = this.toEntity(model, false) as TEntity;
+		const entity = this.toEntity(model, false) as TEntity;
 
 		return this.executeQuery(query => <any>query.insert(entity), opts.atomicSession)
 			.then(() => <any>model);
@@ -104,8 +103,7 @@ export class MonoProcessor<TEntity, TModel, TPk extends PkType = BigInt, TUk = N
 	public deleteHard(pk: TPk, opts: it.RepositoryDeleteOptions = {}): Promise<number> {
 		return this.executeQuery(
 			query => {
-				// let q = this.buildDeleteHard(pk, query);
-				let q = this._queryBuilders.reduce<QueryBuilderSingle<number>>((prevQuery: any, currBuilder) => {
+				const q = this._queryBuilders.reduce<QueryBuilderSingle<number>>((prevQuery: any, currBuilder) => {
 					return currBuilder.buildDeleteHard(pk, prevQuery, query.clone());
 				}, null);
 				debug('HARD DELETE: %s', q.toSql());
@@ -119,10 +117,9 @@ export class MonoProcessor<TEntity, TModel, TPk extends PkType = BigInt, TUk = N
 	 * @see IRepository.exists
 	 */
 	public async exists(props: TUk, opts: it.RepositoryExistsOptions = {}): Promise<boolean> {
-		let result = await this.executeQuery(
+		const result = await this.executeQuery(
 			query => {
-				// let q = this.buildExists(props, query, opts);
-				let q = this._queryBuilders.reduce<QueryBuilder<TEntity>>((prevQuery, currBuilder) => {
+				const q = this._queryBuilders.reduce<QueryBuilder<TEntity>>((prevQuery, currBuilder) => {
 					return currBuilder.buildExists(this.toArr(props, this.ukCol), prevQuery, query.clone(), opts);
 				}, null);
 				debug('EXIST: %s', q.toSql());
@@ -140,8 +137,7 @@ export class MonoProcessor<TEntity, TModel, TPk extends PkType = BigInt, TUk = N
 	public findByPk(pk: TPk, opts: it.RepositoryFindOptions = {}): Promise<TModel> {
 		return this.executeQuery(
 			query => {
-				// let q = this.buildFind(pk, query);
-				let q = this._queryBuilders.reduce<QueryBuilder<TEntity>>((prevQuery, currBuilder) => {
+				const q = this._queryBuilders.reduce<QueryBuilder<TEntity>>((prevQuery, currBuilder) => {
 					return currBuilder.buildFind(pk, prevQuery, query.clone(), opts);
 				}, null);
 				debug('FIND BY (%s): %s', pk, q.toSql());
@@ -160,10 +156,10 @@ export class MonoProcessor<TEntity, TModel, TPk extends PkType = BigInt, TUk = N
 		let foundList: { total: number, results: Array<TEntity> },
 			dtoList: TModel[];
 
+		pageIndex = Math.max(0, pageIndex - 1);
 		foundList = await this.executeQuery(
 			query => {
-				// let q = this.buildPage(pageIndex, pageSize, query, opts);
-				let q = this._queryBuilders.reduce<QueryBuilder<TEntity>>((prevQuery, currBuilder) => {
+				const q = this._queryBuilders.reduce<QueryBuilder<TEntity>>((prevQuery, currBuilder) => {
 					return currBuilder.buildPage(pageIndex, pageSize, prevQuery, query.clone(), opts);
 				}, null);
 				debug('PAGE: %s', q.toSql());
@@ -183,7 +179,7 @@ export class MonoProcessor<TEntity, TModel, TPk extends PkType = BigInt, TUk = N
 	 * @see IRepository.patch
 	 */
 	public patch(model: Partial<TModel>, opts: it.RepositoryPatchOptions = {}): Promise<Partial<TModel> & Partial<TModel>[]> {
-		let entity = this.toEntity(model, true) as TEntity;
+		const entity = this.toEntity(model, true) as TEntity;
 
 		// We check property in "entity" because the "model" here is partial.
 		if (entity.hasOwnProperty('updatedAt')) {
@@ -193,8 +189,7 @@ export class MonoProcessor<TEntity, TModel, TPk extends PkType = BigInt, TUk = N
 
 		return this.executeQuery(
 			query => {
-				// let q = this.buildPatch(entity, query, opts);
-				let q = this._queryBuilders.reduce<QueryBuilder<number>>((prevQuery: any, currBuilder) => {
+				const q = this._queryBuilders.reduce<QueryBuilder<number>>((prevQuery: any, currBuilder) => {
 					return currBuilder.buildPatch(entity, prevQuery, query.clone(), opts);
 				}, null);
 				debug('PATCH (%o): %s', entity, q.toSql());
@@ -209,13 +204,12 @@ export class MonoProcessor<TEntity, TModel, TPk extends PkType = BigInt, TUk = N
 	 * @see ISoftDelRepository.recover
 	 */
 	public async recover(pk: TPk, opts: it.RepositoryRecoverOptions = {}): Promise<number> {
-		// let options = this.buildRecoverOpts(pk, opts),
-		let options = this._queryBuilders.reduce<it.RepositoryExistsOptions>((prevOpts: any, currBuilder) => {
+		const options = this._queryBuilders.reduce<it.RepositoryExistsOptions>((prevOpts: any, currBuilder) => {
 			return currBuilder.buildRecoverOpts(pk, prevOpts, opts);
 		}, null);
 
 		// Fetch the recovered record
-		let model = await this.findByPk(pk, options);
+		const model = await this.findByPk(pk, options);
 
 		// If record doesn't exist
 		if (!model) { return 0; }
@@ -235,13 +229,12 @@ export class MonoProcessor<TEntity, TModel, TPk extends PkType = BigInt, TUk = N
 		if (model.hasOwnProperty('updatedAt')) {
 			model['updatedAt'] = this.utcNow.toDate();
 		}
-		let entity = this.toEntity(model, false) as TEntity;
+		const entity = this.toEntity(model, false) as TEntity;
 
 
 		return this.executeQuery(
 			(query: QueryBuilder<TEntity>) => {
-				// let q = this.buildUpdate(entity, query, opts);
-				let q = this._queryBuilders.reduce<QueryBuilder<any>>((prevQuery: any, currBuilder) => {
+				const q = this._queryBuilders.reduce<QueryBuilder<any>>((prevQuery: any, currBuilder) => {
 					return currBuilder.buildUpdate(entity, prevQuery, query.clone(), opts);
 				}, null);
 				debug('UPDATE (%o): %s', entity, q.toSql());
@@ -269,7 +262,7 @@ export class MonoProcessor<TEntity, TModel, TPk extends PkType = BigInt, TUk = N
 		if (isPartial) {
 			entity = translator.partial(dto);
 		}
-		entity = translator.whole(dto);
+		entity = translator.whole(dto, { enableValidation: false });
 
 		for (let prop of ['createdAt', 'updatedAt', 'deletedAt']) {
 			if (dto[prop]) {
@@ -286,7 +279,7 @@ export class MonoProcessor<TEntity, TModel, TPk extends PkType = BigInt, TUk = N
 	public toDTO(entity: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel | TModel[] {
 		if (!entity) { return null; }
 
-		const translator = this._EntityClass['translator'] as ModelAutoMapper<TModel>;
+		const translator = this._DtoClass['translator'] as ModelAutoMapper<TModel>;
 		let dto;
 		if (isPartial) {
 			dto = translator.partial(entity, { enableValidation: false });
@@ -321,7 +314,7 @@ export class MonoProcessor<TEntity, TModel, TPk extends PkType = BigInt, TUk = N
 	}
 
 	protected _buildDeleteState(pk: TPk, isDel: boolean): any {
-		let deletedAt = (isDel ? this.utcNow.format() : null);
+		const deletedAt = (isDel ? this.utcNow.format() : null);
 
 		if (this._options.isMultiTenancy) {
 			return Object.assign(pk, { deletedAt });
@@ -334,12 +327,11 @@ export class MonoProcessor<TEntity, TModel, TPk extends PkType = BigInt, TUk = N
 	}
 
 	protected _setDeleteState(pk: TPk, isDel: boolean, opts: it.RepositoryDeleteOptions = {}): Promise<number> {
-		let delta = this._buildDeleteState(pk, isDel);
+		const delta = this._buildDeleteState(pk, isDel);
 
 		return this.executeQuery(
 			query => {
-				// let q = this.buildPatch(delta, query, opts);
-				let q = this._queryBuilders.reduce<QueryBuilder<number>>((prevQuery: any, currBuilder) => {
+				const q = this._queryBuilders.reduce<QueryBuilder<number>>((prevQuery: any, currBuilder) => {
 					return currBuilder.buildPatch(delta, prevQuery, query.clone(), opts);
 				}, null);
 				debug('DEL STATE (%s): %s', isDel, q.toSql());

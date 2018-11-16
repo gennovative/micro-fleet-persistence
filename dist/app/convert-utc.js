@@ -11,7 +11,7 @@ DATE_OID = 1082;
  * as UTC format.
  */
 /* istanbul ignore next */
-let parseFn = function (val) {
+const parseFn = function (val) {
     // Use this if you want Entity classes have Date OBJECT properties.
     // return val === null ? null : moment(val).toDate();
     // Use this if you want Entity classes have Date STRING properties.

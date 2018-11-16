@@ -152,7 +152,7 @@ class UserBatchRepo
 	}
 
 	public async find(id: BigInt): Promise<UserBatchDTO> {
-		let foundEnt: UserBatchEntity = await this._processor.executeQuery(query => {
+		const foundEnt: UserBatchEntity = await this._processor.executeQuery(query => {
 				return query.findById(id);
 			}, null);
 
@@ -195,7 +195,7 @@ describe('RepositoryBase-batch', function() {
 
 		it('should insert four rows on each database', async () => {
 			// Arrange
-			let adamOne = new UserBatchDTO(),
+			const adamOne = new UserBatchDTO(),
 				adamTwo = new UserBatchDTO(),
 				evaOne = new UserBatchDTO(),
 				evaTwo = new UserBatchDTO();
@@ -216,11 +216,11 @@ describe('RepositoryBase-batch', function() {
 			evaTwo.name = 'Eva Two';
 			evaTwo.age = 44;
 
-			let sources = [adamOne, adamTwo, evaOne, evaTwo];
+			const sources = [adamOne, adamTwo, evaOne, evaTwo];
 
 			try {
 				// Act
-				let output = await usrRepo.createTwoCouplesWithTransaction([adamOne, adamTwo], [evaOne, evaTwo]);
+				const output = await usrRepo.createTwoCouplesWithTransaction([adamOne, adamTwo], [evaOne, evaTwo]);
 				expect(output).to.exist;
 				expect(output.length).to.equal(4);
 
@@ -245,7 +245,7 @@ describe('RepositoryBase-batch', function() {
 			} catch (ex) {
 			}
 
-			let adamOne = new UserBatchDTO(),
+			const adamOne = new UserBatchDTO(),
 				adamTwo = new UserBatchDTO(),
 				evaOne = new UserBatchDTO(),
 				evaTwo = new UserBatchDTO();
@@ -268,7 +268,7 @@ describe('RepositoryBase-batch', function() {
 
 			try {
 				// Act
-				let output = await usrRepo.createTwoCouplesWithTransaction([adamOne, adamTwo], [evaOne, evaTwo]);
+				const output = await usrRepo.createTwoCouplesWithTransaction([adamOne, adamTwo], [evaOne, evaTwo]);
 				expect(output).not.to.exist;
 			} catch (error) {
 				// Assert
@@ -276,13 +276,13 @@ describe('RepositoryBase-batch', function() {
 				expect(error.message).to.include('violates not-null constraint');
 			}
 			// Assert
-			let count = await usrRepo.countAll();
+			const count = await usrRepo.countAll();
 			expect(count).to.equal(0);
 		});
 
 		it('should resolve same result if calling `closePipe` multiple times', async () => {
 			// Arrange
-			let adamOne = new UserBatchDTO(),
+			const adamOne = new UserBatchDTO(),
 				adamTwo = new UserBatchDTO(),
 				evaOne = new UserBatchDTO(),
 				evaTwo = new UserBatchDTO();
@@ -305,7 +305,7 @@ describe('RepositoryBase-batch', function() {
 
 			try {
 				// Act
-				let flow = usrRepo.createSessionPipe([adamOne, adamTwo], [evaOne, evaTwo]),
+				const flow = usrRepo.createSessionPipe([adamOne, adamTwo], [evaOne, evaTwo]),
 					outputOne: any[] = await flow.closePipe(),
 					outputTwo: any[] = await flow.closePipe();
 
@@ -331,7 +331,7 @@ describe('RepositoryBase-batch', function() {
 		it('should throw error if calling `pipe` after `closePipe`', () => {
 			try {
 				// Act
-				let flow = usrRepo.createEmptyPipe([], []);
+				const flow = usrRepo.createEmptyPipe([], []);
 
 				flow.closePipe();
 				flow.pipe(s => {
@@ -350,20 +350,20 @@ describe('RepositoryBase-batch', function() {
 	describe('create without transaction', () => {
 		it('should insert a row to database without transaction', async () => {
 			// Arrange
-			let modelOne = new UserBatchDTO();
+			const modelOne = new UserBatchDTO();
 			modelOne.id = idGen.nextBigInt().toString();
 			modelOne.name = 'One';
 			modelOne.age = 29;
 
-			let modelTwo = new UserBatchDTO();
+			const modelTwo = new UserBatchDTO();
 			modelTwo.id = idGen.nextBigInt().toString();
 			modelTwo.name = 'Two';
 			modelTwo.age = 92;
 
-			let sources = [modelOne, modelTwo];
+			const sources = [modelOne, modelTwo];
 
 			// Act
-			let createdDTOs: UserBatchDTO[] = cachedDTOs = await usrRepo.create([modelOne, modelTwo]);
+			const createdDTOs: UserBatchDTO[] = cachedDTOs = await usrRepo.create([modelOne, modelTwo]);
 
 			// Assert
 			expect(createdDTOs).to.be.not.null;
@@ -379,11 +379,11 @@ describe('RepositoryBase-batch', function() {
 	describe('patch', () => {
 		it('should return an object with updated properties if found', async () => {
 			// Arrange
-			let newAgeOne = 45,
+			const newAgeOne = 45,
 				newAgeTwo = 54;
 
 			// Act
-			let partials: Partial<UserBatchDTO>[] = await usrRepo.patch([
+			const partials: Partial<UserBatchDTO>[] = await usrRepo.patch([
 					{ id: cachedDTOs[0].id, age: newAgeOne},
 					{ id: cachedDTOs[1].id, age: newAgeTwo},
 				]),
@@ -412,11 +412,11 @@ describe('RepositoryBase-batch', function() {
 
 		it('should return `null` if not found', async () => {
 			// Arrange
-			let newAgeOne = 45,
+			const newAgeOne = 45,
 				newAgeTwo = 54;
 
 			// Act
-			let partial: Partial<UserBatchDTO>[] = await usrRepo.patch([
+			const partial: Partial<UserBatchDTO>[] = await usrRepo.patch([
 					{ id: IMPOSSIBLE_IDs[0], age: newAgeOne},
 					{ id: IMPOSSIBLE_IDs[1], age: newAgeTwo}
 				]),
@@ -437,7 +437,7 @@ describe('RepositoryBase-batch', function() {
 	describe('update', () => {
 		it('should return an updated model if found', async () => {
 			// Arrange
-			let newNameOne = 'Brian',
+			const newNameOne = 'Brian',
 				newNameTwo = 'Rein',
 				updatedOne: UserBatchDTO = Object.assign(new UserBatchDTO, cachedDTOs[0]),
 				updatedTwo: UserBatchDTO = Object.assign(new UserBatchDTO, cachedDTOs[1]);
@@ -445,7 +445,7 @@ describe('RepositoryBase-batch', function() {
 			updatedTwo.name = newNameTwo;
 
 			// Act
-			let modified: UserBatchDTO[] = await usrRepo.update([updatedOne, updatedTwo]),
+			const modified: UserBatchDTO[] = await usrRepo.update([updatedOne, updatedTwo]),
 				refetchedOne: UserBatchDTO = await usrRepo.findByPk(cachedDTOs[0].id),
 				refetchedTwo: UserBatchDTO = await usrRepo.findByPk(cachedDTOs[1].id);
 
@@ -472,7 +472,7 @@ describe('RepositoryBase-batch', function() {
 
 		it('should return `null` if not found', async () => {
 			// Arrange
-			let newNameOne = 'Brian',
+			const newNameOne = 'Brian',
 				newNameTwo = 'Rein',
 				updatedOne: UserBatchDTO = Object.assign(new UserBatchDTO, cachedDTOs[0]),
 				updatedTwo: UserBatchDTO = Object.assign(new UserBatchDTO, cachedDTOs[1]);
@@ -484,7 +484,7 @@ describe('RepositoryBase-batch', function() {
 			updatedTwo.name = newNameTwo;
 
 			// Act
-			let modified: UserBatchDTO[] = await usrRepo.update([updatedOne, updatedTwo]),
+			const modified: UserBatchDTO[] = await usrRepo.update([updatedOne, updatedTwo]),
 				refetchedOne: UserBatchDTO = await usrRepo.findByPk(IMPOSSIBLE_IDs[0]),
 				refetchedTwo: UserBatchDTO = await usrRepo.findByPk(IMPOSSIBLE_IDs[1]);
 
@@ -503,7 +503,7 @@ describe('RepositoryBase-batch', function() {
 	describe('delete (soft)', () => {
 		it('should return a possitive number and the record is still in database', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.deleteSoft([cachedDTOs[0].id, cachedDTOs[1].id]),
+			const affectedRows: number = await usrRepo.deleteSoft([cachedDTOs[0].id, cachedDTOs[1].id]),
 				refetchedOne: UserBatchDTO = await usrRepo.findByPk(cachedDTOs[0].id),
 				refetchedTwo: UserBatchDTO = await usrRepo.findByPk(cachedDTOs[1].id);
 
@@ -518,7 +518,7 @@ describe('RepositoryBase-batch', function() {
 
 		it('should return a number and the affected records', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.deleteSoft([cachedDTOs[0].id, IMPOSSIBLE_IDs[1]]);
+			const affectedRows: number = await usrRepo.deleteSoft([cachedDTOs[0].id, IMPOSSIBLE_IDs[1]]);
 
 			// Assert
 			expect(affectedRows).to.be.equal(1);
@@ -528,7 +528,7 @@ describe('RepositoryBase-batch', function() {
 	describe('recover', () => {
 		it('should return a possitive number if success', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.recover([cachedDTOs[0].id, cachedDTOs[1].id]),
+			const affectedRows: number = await usrRepo.recover([cachedDTOs[0].id, cachedDTOs[1].id]),
 				refetchedOne: UserBatchDTO = await usrRepo.findByPk(cachedDTOs[0].id),
 				refetchedTwo: UserBatchDTO = await usrRepo.findByPk(cachedDTOs[1].id);
 
@@ -546,7 +546,7 @@ describe('RepositoryBase-batch', function() {
 			await usrRepo.deleteSoft([cachedDTOs[0].id, cachedDTOs[1].id]);
 
 			// Act
-			let affectedRows: number = await usrRepo.recover([cachedDTOs[0].id, IMPOSSIBLE_IDs[1]]);
+			const affectedRows: number = await usrRepo.recover([cachedDTOs[0].id, IMPOSSIBLE_IDs[1]]);
 
 			// Assert
 			expect(affectedRows).to.be.equal(1);
@@ -557,7 +557,7 @@ describe('RepositoryBase-batch', function() {
 	describe('delete (hard)', () => {
 		it('should return a possitive number if found', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.deleteHard([cachedDTOs[0].id, cachedDTOs[1].id]),
+			const affectedRows: number = await usrRepo.deleteHard([cachedDTOs[0].id, cachedDTOs[1].id]),
 				refetchedOne: UserBatchDTO = await usrRepo.findByPk(cachedDTOs[0].id),
 				refetchedTwo: UserBatchDTO = await usrRepo.findByPk(cachedDTOs[1].id);
 
@@ -570,7 +570,7 @@ describe('RepositoryBase-batch', function() {
 
 		it('should return 0 if not found', async () => {
 			// Act
-			let affectedRows: number = await usrRepo.deleteHard(IMPOSSIBLE_IDs),
+			const affectedRows: number = await usrRepo.deleteHard(IMPOSSIBLE_IDs),
 				refetchedOne: UserBatchDTO = await usrRepo.findByPk(IMPOSSIBLE_IDs[0]),
 				refetchedTwo: UserBatchDTO = await usrRepo.findByPk(IMPOSSIBLE_IDs[1]);
 

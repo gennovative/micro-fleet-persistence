@@ -3,6 +3,11 @@
 ### 2.1.0 (Coming soon)
 - **RepositoryBase** will supports version controlling.
 
+### 2.0.7
+- Fixed node engine version in package.json
+- Refactor to replace `let` with `const`.
+- Fixed model conversion bug in `RepositoryBase`
+
 ### 2.0.6
 - Split some functions in `RepositoryBase` to `SoftDelRepositoryBase`.
 - Changed `includeDeleted` to `excludeDeleted` in repository options.
