@@ -149,7 +149,7 @@ describe('KnexDatabaseConnector', function () {
 			await dbConnector.dispose();
 
 			// Assert
-			_.forOwn(dbConnector, (value, key) => {
+			_.forOwn(dbConnector, (value: any, key: string) => {
 				callMe();
 				expect(dbConnector[key], key).to.be.null;
 			});

@@ -11,11 +11,10 @@
 		"release": "npm run build && npm run definition",
 		"test": "nyc --reporter=json --reporter=html --include dist/app/**/*.js mocha --recursive dist/test",
 		"tslint": "tslint -c tslint.json 'src/**/*.ts'",
-		"prepublish": "npm run release",
+		"prepublishOnly": "npm run release",
 		"watch": "npm run clean && npm run tslint && tsc --watch --pretty"
 	},
 	"dependencies": {
-		"debug": "~3.1",
 		"knex": "~0.13",
 		"lodash": "~4.17",
 		"moment": "~2.22",
@@ -23,9 +22,25 @@
 		"pg": "~7.0"
 	},
 	"devDependencies": {
-		"@types/moment": "^2.13.0",
+		"@types/chai": "~4.1",
+		"@types/chai-spies": "~0.0.1",
+		"@types/debug": "~4.1",
+		"@types/knex": "~0.14",
+		"@types/lodash": "~4.14",
+		"@types/mocha": "~5.2",
+		"@types/moment": "~2.13",
+		"@types/node": "~8.10",
 		"@types/pg": "~7.4",
-		"sqlite3": "~4.0"
+		"chai": "~4.1",
+		"chai-spies": "git://github.com/chaijs/chai-spies.git#b11aeebf",
+		"debug": "~3.1",
+		"mocha": "~5.2",
+		"nyc": "~12.0",
+		"rimraf": "~2.6",
+		"sqlite3": "~4.0",
+		"ts-declarator": "~1.0",
+		"tslint": "~5.10",
+		"typescript": "~2.9"
 	},
 	"peerDependencies": {
 		"@micro-fleet/common": "~1.2",

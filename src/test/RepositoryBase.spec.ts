@@ -701,7 +701,7 @@ describe('RepositoryBase', function() {
 
 			// Assert
 			expect(
-				fetchedModels.every(m => m instanceof UserDTO)
+				fetchedModels.every((m: any) => m instanceof UserDTO)
 			).to.be.true;
 		});
 
