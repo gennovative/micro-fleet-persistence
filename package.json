@@ -1,64 +1,67 @@
 {
-	"name": "@micro-fleet/persistence",
-	"version": "2.0.8",
-	"description": "Provides base repository class and database connector that helps connect to database and map db tables to JS objects (ORM).",
-	"scripts": {
-		"build": "npm run compile && npm run test",
-		"clean": "rimraf dist coverage .nyc_output",
-		"definition": "node ../../scripts/definition.js",
-		"dedup": "rimraf node_modules/**/node_modules/**/typings",
-		"compile": "npm run clean && npm run tslint && tsc --pretty",
-		"release": "npm run build && npm run definition",
-		"test": "nyc --reporter=json --reporter=html --include dist/app/**/*.js mocha --recursive dist/test",
-		"tslint": "tslint -c tslint.json 'src/**/*.ts'",
-		"prepublishOnly": "npm run release",
-		"watch": "npm run clean && npm run tslint && tsc --watch --pretty"
-	},
-	"dependencies": {
-		"knex": "~0.13",
-		"lodash": "~4.17",
-		"moment": "~2.22",
-		"objection": "~0.8",
-		"pg": "~7.0"
-	},
-	"devDependencies": {
-		"@types/chai": "~4.1",
-		"@types/chai-spies": "~0.0.1",
-		"@types/debug": "~4.1",
-		"@types/knex": "~0.14",
-		"@types/lodash": "~4.14",
-		"@types/mocha": "~5.2",
-		"@types/moment": "~2.13",
-		"@types/node": "~8.10",
-		"@types/pg": "~7.4",
-		"chai": "~4.1",
-		"chai-spies": "git://github.com/chaijs/chai-spies.git#b11aeebf",
-		"debug": "~3.1",
-		"mocha": "~5.2",
-		"nyc": "~12.0",
-		"rimraf": "~2.6",
-		"sqlite3": "~4.0",
-		"ts-declarator": "~1.0",
-		"tslint": "~5.10",
-		"typescript": "~2.9"
-	},
-	"peerDependencies": {
-		"@micro-fleet/common": "~1.2",
-		"@micro-fleet/service-communication": "~0.2"
-	},
-	"publishConfig": {
-		"access": "public"
-	},
-	"author": {
-		"name": "gennovative",
-		"url": "https://github.com/gennovative"
-	},
-	"engines": {
-		"node": ">=8.0.0"
-	},
-	"license": "MIT",
-	"private": false,
-	"main": "./dist/app/index.js",
-	"types": "./typings/app.d.ts",
-	"repository": "git@github.com:gennovative/micro-fleet-persistence.git"
+    "name": "@micro-fleet/persistence",
+    "version": "2.1.0",
+    "description": "Provides base repository class and database connector that helps connect to database and map db tables to JS objects (ORM).",
+    "scripts": {
+        "build": "npm run compile && npm run test",
+        "clean": "rimraf dist coverage .nyc_output",
+        "definition": "node ../../../scripts/definition.js",
+        "dedup": "rimraf node_modules/**/node_modules/**/typings",
+        "compile": "npm run clean && npm run lint && tsc --pretty",
+        "release": "npm run build && npm run definition",
+        "test": "nyc --reporter=json --reporter=html --include dist/app/**/*.js mocha --recursive dist/test",
+        "lint": "tslint --fix 'src/**/*.ts'",
+        "watch": "npm run clean && npm run lint && tsc --watch --pretty",
+        "linkPackages": "node ../../../scripts/linkPackages.js",
+        "postinstall": "npm run linkPackages",
+        "prepublishOnly": "npm run release"
+    },
+    "dependencies": {
+        "knex": "~0.16",
+        "lodash": "~4.17",
+        "moment": "~2.23",
+        "objection": "~1.6",
+        "pg": "~7.8",
+        "reflect-metadata": "~0.1"
+    },
+    "devDependencies": {
+        "@types/chai": "~4.1",
+        "@types/chai-spies": "~0.0.1",
+        "@types/debug": "~4.1",
+        "@types/knex": "~0.16",
+        "@types/lodash": "~4.14",
+        "@types/mocha": "~5.2",
+        "@types/moment": "~2.13",
+        "@types/node": "~10.14",
+        "@types/pg": "~7.4",
+        "chai": "~4.1",
+        "chai-spies": "git://github.com/chaijs/chai-spies.git#b11aeebf",
+        "debug": "~3.1",
+        "mocha": "~5.2",
+        "nyc": "~12.0",
+        "rimraf": "~2.6",
+        "sqlite3": "~4.0",
+        "ts-declarator": "~1.0",
+        "tslint": "~5.11",
+        "typescript": "~3.3"
+    },
+    "peerDependencies": {
+        "@micro-fleet/common": "~1.3",
+        "@micro-fleet/service-communication": "~0.2"
+    },
+    "publishConfig": {
+        "access": "public"
+    },
+    "author": {
+        "name": "gennovative",
+        "url": "https://github.com/gennovative"
+    },
+    "engines": {
+        "node": ">=10.4.0"
+    },
+    "license": "MIT",
+    "private": false,
+    "main": "./dist/app/index.js",
+    "types": "./typings/app.d.ts",
+    "repository": "git@github.com:gennovative/micro-fleet-persistence.git"
 }

@@ -1,7 +1,10 @@
 ## VERSIONS
 
-### 2.1.0 (Coming soon)
+### 2.2.0 (Coming soon)
 - **RepositoryBase** will supports version controlling.
+
+### 2.1.0
+- Support `id` as native BigInt
 
 ### 2.0.7
 - Fixed node engine version in package.json

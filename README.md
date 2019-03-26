@@ -28,7 +28,7 @@ Belongs to Micro Fleet framework, provides base repository class with pre-implem
   - Execute: `knex migrate:latest`
   - Note:
     * Existing tables are dropped.
-	* If you want to re-run migration script, truncate all rows in `knex_migrations` table in database.
+    * If you want to re-run migration script, truncate all rows in `knex_migrations` table in database.
 
 ## RELEASE
 

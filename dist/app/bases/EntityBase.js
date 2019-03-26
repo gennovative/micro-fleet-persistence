@@ -9,7 +9,7 @@ class EntityBase extends objection_1.Model {
      * @abstract
      */
     static get tableName() {
-        throw 'This method must be implemented by derived class!';
+        throw new Error('This method must be implemented by derived class!');
     }
     /**
      * Same with `idColumn`, but transform snakeCase to camelCase.
@@ -18,7 +18,7 @@ class EntityBase extends objection_1.Model {
     static get idProp() {
         return this.idColumn.map(camelCase);
     }
-    // public id: BigInt = undefined;
+    // public id: bigint = undefined
     /**
      * This is called when an object is serialized to database format.
      */

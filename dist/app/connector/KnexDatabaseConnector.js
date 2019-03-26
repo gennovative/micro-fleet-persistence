@@ -32,8 +32,11 @@ let KnexDatabaseConnector = class KnexDatabaseConnector {
         const settings = {
             client: detail.clientName,
             useNullAsDefault: true,
-            connection: this._buildConnSettings(detail)
+            connection: this._buildConnSettings(detail),
         };
+        if (detail.clientName === common_1.constants.DbClient.POSTGRESQL) {
+            require('../pg-type-parsers');
+        }
         this._connection = this._knex(settings);
     }
     /**

@@ -107,7 +107,7 @@ class BatchProcessor {
      * @see MonoProcessor.executeQuery
      */
     executeQuery(callback, atomicSession) {
-        return this._mono.executeQuery.apply(this._mono, arguments);
+        return this._mono.executeQuery(callback, atomicSession);
     }
     /**
      * Executes batch operation in transaction.
@@ -125,13 +125,13 @@ class BatchProcessor {
      * @see MonoProcessor.toEntity
      */
     toEntity(dto, isPartial) {
-        return this._mono.toEntity.apply(this._mono, arguments);
+        return this._mono.toEntity(dto, isPartial);
     }
     /**
      * @see MonoProcessor.toDTO
      */
     toDTO(entity, isPartial) {
-        return this._mono.toDTO.apply(this._mono, arguments);
+        return this._mono.toDTO(entity, isPartial);
     }
     /**
      * Maps from an array of columns to array of values.
@@ -139,7 +139,7 @@ class BatchProcessor {
      * @param cols Array of column names
      */
     toArr(pk, cols) {
-        return this._mono.toArr.apply(this._mono, arguments);
+        return this._mono.toArr(pk, cols);
     }
 }
 exports.BatchProcessor = BatchProcessor;

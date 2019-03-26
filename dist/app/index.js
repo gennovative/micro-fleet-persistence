@@ -10,7 +10,6 @@ if (!Reflect || typeof Reflect['hasOwnMetadata'] !== 'function') {
 const memoize = require("lodash/memoize");
 global['snakeCase'] = memoize(require('lodash/snakeCase'));
 global['camelCase'] = memoize(require('lodash/camelCase'));
-require("./convert-utc");
 __export(require("./atom/AtomicSessionFactory"));
 __export(require("./atom/AtomicSessionFlow"));
 __export(require("./atom/AtomicSession"));

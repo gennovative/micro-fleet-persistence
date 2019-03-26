@@ -22,13 +22,13 @@ class VersionControlledProcessor extends MonoProcessor_1.MonoProcessor {
         if (this._isIntersect(Object.keys(model), this._triggerProps)) {
             return this._saveAsNew(null, model);
         }
-        return super.patch.apply(this, arguments);
+        return super.patch(model, opts);
     }
     update(model, opts = {}) {
         if (this._isIntersect(Object.keys(model), this._triggerProps)) {
             return this._saveAsNew(null, model);
         }
-        return super.update.apply(this, arguments);
+        return super.update(model, opts);
     }
     async _saveAsNew(pk, updatedModel) {
         const source = await this.findByPk(pk || updatedModel);
@@ -48,7 +48,7 @@ class VersionControlledProcessor extends MonoProcessor_1.MonoProcessor {
         return flow.closePipe();
     }
     _isIntersect(arr1, arr2) {
-        for (let a of arr1) {
+        for (const a of arr1) {
             if (arr2.includes(a)) {
                 return true;
             }

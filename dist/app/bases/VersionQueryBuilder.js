@@ -28,13 +28,17 @@ class VersionQueryBuilder {
         return prevQuery.where('is_main', true);
     }
     buildPatch(entity, prevQuery, rawQuery, opts) {
-        return rawQuery.patch(entity).whereComposite(this._EntityClass['idColumn'], '=', this._toArr(entity, this._pkProps)).where('is_main', true);
+        return rawQuery.patch(entity)
+            .whereComposite(this._EntityClass['idColumn'], '=', this._toArr(entity, this._pkProps))
+            .where('is_main', true);
     }
     buildRecoverOpts(pk, prevOpts, rawOpts) {
         return prevOpts;
     }
     buildUpdate(entity, prevQuery, rawQuery, opts) {
-        return rawQuery.update(entity).whereComposite(this._EntityClass['idColumn'], '=', this._toArr(entity, this._pkProps)).where('is_main', true);
+        return rawQuery.update(entity)
+            .whereComposite(this._EntityClass['idColumn'], '=', this._toArr(entity, this._pkProps))
+            .where('is_main', true);
     }
     _toArr(pk, arr) {
         return arr.map(c => pk[c]);

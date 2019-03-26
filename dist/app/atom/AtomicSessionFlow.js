@@ -84,7 +84,7 @@ class AtomicSessionFlow {
             this._resolveTransactions(prevOutput);
             return null;
         }
-        // return this.collectTasksOutputs(task, prevOutputs);
+        // return this.collectTasksOutputs(task, prevOutputs)
         return task(this._session, prevOutput);
     }
     async _loop(prevOutput) {

@@ -16,6 +16,9 @@ const { DbSettingKeys: S } = common_1.constants;
  * Initializes database connections.
  */
 let DatabaseAddOn = class DatabaseAddOn {
+    /**
+     * Initializes database connections.
+     */
     constructor() {
         this.name = 'DatabaseAddOn';
     }
@@ -54,7 +57,7 @@ let DatabaseAddOn = class DatabaseAddOn {
             return new common_1.Maybe;
         }
         const cnnDetail = {
-            clientName: clientName.value
+            clientName: clientName.value,
         };
         let setting;
         // 1st priority: connect to a local file.
@@ -92,8 +95,7 @@ __decorate([
     __metadata("design:type", Object)
 ], DatabaseAddOn.prototype, "_dbConnector", void 0);
 DatabaseAddOn = __decorate([
-    common_1.injectable(),
-    __metadata("design:paramtypes", [])
+    common_1.injectable()
 ], DatabaseAddOn);
 exports.DatabaseAddOn = DatabaseAddOn;
 //# sourceMappingURL=DatabaseAddOn.js.map

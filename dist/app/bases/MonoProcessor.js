@@ -41,7 +41,7 @@ class MonoProcessor {
             debug('COUNT ALL: %s', q.toSql());
             return q;
         }, opts.atomicSession);
-        // In case with Postgres, `count` returns a bigint type which will be a String 
+        // In case with Postgres, `count` returns a bigint type which will be a String
         // and not a Number.
         return +(result[0]['total']);
     }
@@ -198,7 +198,7 @@ class MonoProcessor {
             entity = translator.partial(dto);
         }
         entity = translator.whole(dto, { enableValidation: false });
-        for (let prop of ['createdAt', 'updatedAt', 'deletedAt']) {
+        for (const prop of ['createdAt', 'updatedAt', 'deletedAt']) {
             if (dto[prop]) {
                 entity[prop] = moment.utc(dto[prop]).format();
             }
@@ -219,7 +219,7 @@ class MonoProcessor {
         }
         // Disable validation because it's unnecessary.
         dto = translator.whole(entity, { enableValidation: false });
-        for (let prop of ['createdAt', 'updatedAt', 'deletedAt']) {
+        for (const prop of ['createdAt', 'updatedAt', 'deletedAt']) {
             if (entity[prop]) {
                 dto[prop] = moment.utc(entity[prop]).toDate();
             }
@@ -248,7 +248,7 @@ class MonoProcessor {
         else {
             return {
                 id: pk,
-                deletedAt
+                deletedAt,
             };
         }
     }

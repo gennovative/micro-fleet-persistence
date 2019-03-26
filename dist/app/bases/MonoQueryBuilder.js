@@ -1,12 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const objection_1 = require("objection");
 class MonoQueryBuilder {
     constructor(_EntityClass) {
         this._EntityClass = _EntityClass;
         this._pkProp = this._EntityClass['idProp'][0];
     }
     buildCountAll(prevQuery, rawQuery, opts) {
-        const q = rawQuery.count(`${this._pkProp} as total`);
+        // const q = rawQuery.count(`${this._pkProp} as total`)
+        // TODO: This is Postgres-specific, we need a more cross-vendor solution.
+        const q = rawQuery.select(objection_1.raw('CAST(count(*) AS INTEGER) as total'));
         return (opts.excludeDeleted) ? q.whereNull('deleted_at') : q;
     }
     buildDeleteHard(pk, prevQuery, rawQuery) {
@@ -38,7 +41,7 @@ class MonoQueryBuilder {
             const direction = opts.sortType || 'asc';
             q = q.orderBy(opts.sortBy, direction);
         }
-        return (opts.excludeDeleted) ? q.whereNull('deleted_at') : q;
+        return (opts.excludeDeleted ? q.whereNull('deleted_at') : q);
     }
     buildPatch(entity, prevQuery, rawQuery, opts) {
         return rawQuery.patch(entity).where(this._pkProp, entity[this._pkProp]);

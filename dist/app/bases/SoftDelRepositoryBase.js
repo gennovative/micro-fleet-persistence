@@ -23,7 +23,7 @@ let SoftDelRepositoryBase = class SoftDelRepositoryBase extends RepositoryBase_1
      */
     async countAll(opts = {}) {
         opts = Object.assign({
-            excludeDeleted: true
+            excludeDeleted: true,
         }, opts);
         return this._processor.countAll(opts);
     }
@@ -38,7 +38,7 @@ let SoftDelRepositoryBase = class SoftDelRepositoryBase extends RepositoryBase_1
      */
     async exists(props, opts = {}) {
         opts = Object.assign({
-            excludeDeleted: true
+            excludeDeleted: true,
         }, opts);
         return this._processor.exists(props, opts);
     }
@@ -47,7 +47,7 @@ let SoftDelRepositoryBase = class SoftDelRepositoryBase extends RepositoryBase_1
      */
     async page(pageIndex, pageSize, opts = {}) {
         opts = Object.assign({
-            excludeDeleted: true
+            excludeDeleted: true,
         }, opts);
         return this._processor.page(pageIndex, pageSize, opts);
     }

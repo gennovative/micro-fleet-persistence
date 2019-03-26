@@ -20,7 +20,8 @@
 			"type": "node",
 			"request": "launch",
 			"name": "Mocha test",
-			"program": "${workspaceRoot}/../../node_modules/mocha/bin/_mocha",
+			"protocol": "inspector",
+			"program": "${workspaceRoot}/node_modules/mocha/bin/_mocha",
 			"args": [
 				"./dist/test/**/*.js"
 			],
