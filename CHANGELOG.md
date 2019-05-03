@@ -3,6 +3,9 @@
 ### 2.2.0 (Coming soon)
 - **RepositoryBase** will supports version controlling.
 
+### 2.1.1
+- Remove script "postinstall" from `package.json`.
+
 ### 2.1.0
 - Support `id` as native BigInt
 
