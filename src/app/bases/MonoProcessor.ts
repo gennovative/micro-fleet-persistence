@@ -38,7 +38,7 @@ export class MonoProcessor<TEntity extends Model, TModel, TPk extends PkType = b
 
     constructor(
         protected _EntityClass: Newable,
-        protected _DtoClass: Newable,
+        protected _DomainModelClass: Newable,
         protected _dbConnector: IDatabaseConnector,
         protected _options: ProcessorOptions = {}
     ) {
@@ -145,7 +145,7 @@ export class MonoProcessor<TEntity extends Model, TModel, TPk extends PkType = b
             },
             opts.atomicSession)
             .then(foundEnt => {
-                return foundEnt ? this.toDTO(foundEnt, false) : null
+                return foundEnt ? this.toDomainModel(foundEnt, false) : null
             }) as Promise<TModel>
     }
 
@@ -171,7 +171,7 @@ export class MonoProcessor<TEntity extends Model, TModel, TPk extends PkType = b
         if (!foundList || isEmpty(foundList.results)) {
             return null
         }
-        dtoList = this.toDTO(foundList.results, false) as TModel[]
+        dtoList = this.toDomainModel(foundList.results, false) as TModel[]
         return new PagedArray<TModel>(foundList.total, ...dtoList)
     }
 
@@ -274,12 +274,12 @@ export class MonoProcessor<TEntity extends Model, TModel, TPk extends PkType = b
     }
 
     /**
-     * Translates from entity model(s) to DTO model(s).
+     * Translates from entity model(s) to domain model(s).
      */
-    public toDTO(entity: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel | TModel[] {
+    public toDomainModel(entity: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel | TModel[] {
         if (!entity) { return null }
 
-        const translator = this._DtoClass['translator'] as ModelAutoMapper<TModel>
+        const translator = this._DomainModelClass['translator'] as ModelAutoMapper<TModel>
         let dto
         if (isPartial) {
             dto = translator.partial(entity, { enableValidation: false })

@@ -1,7 +1,6 @@
 import { expect } from 'chai'
 
-import { MinorException, PagedArray, ModelAutoMapper,
-    DtoBase } from '@micro-fleet/common'
+import { MinorException, PagedArray, ModelAutoMapper } from '@micro-fleet/common'
 import { IdGenerator } from '@micro-fleet/id-generator'
 
 import {
@@ -14,7 +13,7 @@ import DB_DETAILS from './database-details'
 const DB_TABLE = 'userdata_version',
     IMPOSSIBLE_ID = 0n
 
-class UserVersionDTO extends DtoBase implements ISoftDeletable, IVersionControlled {
+class UserVersionDTO implements ISoftDeletable, IVersionControlled {
 
     public static readonly translator: ModelAutoMapper<UserVersionDTO> = new ModelAutoMapper(UserVersionDTO)
 
@@ -145,7 +144,7 @@ class UserVersionRepo extends RepositoryBase<UserVersionEntity, UserVersionDTO> 
             return query.findById(id as any)
         }, null)
 
-        return this._processor.toDTO(foundEnt, false) as UserVersionDTO
+        return this._processor.toDomainModel(foundEnt, false) as UserVersionDTO
     }
 
     public deleteAll(): Promise<void> {

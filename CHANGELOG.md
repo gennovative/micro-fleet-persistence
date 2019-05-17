@@ -3,15 +3,20 @@
 ### 2.2.0 (Coming soon)
 - **RepositoryBase** will supports version controlling.
 
+### 2.1.2
+- Removed all references to class `DtoModelBase`.
+- Replaced term "DTO" with "Domain model".
+- Added `uniqProp` to `'EntityBase`.
+
 ### 2.1.1
-- Remove script "postinstall" from `package.json`.
+- Removed script "postinstall" from `package.json`.
 
 ### 2.1.0
 - Support `id` as native BigInt
 
 ### 2.0.7
 - Fixed node engine version in package.json
-- Refactor to replace `let` with `const`.
+- Refactored to replace `let` with `const`.
 - Fixed model conversion bug in `RepositoryBase`
 
 ### 2.0.6

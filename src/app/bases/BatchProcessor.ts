@@ -172,10 +172,10 @@ export class BatchProcessor<TEntity extends EntityBase, TModel, TPk extends PkTy
     }
 
     /**
-     * @see MonoProcessor.toDTO
+     * @see MonoProcessor.toDomainModel
      */
-    public toDTO(entity: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel | TModel[] {
-        return this._mono.toDTO(entity, isPartial)
+    public toDomainModel(entity: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel | TModel[] {
+        return this._mono.toDomainModel(entity, isPartial)
     }
 
     /**

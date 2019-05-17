@@ -1,7 +1,6 @@
 import { expect } from 'chai'
 
-import { MinorException, PagedArray, ModelAutoMapper,
-    DtoBase } from '@micro-fleet/common'
+import { MinorException, PagedArray, ModelAutoMapper } from '@micro-fleet/common'
 import { IdGenerator } from '@micro-fleet/id-generator'
 
 import { RepositoryBase, EntityBase, IDatabaseConnector,
@@ -12,7 +11,7 @@ import DB_DETAILS from './database-details'
 const DB_TABLE = 'usersSoftDel',
     IMPOSSIBLE_ID = 0n
 
-class UserDTO extends DtoBase implements ISoftDeletable, IAuditable {
+class UserDTO implements ISoftDeletable, IAuditable {
 
     public static readonly translator: ModelAutoMapper<UserDTO> = new ModelAutoMapper(UserDTO)
 
@@ -144,7 +143,7 @@ class UserRepo extends RepositoryBase<UserEntity, UserDTO, bigint, NameAgeUk> {
                 return query.findById(<any>id)
             }, null) // Executing on first connection only.
 
-        return this._processor.toDTO(foundEnt, false) as UserDTO
+        return this._processor.toDomainModel(foundEnt, false) as UserDTO
     }
 
     public deleteAll(): Promise<void> {

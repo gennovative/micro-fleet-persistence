@@ -128,10 +128,10 @@ class BatchProcessor {
         return this._mono.toEntity(dto, isPartial);
     }
     /**
-     * @see MonoProcessor.toDTO
+     * @see MonoProcessor.toDomainModel
      */
-    toDTO(entity, isPartial) {
-        return this._mono.toDTO(entity, isPartial);
+    toDomainModel(entity, isPartial) {
+        return this._mono.toDomainModel(entity, isPartial);
     }
     /**
      * Maps from an array of columns to array of values.

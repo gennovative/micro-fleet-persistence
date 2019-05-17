@@ -28,17 +28,21 @@ declare module '@micro-fleet/persistence/dist/app/bases/EntityBase' {
 	    static readonly translator: ModelAutoMapper<any>;
 	    /**
 	     * [ObjectionJS] Array of primary column names.
+	     * Should be overriden (['id', 'tenant_id']) for composite PK.
 	     */
 	    static readonly idColumn: string[];
+	    /**
+	     * Same with `idColumn`, but transform snakeCase to camelCase.
+	     */
+	    static readonly idProp: string[];
 	    /**
 	     * An array of non-primary unique column names.
 	     */
 	    static readonly uniqColumn: string[];
 	    /**
-	     * Same with `idColumn`, but transform snakeCase to camelCase.
-	     * Should be overriden (['id', 'tenantId']) for composite PK.
+	     * Same with `uniqColumn`, but transform snakeCase to camelCase.
 	     */
-	    static readonly idProp: string[];
+	    static readonly uniqProp: string[];
 	    /**
 	     * This is called when an object is serialized to database format.
 	     */
@@ -239,7 +243,7 @@ declare module '@micro-fleet/persistence/dist/app/interfaces' {
 	/**
 	 * Provides common CRUD operations, based on Unit of Work pattern.
 	 */
-	export interface IRepository<TModel extends IModelDTO, TPk extends PkType = bigint, TUk = NameUk> {
+	export interface IRepository<TModel, TPk extends PkType = bigint, TUk = NameUk> {
 	    /**
 	     * Counts all records in a table.
 	     */
@@ -282,7 +286,7 @@ declare module '@micro-fleet/persistence/dist/app/interfaces' {
 	/**
 	 * Provides common operations to soft-delete and recover models.
 	 */
-	export interface ISoftDelRepository<TModel extends IModelDTO, TPk extends PkType = bigint, TUk = NameUk> extends IRepository<TModel, TPk, TUk> {
+	export interface ISoftDelRepository<TModel, TPk extends PkType = bigint, TUk = NameUk> extends IRepository<TModel, TPk, TUk> {
 	    /**
 	     * Marks one or many records with `pk` as deleted.
 	     * @param {PK Type} pk The primary key object.
@@ -393,7 +397,7 @@ declare module '@micro-fleet/persistence/dist/app/bases/MonoProcessor' {
 	}
 	export class MonoProcessor<TEntity extends Model, TModel, TPk extends PkType = bigint, TUk = NameUk> {
 	    protected _EntityClass: Newable;
-	    protected _DtoClass: Newable;
+	    protected _DomainModelClass: Newable;
 	    protected _dbConnector: IDatabaseConnector;
 	    protected _options: ProcessorOptions;
 	    /**
@@ -401,7 +405,7 @@ declare module '@micro-fleet/persistence/dist/app/bases/MonoProcessor' {
 	     */
 	    readonly ukCol: string[];
 	    protected _queryBuilders: IQueryBuilder<TEntity, TModel, PkType, TUk>[];
-	    constructor(_EntityClass: Newable, _DtoClass: Newable, _dbConnector: IDatabaseConnector, _options?: ProcessorOptions);
+	    constructor(_EntityClass: Newable, _DomainModelClass: Newable, _dbConnector: IDatabaseConnector, _options?: ProcessorOptions);
 	    /**
 	     * Gets current date time in UTC.
 	     */
@@ -455,9 +459,9 @@ declare module '@micro-fleet/persistence/dist/app/bases/MonoProcessor' {
 	     */
 	    toEntity(dto: TModel | TModel[] | Partial<TModel>, isPartial: boolean): TEntity | TEntity[];
 	    /**
-	     * Translates from entity model(s) to DTO model(s).
+	     * Translates from entity model(s) to domain model(s).
 	     */
-	    toDTO(entity: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel | TModel[];
+	    toDomainModel(entity: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel | TModel[];
 	    /**
 	     * Maps from an array of columns to array of values.
 	     * @param pk Object to get values from
@@ -545,9 +549,9 @@ declare module '@micro-fleet/persistence/dist/app/bases/BatchProcessor' {
 	     */
 	    toEntity(dto: TModel | TModel[] | Partial<TModel>, isPartial: boolean): TEntity | TEntity[];
 	    /**
-	     * @see MonoProcessor.toDTO
+	     * @see MonoProcessor.toDomainModel
 	     */
-	    toDTO(entity: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel | TModel[];
+	    toDomainModel(entity: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel | TModel[];
 	    /**
 	     * Maps from an array of columns to array of values.
 	     * @param pk Object to get values from

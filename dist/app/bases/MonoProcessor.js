@@ -8,9 +8,9 @@ const common_1 = require("@micro-fleet/common");
 const MonoQueryBuilder_1 = require("./MonoQueryBuilder");
 const TenantQueryBuilder_1 = require("./TenantQueryBuilder");
 class MonoProcessor {
-    constructor(_EntityClass, _DtoClass, _dbConnector, _options = {}) {
+    constructor(_EntityClass, _DomainModelClass, _dbConnector, _options = {}) {
         this._EntityClass = _EntityClass;
-        this._DtoClass = _DtoClass;
+        this._DomainModelClass = _DomainModelClass;
         this._dbConnector = _dbConnector;
         this._options = _options;
         this._queryBuilders = [new MonoQueryBuilder_1.MonoQueryBuilder(_EntityClass)];
@@ -99,7 +99,7 @@ class MonoProcessor {
             return q;
         }, opts.atomicSession)
             .then(foundEnt => {
-            return foundEnt ? this.toDTO(foundEnt, false) : null;
+            return foundEnt ? this.toDomainModel(foundEnt, false) : null;
         });
     }
     /**
@@ -118,7 +118,7 @@ class MonoProcessor {
         if (!foundList || isEmpty(foundList.results)) {
             return null;
         }
-        dtoList = this.toDTO(foundList.results, false);
+        dtoList = this.toDomainModel(foundList.results, false);
         return new common_1.PagedArray(foundList.total, ...dtoList);
     }
     /**
@@ -206,13 +206,13 @@ class MonoProcessor {
         return entity;
     }
     /**
-     * Translates from entity model(s) to DTO model(s).
+     * Translates from entity model(s) to domain model(s).
      */
-    toDTO(entity, isPartial) {
+    toDomainModel(entity, isPartial) {
         if (!entity) {
             return null;
         }
-        const translator = this._DtoClass['translator'];
+        const translator = this._DomainModelClass['translator'];
         let dto;
         if (isPartial) {
             dto = translator.partial(entity, { enableValidation: false });

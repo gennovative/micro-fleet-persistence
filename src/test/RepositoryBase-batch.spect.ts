@@ -3,7 +3,7 @@
 const debug: debug.IDebugger = require('debug')('MonoProcessor')
 import { expect } from 'chai'
 
-import { MinorException, ModelAutoMapper, DtoBase } from '@micro-fleet/common'
+import { MinorException, ModelAutoMapper } from '@micro-fleet/common'
 import { IdGenerator } from '@micro-fleet/id-generator'
 
 import { RepositoryBase, EntityBase, IRepository, IDatabaseConnector,
@@ -14,7 +14,7 @@ import DB_DETAILS from './database-details'
 const DB_TABLE = 'usersBatch',
     IMPOSSIBLE_IDs = [0n, -1n]
 
-class UserBatchDTO extends DtoBase implements ISoftDeletable {
+class UserBatchDTO implements ISoftDeletable {
 
     public static readonly translator: ModelAutoMapper<UserBatchDTO> = new ModelAutoMapper(UserBatchDTO)
 
@@ -156,7 +156,7 @@ class UserBatchRepo
                 return query.findById(id as any)
             }, null)
 
-        return this._processor.toDTO(foundEnt, false) as UserBatchDTO
+        return this._processor.toDomainModel(foundEnt, false) as UserBatchDTO
     }
 
     public deleteAll(): Promise<void> {

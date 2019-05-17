@@ -13,10 +13,15 @@ class EntityBase extends objection_1.Model {
     }
     /**
      * Same with `idColumn`, but transform snakeCase to camelCase.
-     * Should be overriden (['id', 'tenantId']) for composite PK.
      */
     static get idProp() {
         return this.idColumn.map(camelCase);
+    }
+    /**
+     * Same with `uniqColumn`, but transform snakeCase to camelCase.
+     */
+    static get uniqProp() {
+        return this.uniqColumn.map(camelCase);
     }
     // public id: bigint = undefined
     /**
@@ -52,6 +57,7 @@ class EntityBase extends objection_1.Model {
 EntityBase.translator = undefined;
 /**
  * [ObjectionJS] Array of primary column names.
+ * Should be overriden (['id', 'tenant_id']) for composite PK.
  */
 EntityBase.idColumn = ['id'];
 /**

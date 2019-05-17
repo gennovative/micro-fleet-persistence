@@ -73,7 +73,7 @@ export interface RepositoryRestrictOptions extends RepositoryOptions {
 /**
  * Provides common CRUD operations, based on Unit of Work pattern.
  */
-export interface IRepository<TModel extends IModelDTO, TPk extends PkType = bigint, TUk = NameUk> {
+export interface IRepository<TModel, TPk extends PkType = bigint, TUk = NameUk> {
 
     /**
      * Counts all records in a table.
@@ -125,7 +125,7 @@ export interface IRepository<TModel extends IModelDTO, TPk extends PkType = bigi
 /**
  * Provides common operations to soft-delete and recover models.
  */
-export interface ISoftDelRepository<TModel extends IModelDTO, TPk extends PkType = bigint, TUk = NameUk>
+export interface ISoftDelRepository<TModel, TPk extends PkType = bigint, TUk = NameUk>
         extends IRepository<TModel, TPk, TUk> {
 
     /**

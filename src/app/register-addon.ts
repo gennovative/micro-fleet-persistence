@@ -14,6 +14,6 @@ export function registerDbAddOn(): DatabaseAddOn {
     if (!depCon.isBound(Types.DB_ADDON)) {
         depCon.bind<DatabaseAddOn>(Types.DB_ADDON, DatabaseAddOn).asSingleton()
     }
-    const dbAdt = depCon.resolve<DatabaseAddOn>(Types.DB_ADDON)
-    return dbAdt
+    const addon = depCon.resolve<DatabaseAddOn>(Types.DB_ADDON)
+    return addon
 }
