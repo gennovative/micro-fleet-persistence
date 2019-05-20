@@ -9,7 +9,7 @@ import { EntityBase } from './EntityBase'
 import { MonoProcessor } from './MonoProcessor'
 
 
-export class BatchProcessor<TEntity extends EntityBase, TModel, TPk extends PkType = bigint, TUk = NameUk> {
+export class BatchProcessor<TEntity extends EntityBase, TModel extends object, TPk extends PkType = bigint, TUk = NameUk> {
 
     /**
      * Gets array of non-primary unique property(ies).

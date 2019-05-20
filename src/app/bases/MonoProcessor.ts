@@ -25,7 +25,7 @@ export interface ProcessorOptions {
     triggerProps?: string[]
 }
 
-export class MonoProcessor<TEntity extends Model, TModel, TPk extends PkType = bigint, TUk = NameUk> {
+export class MonoProcessor<TEntity extends Model, TModel extends object, TPk extends PkType = bigint, TUk = NameUk> {
 
     /**
      * Gets array of non-primary unique property(ies).

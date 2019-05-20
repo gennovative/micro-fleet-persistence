@@ -10,6 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const knex = require("knex");
+const objection_1 = require("objection");
 const common_1 = require("@micro-fleet/common");
 /**
  * Provides settings from package
@@ -33,6 +34,7 @@ let KnexDatabaseConnector = class KnexDatabaseConnector {
             client: detail.clientName,
             useNullAsDefault: true,
             connection: this._buildConnSettings(detail),
+            ...objection_1.knexSnakeCaseMappers(),
         };
         if (detail.clientName === common_1.constants.DbClient.POSTGRESQL) {
             require('../pg-type-parsers');

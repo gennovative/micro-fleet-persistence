@@ -43,14 +43,6 @@ declare module '@micro-fleet/persistence/dist/app/bases/EntityBase' {
 	     * Same with `uniqColumn`, but transform snakeCase to camelCase.
 	     */
 	    static readonly uniqProp: string[];
-	    /**
-	     * This is called when an object is serialized to database format.
-	     */
-	    $formatDatabaseJson(json: any): any;
-	    /**
-	     * This is called when an object is read from database.
-	     */
-	    $parseDatabaseJson(json: any): import("objection").Pojo;
 	}
 
 }
@@ -395,7 +387,7 @@ declare module '@micro-fleet/persistence/dist/app/bases/MonoProcessor' {
 	     */
 	    triggerProps?: string[];
 	}
-	export class MonoProcessor<TEntity extends Model, TModel, TPk extends PkType = bigint, TUk = NameUk> {
+	export class MonoProcessor<TEntity extends Model, TModel extends object, TPk extends PkType = bigint, TUk = NameUk> {
 	    protected _EntityClass: Newable;
 	    protected _DomainModelClass: Newable;
 	    protected _dbConnector: IDatabaseConnector;
@@ -485,7 +477,7 @@ declare module '@micro-fleet/persistence/dist/app/bases/BatchProcessor' {
 	import { IDatabaseConnector, QueryCallback } from '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector';
 	import { EntityBase } from '@micro-fleet/persistence/dist/app/bases/EntityBase';
 	import { MonoProcessor } from '@micro-fleet/persistence/dist/app/bases/MonoProcessor';
-	export class BatchProcessor<TEntity extends EntityBase, TModel, TPk extends PkType = bigint, TUk = NameUk> {
+	export class BatchProcessor<TEntity extends EntityBase, TModel extends object, TPk extends PkType = bigint, TUk = NameUk> {
 	    protected _mono: MonoProcessor<TEntity, TModel, TPk, TUk>;
 	    /**
 	     * Gets array of non-primary unique property(ies).
@@ -583,7 +575,7 @@ declare module '@micro-fleet/persistence/dist/app/bases/VersionControlledProcess
 	import { IDatabaseConnector } from '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector';
 	import { EntityBase } from '@micro-fleet/persistence/dist/app/bases/EntityBase';
 	import { MonoProcessor, ProcessorOptions } from '@micro-fleet/persistence/dist/app/bases/MonoProcessor';
-	export class VersionControlledProcessor<TEntity extends EntityBase, TModel, TPk extends PkType, TUk = NameUk> extends MonoProcessor<TEntity, TModel, TPk, TUk> {
+	export class VersionControlledProcessor<TEntity extends EntityBase, TModel extends object, TPk extends PkType, TUk = NameUk> extends MonoProcessor<TEntity, TModel, TPk, TUk> {
 	    	    	    constructor(EntityClass: Newable, DtoClass: Newable, dbConnector: IDatabaseConnector, options?: ProcessorOptions);
 	    create(model: TModel, opts?: it.RepositoryCreateOptions): Promise<TModel | TModel[]>;
 	    patch(model: Partial<TModel>, opts?: it.RepositoryPatchOptions): Promise<Partial<TModel> | Partial<TModel>[]>;
@@ -599,7 +591,7 @@ declare module '@micro-fleet/persistence/dist/app/bases/RepositoryBase' {
 	import { MonoProcessor, ProcessorOptions } from '@micro-fleet/persistence/dist/app/bases/MonoProcessor';
 	import { BatchProcessor } from '@micro-fleet/persistence/dist/app/bases/BatchProcessor';
 	import { VersionControlledProcessor } from '@micro-fleet/persistence/dist/app/bases/VersionControlledProcessor';
-	export interface RepositoryBaseOptions<TEntity extends EntityBase, TModel, TPk extends PkType = bigint, TUk = NameUk> extends ProcessorOptions {
+	export interface RepositoryBaseOptions<TEntity extends EntityBase, TModel extends object, TPk extends PkType = bigint, TUk = NameUk> extends ProcessorOptions {
 	    /**
 	     * Used by default version-controlled processor and default batch processor.
 	     */
@@ -613,7 +605,7 @@ declare module '@micro-fleet/persistence/dist/app/bases/RepositoryBase' {
 	     */
 	    batchProcessor?: BatchProcessor<TEntity, TModel, TPk, TUk>;
 	}
-	export abstract class RepositoryBase<TEntity extends EntityBase, TModel, TPk extends PkType = bigint, TUk = NameUk> implements it.IRepository<TModel, TPk, TUk> {
+	export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends object, TPk extends PkType = bigint, TUk = NameUk> implements it.IRepository<TModel, TPk, TUk> {
 	    protected _processor: BatchProcessor<TEntity, TModel, TPk, TUk>;
 	    constructor(EntityClass: Newable, DtoClass: Newable, dbConnector: IDatabaseConnector, options?: RepositoryBaseOptions<TEntity, TModel, TPk, TUk>);
 	    /**
@@ -658,7 +650,7 @@ declare module '@micro-fleet/persistence/dist/app/bases/SoftDelRepositoryBase' {
 	import { EntityBase } from '@micro-fleet/persistence/dist/app/bases/EntityBase';
 	import { BatchProcessor } from '@micro-fleet/persistence/dist/app/bases/BatchProcessor';
 	import { RepositoryBase, RepositoryBaseOptions } from '@micro-fleet/persistence/dist/app/bases/RepositoryBase';
-	export abstract class SoftDelRepositoryBase<TEntity extends EntityBase, TModel, TPk extends PkType = bigint, TUk = NameUk> extends RepositoryBase<TEntity, TModel, TPk, TUk> implements it.ISoftDelRepository<TModel, TPk, TUk> {
+	export abstract class SoftDelRepositoryBase<TEntity extends EntityBase, TModel extends object, TPk extends PkType = bigint, TUk = NameUk> extends RepositoryBase<TEntity, TModel, TPk, TUk> implements it.ISoftDelRepository<TModel, TPk, TUk> {
 	    protected _processor: BatchProcessor<TEntity, TModel, TPk, TUk>;
 	    constructor(EntityClass: Newable, DtoClass: Newable, dbConnector: IDatabaseConnector, options?: RepositoryBaseOptions<TEntity, TModel, TPk, TUk>);
 	    /**

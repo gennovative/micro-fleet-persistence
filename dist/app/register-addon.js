@@ -12,8 +12,8 @@ function registerDbAddOn() {
     if (!depCon.isBound(Types_1.Types.DB_ADDON)) {
         depCon.bind(Types_1.Types.DB_ADDON, DatabaseAddOn_1.DatabaseAddOn).asSingleton();
     }
-    const dbAdt = depCon.resolve(Types_1.Types.DB_ADDON);
-    return dbAdt;
+    const addon = depCon.resolve(Types_1.Types.DB_ADDON);
+    return addon;
 }
 exports.registerDbAddOn = registerDbAddOn;
 //# sourceMappingURL=register-addon.js.map

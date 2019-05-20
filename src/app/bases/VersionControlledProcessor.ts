@@ -6,7 +6,7 @@ import { MonoProcessor, ProcessorOptions } from './MonoProcessor'
 import { VersionQueryBuilder } from './VersionQueryBuilder'
 
 
-export class VersionControlledProcessor<TEntity extends EntityBase, TModel, TPk extends PkType, TUk = NameUk>
+export class VersionControlledProcessor<TEntity extends EntityBase, TModel extends object, TPk extends PkType, TUk = NameUk>
     extends MonoProcessor<TEntity, TModel, TPk, TUk> {
 
     private _triggerProps: string[]

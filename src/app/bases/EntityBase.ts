@@ -1,9 +1,6 @@
 import { Model } from 'objection'
-const mapKeys = require('lodash/mapKeys')
-
 import { ModelAutoMapper } from '@micro-fleet/common'
 
-const snakeCase = global['snakeCase']
 const camelCase = global['camelCase']
 
 
@@ -46,37 +43,6 @@ export abstract class EntityBase extends Model {
      */
     public static get uniqProp(): string[] {
         return this.uniqColumn.map<string>(camelCase)
-    }
-
-
-    // public id: bigint = undefined
-
-    /**
-     * This is called when an object is serialized to database format.
-     */
-    public $formatDatabaseJson(json: any) {
-        json = super.$formatDatabaseJson(json)
-
-        return mapKeys(json, (value: any, key: string) => {
-            // Maps from "camelCase" to "snake_case" except special keyword.
-            /* istanbul ignore if */
-            if (key.indexOf('#') == 0) {
-                return key
-            }
-            return snakeCase(<any>key)
-        })
-    }
-
-    /**
-     * This is called when an object is read from database.
-     */
-    public $parseDatabaseJson(json: any) {
-        json = mapKeys(json, (value: any, key: string) => {
-            // Maps from "snake_case" to "camelCase"
-            return camelCase(<any>key)
-        })
-
-        return super.$parseDatabaseJson(json)
     }
 }
 

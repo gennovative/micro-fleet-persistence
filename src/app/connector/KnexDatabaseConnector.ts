@@ -1,4 +1,5 @@
 import * as knex from 'knex'
+import { knexSnakeCaseMappers } from 'objection'
 import { injectable, Guard, MinorException, DbConnectionDetail,
     constants as CmC } from '@micro-fleet/common'
 
@@ -36,6 +37,7 @@ export class KnexDatabaseConnector implements IDatabaseConnector {
                 client: detail.clientName,
                 useNullAsDefault: true,
                 connection: this._buildConnSettings(detail),
+                ...knexSnakeCaseMappers(),
             }
 
         if (detail.clientName === CmC.DbClient.POSTGRESQL) {

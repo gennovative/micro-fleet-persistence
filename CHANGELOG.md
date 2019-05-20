@@ -7,6 +7,7 @@
 - Removed all references to class `DtoModelBase`.
 - Replaced term "DTO" with "Domain model".
 - Added `uniqProp` to `'EntityBase`.
+- Fixed [#1](https://github.com/gennovative/micro-fleet-persistence/issues/1) (Use Knex's case mappers in `KnexDatabaseConnector`)
 
 ### 2.1.1
 - Removed script "postinstall" from `package.json`.

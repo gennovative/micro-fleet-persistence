@@ -28,13 +28,11 @@ describe('KnexDatabaseConnector', function () {
     this.timeout(5000)
     // this.timeout(60000) // For debugging
 
-    describe('addConnection', () => {
+    describe('init', () => {
         it('should configure connection with file name settings', async () => {
             // Arrange
             const dbConnector = new KnexDatabaseConnector()
-            let expectedSettings
-
-            expectedSettings = {
+            const expectedSettings = {
                     client: DbClient.SQLITE3,
                     useNullAsDefault: true,
                     connection: {
@@ -43,7 +41,10 @@ describe('KnexDatabaseConnector', function () {
                 }
 
             // Spy on this method, because we need the real function be called.
-            dbConnector['_knex'] = <any>chai.spy(() => {
+            dbConnector['_knex'] = <any>chai.spy((settings: any) => {
+                expect(settings.client).to.equal(expectedSettings.client)
+                expect(settings.useNullAsDefault).to.equal(expectedSettings.useNullAsDefault)
+                expect(settings.connection.filename).to.equal(expectedSettings.connection.filename)
                 return {}
             })
 
@@ -55,18 +56,21 @@ describe('KnexDatabaseConnector', function () {
 
             // Assert
             expect(dbConnector['_knex']).to.be.spy
-            expect(dbConnector['_knex']).to.have.been.called.with(expectedSettings)
+            expect(dbConnector['_knex']).to.have.been.called.once
         })
 
         it('should configure connection with connection string', async () => {
             // Arrange
-            const dbConnector = new KnexDatabaseConnector(),
-                expectedSettings = {
+            const dbConnector = new KnexDatabaseConnector()
+            const expectedSettings = {
                     client: DbClient.POSTGRESQL,
                     useNullAsDefault: true,
                     connection: CONN_STRING,
                 }
-            dbConnector['_knex'] = <any>chai.spy(() => {
+            dbConnector['_knex'] = <any>chai.spy((settings: any) => {
+                expect(settings.client).to.equal(expectedSettings.client)
+                expect(settings.useNullAsDefault).to.equal(expectedSettings.useNullAsDefault)
+                expect(settings.connection).to.equal(expectedSettings.connection)
                 return {}
             })
 
@@ -78,7 +82,7 @@ describe('KnexDatabaseConnector', function () {
 
             // Assert
             expect(dbConnector['_knex']).to.be.spy
-            expect(dbConnector['_knex']).to.have.been.called.with(expectedSettings)
+            expect(dbConnector['_knex']).to.have.been.called.once
         })
 
         it('should configure connection with host credentials', async () => {
@@ -95,7 +99,13 @@ describe('KnexDatabaseConnector', function () {
                     },
                 }
 
-            dbConnector['_knex'] = <any>chai.spy(() => {
+            dbConnector['_knex'] = <any>chai.spy((settings: any) => {
+                expect(settings.client).to.equal(expectedSettings.client)
+                expect(settings.useNullAsDefault).to.equal(expectedSettings.useNullAsDefault)
+                expect(settings.connection.host).to.equal(expectedSettings.connection.host)
+                expect(settings.connection.user).to.equal(expectedSettings.connection.user)
+                expect(settings.connection.password).to.equal(expectedSettings.connection.password)
+                expect(settings.connection.database).to.equal(expectedSettings.connection.database)
                 return {}
             })
 
@@ -104,7 +114,7 @@ describe('KnexDatabaseConnector', function () {
 
             // Assert
             expect(dbConnector['_knex']).to.be.spy
-            expect(dbConnector['_knex']).to.have.been.called.with(expectedSettings)
+            expect(dbConnector['_knex']).to.have.been.called.once
         })
 
         it('should throw exception if there is no settings for database connection', async () => {
@@ -132,7 +142,7 @@ describe('KnexDatabaseConnector', function () {
             expect(exception).to.be.instanceOf(MinorException)
             expect(exception.message).to.equal('No database settings!')
         })
-    }) // END describe 'addConnection'
+    }) // END describe 'init'
 
     describe('dispose', () => {
         it('should release all resources', async () => {

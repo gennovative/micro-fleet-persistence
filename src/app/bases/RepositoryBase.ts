@@ -9,7 +9,7 @@ import { VersionControlledProcessor } from './VersionControlledProcessor'
 
 
 
-export interface RepositoryBaseOptions<TEntity extends EntityBase, TModel, TPk extends PkType = bigint, TUk = NameUk>
+export interface RepositoryBaseOptions<TEntity extends EntityBase, TModel extends object, TPk extends PkType = bigint, TUk = NameUk>
         extends ProcessorOptions {
     /**
      * Used by default version-controlled processor and default batch processor.
@@ -29,7 +29,7 @@ export interface RepositoryBaseOptions<TEntity extends EntityBase, TModel, TPk e
 
 
 @injectable()
-export abstract class RepositoryBase<TEntity extends EntityBase, TModel, TPk extends PkType = bigint, TUk = NameUk>
+export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends object, TPk extends PkType = bigint, TUk = NameUk>
     implements it.IRepository<TModel, TPk, TUk> {
 
     protected _processor: BatchProcessor<TEntity, TModel, TPk, TUk>
