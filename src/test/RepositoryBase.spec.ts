@@ -9,7 +9,7 @@ import DB_DETAILS from './database-details'
 
 
 const DB_TABLE = 'usersSoftDel',
-    IMPOSSIBLE_ID = 0n
+    IMPOSSIBLE_ID = '0'
 
 class UserDTO implements ISoftDeletable, IAuditable {
 
@@ -17,7 +17,7 @@ class UserDTO implements ISoftDeletable, IAuditable {
 
     // NOTE: Class properties must be initialized, otherwise they
     // will disappear in transpiled code.
-    public id: bigint = undefined
+    public id: string = undefined
     public name: string = undefined
     public age: number = undefined
     public deletedAt: Date = undefined
@@ -41,7 +41,7 @@ class UserEntity extends EntityBase {
 
     // NOTE: Class properties must be initialized, otherwise they
     // will disappear in transpiled code.
-    public id: bigint = undefined
+    public id: string = undefined
     public name: string = undefined
     public age: number = undefined
     public deletedAt: string = undefined
@@ -54,7 +54,7 @@ type NameAgeUk = {
     age?: number
 }
 
-class UserRepo extends RepositoryBase<UserEntity, UserDTO, bigint, NameAgeUk> {
+class UserRepo extends RepositoryBase<UserEntity, UserDTO, string, NameAgeUk> {
 
     private _sessionFactory: AtomicSessionFactory
 
@@ -138,7 +138,7 @@ class UserRepo extends RepositoryBase<UserEntity, UserDTO, bigint, NameAgeUk> {
             // .closePipe() // Not closing pipe
     }
 
-    public async find(id: bigint): Promise<UserDTO> {
+    public async find(id: string): Promise<UserDTO> {
         const foundEnt: UserEntity = await this._processor.executeQuery(query => {
                 return query.findById(<any>id)
             }, null) // Executing on first connection only.
@@ -185,11 +185,11 @@ describe('RepositoryBase', function() {
             // Arrange
             const modelOne = new UserDTO(),
                 modelTwo = new UserDTO()
-            modelOne.id = idGen.nextBigInt()
+            modelOne.id = idGen.nextBigInt().toString()
             modelOne.name = 'One'
             modelOne.age = 11
 
-            modelTwo.id = idGen.nextBigInt()
+            modelTwo.id = idGen.nextBigInt().toString()
             modelTwo.name = 'Two'
             modelTwo.age = 22
 
@@ -235,11 +235,11 @@ describe('RepositoryBase', function() {
 
             const modelOne = new UserDTO(),
                 modelTwo = new UserDTO()
-            modelOne.id = idGen.nextBigInt()
+            modelOne.id = idGen.nextBigInt().toString()
             modelOne.name = 'One'
             modelOne.age = 11
 
-            modelTwo.id = idGen.nextBigInt()
+            modelTwo.id = idGen.nextBigInt().toString()
             modelTwo.name = null // fail
             modelTwo.age = 22
 
@@ -261,11 +261,11 @@ describe('RepositoryBase', function() {
             // Arrange
             const modelOne = new UserDTO(),
                 modelTwo = new UserDTO()
-            modelOne.id = idGen.nextBigInt()
+            modelOne.id = idGen.nextBigInt().toString()
             modelOne.name = 'One'
             modelOne.age = 11
 
-            modelTwo.id = idGen.nextBigInt()
+            modelTwo.id = idGen.nextBigInt().toString()
             modelTwo.name = 'Two'
             modelTwo.age = 22
 
@@ -296,11 +296,11 @@ describe('RepositoryBase', function() {
             // Arrange
             const modelOne = new UserDTO(),
                 modelTwo = new UserDTO()
-            modelOne.id = idGen.nextBigInt()
+            modelOne.id = idGen.nextBigInt().toString()
             modelOne.name = 'One'
             modelOne.age = 11
 
-            modelTwo.id = idGen.nextBigInt()
+            modelTwo.id = idGen.nextBigInt().toString()
             modelTwo.name = 'Two'
             modelTwo.age = 22
 
@@ -326,7 +326,7 @@ describe('RepositoryBase', function() {
         it('should insert a row to database without transaction', async () => {
             // Arrange
             const model = new UserDTO()
-            model.id = idGen.nextBigInt()
+            model.id = idGen.nextBigInt().toString()
             model.name = 'Hiri'
             model.age = 39
 
@@ -345,7 +345,7 @@ describe('RepositoryBase', function() {
         it('should return DTO instance if success', async () => {
             // Arrange
             const model = new UserDTO()
-            model.id = idGen.nextBigInt()
+            model.id = idGen.nextBigInt().toString()
             model.name = 'Hiri'
             model.age = 39
 
@@ -619,7 +619,7 @@ describe('RepositoryBase', function() {
 
             for (let i = 0; i < TOTAL; ++i) {
                 model = new UserDTO()
-                model.id = idGen.nextBigInt()
+                model.id = idGen.nextBigInt().toString()
                 model.name = 'Hiri' + i
                 model.age = Math.ceil(29 * Math.random())
                 firstPageModel.push(model)
@@ -657,7 +657,7 @@ describe('RepositoryBase', function() {
 
             for (let i = 0; i < TOTAL; ++i) {
                 model = new UserDTO()
-                model.id = idGen.nextBigInt()
+                model.id = idGen.nextBigInt().toString()
                 model.name = 'Hiri' + i
                 model.age = Math.ceil(29 * Math.random())
                 createJobs.push(usrRepo.create(model))
@@ -688,7 +688,7 @@ describe('RepositoryBase', function() {
 
             for (let i = 0; i < SIZE; ++i) {
                 model = new UserDTO()
-                model.id = idGen.nextBigInt()
+                model.id = idGen.nextBigInt().toString()
                 model.name = 'Hiri' + i
                 model.age = Math.ceil(29 * Math.random())
                 firstPageModel.push(model)

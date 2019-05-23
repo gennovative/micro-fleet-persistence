@@ -17,7 +17,7 @@ export interface RepositoryOptions {
     /**
      * Account ID.
      */
-    accountId?: bigint
+    accountId?: string
 }
 
 export interface RepositoryExistsOptions extends RepositoryOptions {
@@ -30,7 +30,7 @@ export interface RepositoryExistsOptions extends RepositoryOptions {
     /**
      * Tenant ID.
      */
-    tenantId?: bigint
+    tenantId?: string
 }
 
 export interface RepositoryCountAllOptions extends RepositoryExistsOptions {
@@ -73,7 +73,7 @@ export interface RepositoryRestrictOptions extends RepositoryOptions {
 /**
  * Provides common CRUD operations, based on Unit of Work pattern.
  */
-export interface IRepository<TModel, TPk extends PkType = bigint, TUk = NameUk> {
+export interface IRepository<TModel, TPk extends PkType = string, TUk = NameUk> {
 
     /**
      * Counts all records in a table.
@@ -125,7 +125,7 @@ export interface IRepository<TModel, TPk extends PkType = bigint, TUk = NameUk> 
 /**
  * Provides common operations to soft-delete and recover models.
  */
-export interface ISoftDelRepository<TModel, TPk extends PkType = bigint, TUk = NameUk>
+export interface ISoftDelRepository<TModel, TPk extends PkType = string, TUk = NameUk>
         extends IRepository<TModel, TPk, TUk> {
 
     /**
@@ -145,7 +145,7 @@ export interface ISoftDelRepository<TModel, TPk extends PkType = bigint, TUk = N
 /**
  * Provides common operations to control models' revisions.
  */
-export interface IVersionRepository<TModel extends IVersionControlled, TPk extends PkType = bigint, TUk = NameUk>
+export interface IVersionRepository<TModel extends IVersionControlled, TPk extends PkType = string, TUk = NameUk>
         extends ISoftDelRepository<TModel, TPk, TUk> {
 
     /**

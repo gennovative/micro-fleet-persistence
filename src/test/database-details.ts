@@ -7,6 +7,6 @@ export default {
         address: 'localhost',
         user: 'postgres',
         password: 'postgres',
-        database: 'unittest-persistence',
+        database: 'persistence_spec',
     },
 }

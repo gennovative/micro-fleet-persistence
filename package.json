@@ -18,7 +18,7 @@
     "dependencies": {
         "knex": "~0.16",
         "lodash": "~4.17",
-        "moment": "^2.24.0",
+        "moment": "~2.24",
         "objection": "~1.6",
         "pg": "~7.8",
         "reflect-metadata": "~0.1"

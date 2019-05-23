@@ -25,7 +25,7 @@ export interface ProcessorOptions {
     triggerProps?: string[]
 }
 
-export class MonoProcessor<TEntity extends Model, TModel extends object, TPk extends PkType = bigint, TUk = NameUk> {
+export class MonoProcessor<TEntity extends Model, TModel extends object, TPk extends PkType = string, TUk = NameUk> {
 
     /**
      * Gets array of non-primary unique property(ies).
@@ -72,7 +72,7 @@ export class MonoProcessor<TEntity extends Model, TModel extends object, TPk ext
             opts.atomicSession
         )
 
-        // In case with Postgres, `count` returns a bigint type which will be a String
+        // In case with Postgres, `count` returns a string type which will be a String
         // and not a Number.
         return +(result[0]['total'])
     }

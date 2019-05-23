@@ -41,7 +41,7 @@ class MonoProcessor {
             debug('COUNT ALL: %s', q.toSql());
             return q;
         }, opts.atomicSession);
-        // In case with Postgres, `count` returns a bigint type which will be a String
+        // In case with Postgres, `count` returns a string type which will be a String
         // and not a Number.
         return +(result[0]['total']);
     }

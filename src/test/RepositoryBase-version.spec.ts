@@ -11,7 +11,7 @@ import DB_DETAILS from './database-details'
 
 
 const DB_TABLE = 'userdata_version',
-    IMPOSSIBLE_ID = 0n
+    IMPOSSIBLE_ID = '0'
 
 class UserVersionDTO implements ISoftDeletable, IVersionControlled {
 
@@ -19,7 +19,7 @@ class UserVersionDTO implements ISoftDeletable, IVersionControlled {
 
     // NOTE: Class properties must be initialized, otherwise they
     // will disappear in transpiled code.
-    public id: bigint = undefined
+    public id: string = undefined
     public name: string = undefined
     public age: number = undefined
     public deletedAt: Date = undefined
@@ -43,7 +43,7 @@ class UserVersionEntity extends EntityBase {
 
     // NOTE: Class properties must be initialized, otherwise they
     // will disappear in transpiled code.
-    public id: bigint = undefined
+    public id: string = undefined
     public name: string = undefined
     public age: number = undefined
     public deletedAt: string = undefined
@@ -139,7 +139,7 @@ class UserVersionRepo extends RepositoryBase<UserVersionEntity, UserVersionDTO> 
         // .closePipe() // Not closing pipe
     }
 
-    public async find(id: bigint): Promise<UserVersionDTO> {
+    public async find(id: string): Promise<UserVersionDTO> {
         const foundEnt: UserVersionEntity = await this._processor.executeQuery(query => {
             return query.findById(id as any)
         }, null)
@@ -184,7 +184,7 @@ describe.skip('RepositoryBase-version', function () {
         it('should insert with version number', async () => {
             // Arrange
             const model = new UserVersionDTO()
-            model.id = idGen.nextBigInt()
+            model.id = idGen.nextBigInt().toString()
             model.name = 'Hiri'
             model.age = 29
 
@@ -203,7 +203,7 @@ describe.skip('RepositoryBase-version', function () {
         it('should throw error if not success on all connections', async () => {
             // Arrange
             const model = new UserVersionDTO()
-            model.id = idGen.nextBigInt()
+            model.id = idGen.nextBigInt().toString()
             model.name = 'Hiri'
             model.age = 29
 
@@ -455,7 +455,7 @@ describe.skip('RepositoryBase-version', function () {
 
             for (let i = 0; i < TOTAL; i++) {
                 model = new UserVersionDTO()
-                model.id = idGen.nextBigInt()
+                model.id = idGen.nextBigInt().toString()
                 model.name = 'Hiri' + i
                 model.age = Math.ceil(29 * Math.random())
                 await usrRepo.create(model)

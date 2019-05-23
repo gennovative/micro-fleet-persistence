@@ -10,7 +10,7 @@ import DB_DETAILS from './database-details'
 
 
 const DB_TABLE = 'usersTenant',
-    IMPOSSIBLE_ID = 0n
+    IMPOSSIBLE_ID = '0'
 
 
 class UserTenantDTO implements ISoftDeletable {
@@ -19,8 +19,8 @@ class UserTenantDTO implements ISoftDeletable {
 
     // NOTE: Class properties must be initialized, otherwise they
     // will disappear in transpiled code.
-    public id: bigint = undefined
-    public tenantId: bigint = undefined
+    public id: string = undefined
+    public tenantId: string = undefined
     public name: string = undefined
     public age: number = undefined
     public deletedAt: Date = undefined
@@ -43,8 +43,8 @@ class UserTenantEntity extends EntityBase {
 
     // NOTE: Class properties must be initialized, otherwise they
     // will disappear in transpiled code.
-    public id: bigint = undefined
-    public tenantId: bigint = undefined
+    public id: string = undefined
+    public tenantId: string = undefined
     public name: string = undefined
     public age: number = undefined
     public deletedAt: string = undefined
@@ -150,7 +150,7 @@ class UserTenantRepo extends RepositoryBase<UserTenantEntity, UserTenantDTO, Ten
 }
 
 let cachedDTO: UserTenantDTO,
-    cachedTenantId: bigint,
+    cachedTenantId: string,
     globalDbConnector: IDatabaseConnector,
     usrRepo: UserTenantRepo
 
@@ -185,13 +185,13 @@ describe('RepositoryBase-tenant', function() {
             const modelOne = new UserTenantDTO(),
                 modelTwo = new UserTenantDTO()
 
-            modelOne.id = idGen.nextBigInt()
-            modelOne.tenantId = idGen.nextBigInt()
+            modelOne.id = idGen.nextBigInt().toString()
+            modelOne.tenantId = idGen.nextBigInt().toString()
             modelOne.name = 'One'
             modelOne.age = 11
 
             modelTwo.id = modelOne.id
-            modelTwo.tenantId = idGen.nextBigInt()
+            modelTwo.tenantId = idGen.nextBigInt().toString()
             modelTwo.name = 'Two'
             modelTwo.age = 22
 
@@ -239,12 +239,12 @@ describe('RepositoryBase-tenant', function() {
             const modelOne = new UserTenantDTO(),
                 modelTwo = new UserTenantDTO()
 
-            modelOne.id = modelTwo.id = idGen.nextBigInt()
-            modelOne.tenantId = idGen.nextBigInt()
+            modelOne.id = modelTwo.id = idGen.nextBigInt().toString()
+            modelOne.tenantId = idGen.nextBigInt().toString()
             modelOne.name = 'One'
             modelOne.age = 11
 
-            modelTwo.tenantId = idGen.nextBigInt()
+            modelTwo.tenantId = idGen.nextBigInt().toString()
             modelTwo.name = null // fail
             modelTwo.age = 22
 
@@ -274,12 +274,12 @@ describe('RepositoryBase-tenant', function() {
             const modelOne = new UserTenantDTO(),
                 modelTwo = new UserTenantDTO()
 
-            modelOne.id = modelTwo.id = idGen.nextBigInt()
-            modelOne.tenantId = idGen.nextBigInt()
+            modelOne.id = modelTwo.id = idGen.nextBigInt().toString()
+            modelOne.tenantId = idGen.nextBigInt().toString()
             modelOne.name = 'One'
             modelOne.age = 11
 
-            modelTwo.tenantId = idGen.nextBigInt()
+            modelTwo.tenantId = idGen.nextBigInt().toString()
             modelTwo.name = 'Two'
             modelTwo.age = 22
 
@@ -317,12 +317,12 @@ describe('RepositoryBase-tenant', function() {
             const modelOne = new UserTenantDTO(),
                 modelTwo = new UserTenantDTO()
 
-            modelOne.id = modelTwo.id = idGen.nextBigInt()
-            modelOne.tenantId = idGen.nextBigInt()
+            modelOne.id = modelTwo.id = idGen.nextBigInt().toString()
+            modelOne.tenantId = idGen.nextBigInt().toString()
             modelOne.name = 'One'
             modelOne.age = 11
 
-            modelTwo.tenantId = idGen.nextBigInt()
+            modelTwo.tenantId = idGen.nextBigInt().toString()
             modelTwo.name = 'Two'
             modelTwo.age = 22
 
@@ -348,8 +348,8 @@ describe('RepositoryBase-tenant', function() {
         it('should insert a row to database without transaction', async () => {
             // Arrange
             const model = new UserTenantDTO(),
-                tenantId = idGen.nextBigInt()
-            model.id = idGen.nextBigInt()
+                tenantId = idGen.nextBigInt().toString()
+            model.id = idGen.nextBigInt().toString()
             model.tenantId = tenantId
             model.name = 'Hiri'
             model.age = 29
@@ -384,7 +384,7 @@ describe('RepositoryBase-tenant', function() {
             // Act
             const model: UserTenantDTO = await usrRepo.findByPk({
                 id: IMPOSSIBLE_ID,
-                tenantId: 0n,
+                tenantId: '0',
             })
 
             // Assert
@@ -424,12 +424,12 @@ describe('RepositoryBase-tenant', function() {
             // Act
             const partial = await usrRepo.patch({
                     id: IMPOSSIBLE_ID,
-                    tenantId: 0n,
+                    tenantId: '0',
                     age: newAge,
                 }) as Partial<UserTenantDTO>,
                 refetchedDTO: UserTenantDTO = await usrRepo.findByPk({
                     id: IMPOSSIBLE_ID,
-                    tenantId: 0n,
+                    tenantId: '0',
                 })
 
             // Assert
@@ -580,11 +580,11 @@ describe('RepositoryBase-tenant', function() {
             // Act
             const affectedRows: number = await usrRepo.deleteHard({
                     id: IMPOSSIBLE_ID,
-                    tenantId: 0n,
+                    tenantId: '0',
                 }),
                 refetchedDTO: UserTenantDTO = await usrRepo.findByPk({
                     id: IMPOSSIBLE_ID,
-                    tenantId: 0n,
+                    tenantId: '0',
                 })
 
             // Assert
@@ -607,7 +607,7 @@ describe('RepositoryBase-tenant', function() {
 
             // Act
             const models: PagedArray<UserTenantDTO> = await usrRepo.page(PAGE, SIZE, {
-                tenantId: 0n,
+                tenantId: '0',
             })
 
             // Assert
@@ -619,7 +619,7 @@ describe('RepositoryBase-tenant', function() {
             const PAGE = 1,
                 SIZE = 10,
                 TOTAL = SIZE * 2
-            const tenantId = cachedTenantId = idGen.nextBigInt()
+            const tenantId = cachedTenantId = idGen.nextBigInt().toString()
 
             // Deletes all from DB
             await usrRepo.deleteAll()
@@ -629,7 +629,7 @@ describe('RepositoryBase-tenant', function() {
             let model: UserTenantDTO
             for (let i = 0; i < TOTAL; i++) {
                 model = new UserTenantDTO()
-                model.id = idGen.nextBigInt()
+                model.id = idGen.nextBigInt().toString()
                 model.tenantId = tenantId
                 model.name = 'Hiri' + i
                 model.age = Math.ceil(29 * Math.random())

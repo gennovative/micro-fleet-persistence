@@ -5,7 +5,7 @@ import { IQueryBuilder } from './IQueryBuilder'
 
 
 export class MonoQueryBuilder<TEntity extends Model, TModel, TUk = NameUk>
-    implements IQueryBuilder<TEntity, TModel, bigint, TUk> {
+    implements IQueryBuilder<TEntity, TModel, string, TUk> {
 
     private _pkProp: string
 
@@ -22,7 +22,7 @@ export class MonoQueryBuilder<TEntity extends Model, TModel, TUk = NameUk>
         return (opts.excludeDeleted) ? q.whereNull('deleted_at') : q
     }
 
-    public buildDeleteHard(pk: bigint, prevQuery: QueryBuilder<TEntity>,
+    public buildDeleteHard(pk: string, prevQuery: QueryBuilder<TEntity>,
             rawQuery: QueryBuilder<TEntity>): QueryBuilder<TEntity> {
         return rawQuery.deleteById(<any>pk) as any as QueryBuilder<TEntity>
     }
@@ -45,7 +45,7 @@ export class MonoQueryBuilder<TEntity extends Model, TModel, TUk = NameUk>
         return (opts.excludeDeleted) ? q.whereNull('deleted_at') : q
     }
 
-    public buildFind(pk: bigint, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>,
+    public buildFind(pk: string, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>,
             opts: it.RepositoryFindOptions = {}): QueryBuilder<TEntity> {
         return <any>rawQuery.findById(<any>pk)
     }
@@ -65,7 +65,7 @@ export class MonoQueryBuilder<TEntity extends Model, TModel, TUk = NameUk>
         return rawQuery.patch(entity).where(this._pkProp, entity[this._pkProp]) as any as QueryBuilder<TEntity>
     }
 
-    public buildRecoverOpts(pk: bigint, prevOpts: it.RepositoryRecoverOptions,
+    public buildRecoverOpts(pk: string, prevOpts: it.RepositoryRecoverOptions,
             rawOpts: it.RepositoryRecoverOptions): it.RepositoryExistsOptions {
         return {
             excludeDeleted: false,

@@ -4,8 +4,8 @@ import { types } from 'pg'
 // PostgreSQL data type OID
 const TIMESTAMPTZ_OID = 1184, // Timestamp without timezone
     TIMESTAMP_OID = 1114, // Timestamp with timezone
-    DATE_OID = 1082,
-    BIGINT_OID = 20
+    DATE_OID = 1082
+    // BIGINT_OID = 20
 
 /**
  * This piece of code makes sure all date values loaded from database are converted
@@ -25,5 +25,5 @@ types.setTypeParser(TIMESTAMP_OID, parseDate)
 types.setTypeParser(DATE_OID, parseDate)
 
 // pg returns big integers as string by default
-// We want to cast Postgres big integer to Node BigInt
-types.setTypeParser(BIGINT_OID, (val: string) => BigInt(val))
+// Uncomment to cast Postgres big integer to Node BigInt
+// types.setTypeParser(BIGINT_OID, (val: string) => BigInt(val))

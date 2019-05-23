@@ -193,7 +193,7 @@ declare module '@micro-fleet/persistence/dist/app/interfaces' {
 	    /**
 	     * Account ID.
 	     */
-	    accountId?: bigint;
+	    accountId?: string;
 	}
 	export interface RepositoryExistsOptions extends RepositoryOptions {
 	    /**
@@ -204,7 +204,7 @@ declare module '@micro-fleet/persistence/dist/app/interfaces' {
 	    /**
 	     * Tenant ID.
 	     */
-	    tenantId?: bigint;
+	    tenantId?: string;
 	}
 	export interface RepositoryCountAllOptions extends RepositoryExistsOptions {
 	}
@@ -235,7 +235,7 @@ declare module '@micro-fleet/persistence/dist/app/interfaces' {
 	/**
 	 * Provides common CRUD operations, based on Unit of Work pattern.
 	 */
-	export interface IRepository<TModel, TPk extends PkType = bigint, TUk = NameUk> {
+	export interface IRepository<TModel, TPk extends PkType = string, TUk = NameUk> {
 	    /**
 	     * Counts all records in a table.
 	     */
@@ -278,7 +278,7 @@ declare module '@micro-fleet/persistence/dist/app/interfaces' {
 	/**
 	 * Provides common operations to soft-delete and recover models.
 	 */
-	export interface ISoftDelRepository<TModel, TPk extends PkType = bigint, TUk = NameUk> extends IRepository<TModel, TPk, TUk> {
+	export interface ISoftDelRepository<TModel, TPk extends PkType = string, TUk = NameUk> extends IRepository<TModel, TPk, TUk> {
 	    /**
 	     * Marks one or many records with `pk` as deleted.
 	     * @param {PK Type} pk The primary key object.
@@ -293,7 +293,7 @@ declare module '@micro-fleet/persistence/dist/app/interfaces' {
 	/**
 	 * Provides common operations to control models' revisions.
 	 */
-	export interface IVersionRepository<TModel extends IVersionControlled, TPk extends PkType = bigint, TUk = NameUk> extends ISoftDelRepository<TModel, TPk, TUk> {
+	export interface IVersionRepository<TModel extends IVersionControlled, TPk extends PkType = string, TUk = NameUk> extends ISoftDelRepository<TModel, TPk, TUk> {
 	    /**
 	     * Permanently deletes one or many version of a record.
 	     * Can be filtered with `olderThan` option.
@@ -341,15 +341,15 @@ declare module '@micro-fleet/persistence/dist/app/bases/MonoQueryBuilder' {
 	import { Model, QueryBuilder } from 'objection';
 	import * as it from '@micro-fleet/persistence/dist/app/interfaces';
 	import { IQueryBuilder } from '@micro-fleet/persistence/dist/app/bases/IQueryBuilder';
-	export class MonoQueryBuilder<TEntity extends Model, TModel, TUk = NameUk> implements IQueryBuilder<TEntity, TModel, bigint, TUk> {
+	export class MonoQueryBuilder<TEntity extends Model, TModel, TUk = NameUk> implements IQueryBuilder<TEntity, TModel, string, TUk> {
 	    	    	    constructor(_EntityClass: Newable);
 	    buildCountAll(prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryCountAllOptions): QueryBuilder<TEntity>;
-	    buildDeleteHard(pk: bigint, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>): QueryBuilder<TEntity>;
+	    buildDeleteHard(pk: string, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>): QueryBuilder<TEntity>;
 	    buildExists(uniqVals: any[], prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryExistsOptions): QueryBuilder<TEntity>;
-	    buildFind(pk: bigint, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryFindOptions): QueryBuilder<TEntity>;
+	    buildFind(pk: string, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryFindOptions): QueryBuilder<TEntity>;
 	    buildPage(pageIndex: number, pageSize: number, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryPageOptions): QueryBuilder<TEntity>;
 	    buildPatch(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryPatchOptions): QueryBuilder<TEntity>;
-	    buildRecoverOpts(pk: bigint, prevOpts: it.RepositoryRecoverOptions, rawOpts: it.RepositoryRecoverOptions): it.RepositoryExistsOptions;
+	    buildRecoverOpts(pk: string, prevOpts: it.RepositoryRecoverOptions, rawOpts: it.RepositoryRecoverOptions): it.RepositoryExistsOptions;
 	    buildUpdate(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryPatchOptions): QueryBuilder<TEntity>;
 	}
 
@@ -387,7 +387,7 @@ declare module '@micro-fleet/persistence/dist/app/bases/MonoProcessor' {
 	     */
 	    triggerProps?: string[];
 	}
-	export class MonoProcessor<TEntity extends Model, TModel extends object, TPk extends PkType = bigint, TUk = NameUk> {
+	export class MonoProcessor<TEntity extends Model, TModel extends object, TPk extends PkType = string, TUk = NameUk> {
 	    protected _EntityClass: Newable;
 	    protected _DomainModelClass: Newable;
 	    protected _dbConnector: IDatabaseConnector;
@@ -477,7 +477,7 @@ declare module '@micro-fleet/persistence/dist/app/bases/BatchProcessor' {
 	import { IDatabaseConnector, QueryCallback } from '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector';
 	import { EntityBase } from '@micro-fleet/persistence/dist/app/bases/EntityBase';
 	import { MonoProcessor } from '@micro-fleet/persistence/dist/app/bases/MonoProcessor';
-	export class BatchProcessor<TEntity extends EntityBase, TModel extends object, TPk extends PkType = bigint, TUk = NameUk> {
+	export class BatchProcessor<TEntity extends EntityBase, TModel extends object, TPk extends PkType = string, TUk = NameUk> {
 	    protected _mono: MonoProcessor<TEntity, TModel, TPk, TUk>;
 	    /**
 	     * Gets array of non-primary unique property(ies).
@@ -591,7 +591,7 @@ declare module '@micro-fleet/persistence/dist/app/bases/RepositoryBase' {
 	import { MonoProcessor, ProcessorOptions } from '@micro-fleet/persistence/dist/app/bases/MonoProcessor';
 	import { BatchProcessor } from '@micro-fleet/persistence/dist/app/bases/BatchProcessor';
 	import { VersionControlledProcessor } from '@micro-fleet/persistence/dist/app/bases/VersionControlledProcessor';
-	export interface RepositoryBaseOptions<TEntity extends EntityBase, TModel extends object, TPk extends PkType = bigint, TUk = NameUk> extends ProcessorOptions {
+	export interface RepositoryBaseOptions<TEntity extends EntityBase, TModel extends object, TPk extends PkType = string, TUk = NameUk> extends ProcessorOptions {
 	    /**
 	     * Used by default version-controlled processor and default batch processor.
 	     */
@@ -605,7 +605,7 @@ declare module '@micro-fleet/persistence/dist/app/bases/RepositoryBase' {
 	     */
 	    batchProcessor?: BatchProcessor<TEntity, TModel, TPk, TUk>;
 	}
-	export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends object, TPk extends PkType = bigint, TUk = NameUk> implements it.IRepository<TModel, TPk, TUk> {
+	export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends object, TPk extends PkType = string, TUk = NameUk> implements it.IRepository<TModel, TPk, TUk> {
 	    protected _processor: BatchProcessor<TEntity, TModel, TPk, TUk>;
 	    constructor(EntityClass: Newable, DtoClass: Newable, dbConnector: IDatabaseConnector, options?: RepositoryBaseOptions<TEntity, TModel, TPk, TUk>);
 	    /**
@@ -650,7 +650,7 @@ declare module '@micro-fleet/persistence/dist/app/bases/SoftDelRepositoryBase' {
 	import { EntityBase } from '@micro-fleet/persistence/dist/app/bases/EntityBase';
 	import { BatchProcessor } from '@micro-fleet/persistence/dist/app/bases/BatchProcessor';
 	import { RepositoryBase, RepositoryBaseOptions } from '@micro-fleet/persistence/dist/app/bases/RepositoryBase';
-	export abstract class SoftDelRepositoryBase<TEntity extends EntityBase, TModel extends object, TPk extends PkType = bigint, TUk = NameUk> extends RepositoryBase<TEntity, TModel, TPk, TUk> implements it.ISoftDelRepository<TModel, TPk, TUk> {
+	export abstract class SoftDelRepositoryBase<TEntity extends EntityBase, TModel extends object, TPk extends PkType = string, TUk = NameUk> extends RepositoryBase<TEntity, TModel, TPk, TUk> implements it.ISoftDelRepository<TModel, TPk, TUk> {
 	    protected _processor: BatchProcessor<TEntity, TModel, TPk, TUk>;
 	    constructor(EntityClass: Newable, DtoClass: Newable, dbConnector: IDatabaseConnector, options?: RepositoryBaseOptions<TEntity, TModel, TPk, TUk>);
 	    /**

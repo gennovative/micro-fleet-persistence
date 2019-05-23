@@ -12,7 +12,7 @@ import DB_DETAILS from './database-details'
 
 
 const DB_TABLE = 'usersBatch',
-    IMPOSSIBLE_IDs = [0n, -1n]
+    IMPOSSIBLE_IDs = ['0', '-1']
 
 class UserBatchDTO implements ISoftDeletable {
 
@@ -20,7 +20,7 @@ class UserBatchDTO implements ISoftDeletable {
 
     // NOTE: Class properties must be initialized, otherwise they
     // will disappear in transpiled code.
-    public id: bigint = undefined
+    public id: string = undefined
     public name: string = undefined
     public age: number = undefined
     public deletedAt: Date = undefined
@@ -42,7 +42,7 @@ class UserBatchEntity extends EntityBase {
 
     // NOTE: Class properties must be initialized, otherwise they
     // will disappear in transpiled code.
-    public id: bigint = undefined
+    public id: string = undefined
     public name: string = undefined
     public age: number = undefined
     public deletedAt: string = undefined
@@ -151,7 +151,7 @@ class UserBatchRepo
             // .closePipe() // Not closing pipe
     }
 
-    public async find(id: bigint): Promise<UserBatchDTO> {
+    public async find(id: string): Promise<UserBatchDTO> {
         const foundEnt: UserBatchEntity = await this._processor.executeQuery(query => {
                 return query.findById(id as any)
             }, null)
@@ -201,19 +201,19 @@ describe('RepositoryBase-batch', function() {
                 evaOne = new UserBatchDTO(),
                 evaTwo = new UserBatchDTO()
 
-            adamOne.id = idGen.nextBigInt()
+            adamOne.id = idGen.nextBigInt().toString()
             adamOne.name = 'Adam One'
             adamOne.age = 11
 
-            adamTwo.id = idGen.nextBigInt()
+            adamTwo.id = idGen.nextBigInt().toString()
             adamTwo.name = 'Adam Two'
             adamTwo.age = 22
 
-            evaOne.id = idGen.nextBigInt()
+            evaOne.id = idGen.nextBigInt().toString()
             evaOne.name = 'Eva One'
             evaOne.age = 33
 
-            evaTwo.id = idGen.nextBigInt()
+            evaTwo.id = idGen.nextBigInt().toString()
             evaTwo.name = 'Eva Two'
             evaTwo.age = 44
 
@@ -252,19 +252,19 @@ describe('RepositoryBase-batch', function() {
                 evaOne = new UserBatchDTO(),
                 evaTwo = new UserBatchDTO()
 
-            adamOne.id = idGen.nextBigInt()
+            adamOne.id = idGen.nextBigInt().toString()
             adamOne.name = 'Adam One'
             adamOne.age = 11
 
-            adamTwo.id = idGen.nextBigInt()
+            adamTwo.id = idGen.nextBigInt().toString()
             adamTwo.name = 'Adam Two'
             adamTwo.age = 22
 
-            evaOne.id = idGen.nextBigInt()
+            evaOne.id = idGen.nextBigInt().toString()
             evaOne.name = 'Eva One'
             evaOne.age = 33
 
-            evaTwo.id = idGen.nextBigInt()
+            evaTwo.id = idGen.nextBigInt().toString()
             evaTwo.name = null // fail
             evaTwo.age = 44
 
@@ -289,19 +289,19 @@ describe('RepositoryBase-batch', function() {
                 evaOne = new UserBatchDTO(),
                 evaTwo = new UserBatchDTO()
 
-            adamOne.id = idGen.nextBigInt()
+            adamOne.id = idGen.nextBigInt().toString()
             adamOne.name = 'Adam One'
             adamOne.age = 11
 
-            adamTwo.id = idGen.nextBigInt()
+            adamTwo.id = idGen.nextBigInt().toString()
             adamTwo.name = 'Adam Two'
             adamTwo.age = 22
 
-            evaOne.id = idGen.nextBigInt()
+            evaOne.id = idGen.nextBigInt().toString()
             evaOne.name = 'Eva One'
             evaOne.age = 33
 
-            evaTwo.id = idGen.nextBigInt()
+            evaTwo.id = idGen.nextBigInt().toString()
             evaTwo.name = 'Eva Two'
             evaTwo.age = 44
 
@@ -353,12 +353,12 @@ describe('RepositoryBase-batch', function() {
         it('should insert a row to database without transaction', async () => {
             // Arrange
             const modelOne = new UserBatchDTO()
-            modelOne.id = idGen.nextBigInt()
+            modelOne.id = idGen.nextBigInt().toString()
             modelOne.name = 'One'
             modelOne.age = 29
 
             const modelTwo = new UserBatchDTO()
-            modelTwo.id = idGen.nextBigInt()
+            modelTwo.id = idGen.nextBigInt().toString()
             modelTwo.name = 'Two'
             modelTwo.age = 92
 

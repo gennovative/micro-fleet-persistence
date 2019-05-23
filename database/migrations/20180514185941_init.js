@@ -22,7 +22,7 @@ exports.up = function(knex, Promise) {
 	async function usersSoftDel() {
 		const schema = knex.schema;
 		await schema.dropTableIfExists('usersSoftDel');
-		await schema.createTable('usersSoftDel', tbl => {
+		await schema.createTable('users_soft_del', tbl => {
 			tbl.bigInteger('id').primary();
 			tbl.string('name').notNullable();
 			tbl.integer('age');
@@ -35,7 +35,7 @@ exports.up = function(knex, Promise) {
 	async function usersBatch() {
 		const schema = knex.schema;
 		await schema.dropTableIfExists('usersBatch');
-		await schema.createTable('usersBatch', tbl => {
+		await schema.createTable('users_batch', tbl => {
 			tbl.bigInteger('id').primary();
 			tbl.string('name').notNullable();
 			tbl.integer('age');
@@ -46,7 +46,7 @@ exports.up = function(knex, Promise) {
 	async function usersTenant() {
 		const schema = knex.schema;
 		await schema.dropTableIfExists('usersTenant');
-		await schema.createTable('usersTenant', tbl => {
+		await schema.createTable('users_tenant', tbl => {
 			tbl.bigInteger('id');
 			tbl.bigInteger('tenant_id');
 			tbl.string('name').notNullable();

@@ -8,7 +8,7 @@ import { RepositoryBase, RepositoryBaseOptions } from './RepositoryBase'
 
 
 @injectable()
-export abstract class SoftDelRepositoryBase<TEntity extends EntityBase, TModel extends object, TPk extends PkType = bigint, TUk = NameUk>
+export abstract class SoftDelRepositoryBase<TEntity extends EntityBase, TModel extends object, TPk extends PkType = string, TUk = NameUk>
     extends RepositoryBase<TEntity, TModel, TPk, TUk>
     implements it.ISoftDelRepository<TModel, TPk, TUk> {
 
