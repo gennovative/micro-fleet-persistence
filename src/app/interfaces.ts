@@ -1,7 +1,20 @@
-import { PagedArray } from '@micro-fleet/common'
+import { PagedArray, Maybe, IdBase, SingleId } from '@micro-fleet/common'
 
 import { AtomicSession } from './atom/AtomicSession'
 
+
+export enum SortType { ASC = 'asc', DESC = 'desc' }
+
+export enum FilterOperator {
+    CONTAINS = 'con',
+    ENDS_WITH = 'end',
+    STARTS_WITH = 'start',
+    LESS_THAN = 'lt',
+    LESS_OR_EQUAL = 'le',
+    GREATER_THAN = 'gt',
+    GREATER_OR_EQUAL = 'ge',
+    EQUALS = 'eq',
+}
 
 /**
  * Options for repository's operations.
@@ -13,24 +26,25 @@ export interface RepositoryOptions {
      * A transaction to which this operation is restricted.
      */
     atomicSession?: AtomicSession
-
-    /**
-     * Account ID.
-     */
-    accountId?: string
 }
 
 export interface RepositoryExistsOptions extends RepositoryOptions {
     /**
-     * Whether to exclude records marked as soft-deleted.
+     * Whether to include records marked as archived.
      * Default to `false`.
      */
-    excludeDeleted?: boolean
+    // includeArchived?: boolean
 
     /**
-     * Tenant ID.
+     * Whether to include records marked as soft-deleted.
+     * Default to `false`.
      */
-    tenantId?: string
+    // includeDeleted?: boolean
+
+    /**
+     * Tenant Id
+     */
+    tenantId?: string,
 }
 
 export interface RepositoryCountAllOptions extends RepositoryExistsOptions {
@@ -42,22 +56,58 @@ export interface RepositoryCreateOptions extends RepositoryOptions {
 export interface RepositoryDeleteOptions extends RepositoryOptions {
 }
 
-export interface RepositoryFindOptions extends RepositoryOptions {
-    version?: number
+export interface RepositoryFindOptions extends RepositoryExistsOptions {
+    /**
+     * Specifies relation entity to fetch, must follow Objection's
+     * [Object notation](https://vincit.github.io/objection.js/api/types/#relationexpression-object-notation)
+     *
+     * @example
+     *
+     *  ```
+     *  {
+     *    name: true,
+     *    address: true,
+     *  }
+     *  ```
+     *
+     *
+     * @example
+     *
+     *  ```
+     *  {
+     *    status: true,
+     *    staff: {
+     *      name: true,
+     *    },
+     *  }
+     *  ```
+     *
+     */
+    relations?: object,
+
+    /**
+     * Specifies field names to fetch. These fields must not be relation.
+     */
+    fields?: string[],
 }
 
-export interface RepositoryPageOptions extends RepositoryCountAllOptions {
+export interface RepositoryPageOptions extends RepositoryFindOptions {
+    pageIndex: number
+    pageSize: number
     sortBy?: string
-    sortType?: string
+    sortType?: SortType
+    filterBy?: string
+    filterValue?: any
+    filterOperator?: FilterOperator
 }
 
 export interface RepositoryPatchOptions extends RepositoryOptions {
 }
 
-export interface RepositoryRecoverOptions extends RepositoryOptions {
+export interface RepositoryUpdateOptions extends RepositoryOptions {
 }
 
-export interface RepositoryUpdateOptions extends RepositoryOptions {
+export interface RepositoryRecoverOptions extends RepositoryOptions {
 }
 
 export interface RepositorySetMainOptions extends RepositoryOptions {
@@ -70,10 +120,80 @@ export interface RepositoryDelVersionOptions extends RepositoryOptions {
 export interface RepositoryRestrictOptions extends RepositoryOptions {
 }
 
+
+/**
+ * Provides common CRUD operations.
+ */
+export interface IRepository<TModel, TPk extends IdBase = SingleId> {
+
+    /**
+     * Counts all records in a table.
+     */
+    countAll(options?: RepositoryCountAllOptions): Promise<number>
+
+    /**
+     * Inserts one or more `model` to database.
+     *
+     * @param {DTO model} model The model to be inserted.
+     */
+    create(model: TModel, options?: RepositoryCreateOptions): Promise<TModel>
+
+    /**
+     * Permanently deletes one record.
+     *
+     * @param {PK Type} pk The primary key object.
+     */
+    deleteSingle(pk: TPk, options?: RepositoryDeleteOptions): Promise<number>
+
+    /**
+     * Permanently deletes many records.
+     */
+    deleteMany(pkList: TPk[], options?: RepositoryDeleteOptions): Promise<number>
+
+    /**
+     * Checks if a record exists or not.
+     *
+     * @param {DTO model} uniqPartial An object with non-primary unique properties.
+     */
+    exists(uniqPartial: Partial<TModel>, options?: RepositoryExistsOptions): Promise<boolean>
+
+    /**
+     * Selects only one record with `pk`.
+     *
+     * @param {PK Type} pk The primary key object.
+     */
+    findByPk(pk: TPk, options?: RepositoryFindOptions): Promise<Maybe<TModel>>
+
+    /**
+     * Fetches a limited number of records at specified offset.
+     *
+     * @param {RepositoryPageOptions} options Page options.
+     */
+    page(options: RepositoryPageOptions): Promise<PagedArray<TModel>>
+
+    /**
+     * Updates new value for specified properties in `model`.
+     */
+    patch(model: Partial<TModel>, options?: RepositoryPatchOptions): Promise<Maybe<TModel>>
+
+    /**
+     * Replaces a record with `model`.
+     */
+    update(model: TModel, options?: RepositoryUpdateOptions): Promise<Maybe<TModel>>
+}
+
+
+export interface LegacyRepositoryPageOptions extends RepositoryCountAllOptions {
+    sortBy?: string
+    sortType?: SortType
+    excludeDeleted?: boolean
+}
+
 /**
  * Provides common CRUD operations, based on Unit of Work pattern.
+ * @deprecated
  */
-export interface IRepository<TModel, TPk extends PkType = string, TUk = NameUk> {
+export interface ILegacyRepository<TModel, TPk extends PkType = string, TUk = NameUk> {
 
     /**
      * Counts all records in a table.
@@ -126,7 +246,7 @@ export interface IRepository<TModel, TPk extends PkType = string, TUk = NameUk> 
  * Provides common operations to soft-delete and recover models.
  */
 export interface ISoftDelRepository<TModel, TPk extends PkType = string, TUk = NameUk>
-        extends IRepository<TModel, TPk, TUk> {
+        extends ILegacyRepository<TModel, TPk, TUk> {
 
     /**
      * Marks one or many records with `pk` as deleted.

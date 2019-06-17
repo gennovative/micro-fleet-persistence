@@ -1,68 +1,57 @@
 "use strict";
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __metadata = (this && this.__metadata) || function (k, v) {
-    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
-};
-var __param = (this && this.__param) || function (paramIndex, decorator) {
-    return function (target, key) { decorator(target, key, paramIndex); }
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const common_1 = require("@micro-fleet/common");
-const RepositoryBase_1 = require("./RepositoryBase");
-let SoftDelRepositoryBase = class SoftDelRepositoryBase extends RepositoryBase_1.RepositoryBase {
-    constructor(EntityClass, DtoClass, dbConnector, options = {}) {
-        super(EntityClass, DtoClass, dbConnector, options);
-    }
-    /**
-     * @see IRepository.countAll
-     */
-    async countAll(opts = {}) {
-        opts = Object.assign({
-            excludeDeleted: true,
-        }, opts);
-        return this._processor.countAll(opts);
-    }
-    /**
-     * @see ISoftDelRepository.deleteSoft
-     */
-    deleteSoft(pk, opts = {}) {
-        return this._processor.deleteSoft(pk, opts);
-    }
-    /**
-     * @see IRepository.exists
-     */
-    async exists(props, opts = {}) {
-        opts = Object.assign({
-            excludeDeleted: true,
-        }, opts);
-        return this._processor.exists(props, opts);
-    }
-    /**
-     * @see IRepository.page
-     */
-    async page(pageIndex, pageSize, opts = {}) {
-        opts = Object.assign({
-            excludeDeleted: true,
-        }, opts);
-        return this._processor.page(pageIndex, pageSize, opts);
-    }
-    /**
-     * @see ISoftDelRepository.recover
-     */
-    async recover(pk, opts = {}) {
-        return this._processor.recover(pk, opts);
-    }
-};
-SoftDelRepositoryBase = __decorate([
-    common_1.injectable(),
-    __param(0, common_1.unmanaged()), __param(1, common_1.unmanaged()),
-    __param(2, common_1.unmanaged()), __param(3, common_1.unmanaged()),
-    __metadata("design:paramtypes", [Object, Object, Object, Object])
-], SoftDelRepositoryBase);
-exports.SoftDelRepositoryBase = SoftDelRepositoryBase;
+// import { PagedArray, injectable, unmanaged } from '@micro-fleet/common'
+// import * as it from '../interfaces'
+// import { IDatabaseConnector } from '../connector/IDatabaseConnector'
+// import { EntityBase } from './EntityBase'
+// import { BatchProcessor } from './BatchProcessor'
+// import { RepositoryBase, RepositoryBaseOptions } from './RepositoryBase'
+// @injectable()
+// export abstract class SoftDelRepositoryBase<TEntity extends EntityBase, TModel extends object, TPk extends PkType = string, TUk = NameUk>
+//     extends RepositoryBase<TEntity, TModel, TPk, TUk>
+//     implements it.ISoftDelRepository<TModel, TPk, TUk> {
+//     protected _processor: BatchProcessor<TEntity, TModel, TPk, TUk>
+//     constructor( @unmanaged() EntityClass: Newable, @unmanaged() DtoClass: Newable,
+//             @unmanaged() dbConnector: IDatabaseConnector, @unmanaged() options: RepositoryBaseOptions<TEntity, TModel, TPk, TUk> = {}) {
+//         super(EntityClass, DtoClass, dbConnector, options)
+//     }
+//     /**
+//      * @see IRepository.countAll
+//      */
+//     public async countAll(opts: it.RepositoryCountAllOptions = {}): Promise<number> {
+//         opts = Object.assign(<it.RepositoryCountAllOptions>{
+//             excludeDeleted: true,
+//         }, opts)
+//         return this._processor.countAll(opts)
+//     }
+//     /**
+//      * @see ISoftDelRepository.deleteSoft
+//      */
+//     public deleteSoft(pk: TPk | TPk[], opts: it.RepositoryDeleteOptions = {}): Promise<number> {
+//         return this._processor.deleteSoft(pk, opts)
+//     }
+//     /**
+//      * @see IRepository.exists
+//      */
+//     public async exists(props: TUk, opts: it.RepositoryExistsOptions = {}): Promise<boolean> {
+//         opts = Object.assign(<it.RepositoryExistsOptions>{
+//             excludeDeleted: true,
+//         }, opts)
+//         return this._processor.exists(props, opts)
+//     }
+//     /**
+//      * @see IRepository.page
+//      */
+//     public async page(pageIndex: number, pageSize: number, opts: it.RepositoryPageOptions = {}): Promise<PagedArray<TModel>> {
+//         opts = Object.assign(<it.RepositoryPageOptions>{
+//             excludeDeleted: true,
+//         }, opts)
+//         return this._processor.page(pageIndex, pageSize, opts)
+//     }
+//     /**
+//      * @see ISoftDelRepository.recover
+//      */
+//     public async recover(pk: TPk | TPk[], opts: it.RepositoryRecoverOptions = {}): Promise<number> {
+//         return this._processor.recover(pk, opts)
+//     }
+// }
 //# sourceMappingURL=SoftDelRepositoryBase.js.map

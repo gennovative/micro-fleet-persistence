@@ -21,6 +21,41 @@ let DatabaseAddOn = class DatabaseAddOn {
      */
     constructor() {
         this.name = 'DatabaseAddOn';
+        // private _buildConnDetails(): Maybe<DbConnectionDetail> {
+        //     const provider = this._configProvider
+        //     const clientName = provider.get(S.DB_ENGINE) as Maybe<DbClient> // Must belong to `DbClient`
+        //     if (!clientName.isJust) {
+        //         return Maybe.Nothing()
+        //     }
+        //     const cnnDetail: DbConnectionDetail = {
+        //         clientName: clientName.value,
+        //     }
+        //     let setting: Maybe<string>
+        //     // 1st priority: connect to a local file.
+        //     setting = provider.get(S.DB_FILE) as Maybe<string>
+        //     if (setting.isJust) {
+        //         cnnDetail.filePath = setting.value
+        //         return Maybe.Just(cnnDetail)
+        //     }
+        //     // 2nd priority: connect with a connection string.
+        //     setting = provider.get(S.DB_CONN_STRING) as Maybe<string>
+        //     if (setting.isJust) {
+        //         cnnDetail.connectionString = setting.value
+        //         return Maybe.Just(cnnDetail)
+        //     }
+        //     // Last priority: connect with host credentials.
+        //     setting = provider.get(S.DB_ADDRESS) as Maybe<string>
+        //     if (setting.isJust) {
+        //         cnnDetail.host = {
+        //             address: provider.get(S.DB_ADDRESS).value as string,
+        //             user: provider.get(S.DB_USER).value as string,
+        //             password: provider.get(S.DB_PASSWORD).value as string,
+        //             database: provider.get(S.DB_NAME).value as string,
+        //         }
+        //         return Maybe.Just(cnnDetail)
+        //     }
+        //     return Maybe.Nothing()
+        // }
     }
     /**
      * @see IServiceAddOn.init
@@ -45,45 +80,48 @@ let DatabaseAddOn = class DatabaseAddOn {
     }
     _prepareConnection() {
         const connDetail = this._buildConnDetails();
-        if (!connDetail.hasValue) {
+        if (connDetail.isNothing) {
             throw new common_1.CriticalException('No database settings!');
         }
         this._dbConnector.init(connDetail.value);
     }
     _buildConnDetails() {
         const provider = this._configProvider;
-        const clientName = provider.get(S.DB_ENGINE); // Must belong to `DbClient`
-        if (!clientName.hasValue) {
-            return new common_1.Maybe;
-        }
-        const cnnDetail = {
-            clientName: clientName.value,
-        };
-        let setting;
-        // 1st priority: connect to a local file.
-        setting = provider.get(S.DB_FILE);
-        if (setting.hasValue) {
-            cnnDetail.filePath = setting.value;
-            return new common_1.Maybe(cnnDetail);
-        }
-        // 2nd priority: connect with a connection string.
-        setting = provider.get(S.DB_CONN_STRING);
-        if (setting.hasValue) {
-            cnnDetail.connectionString = setting.value;
-            return new common_1.Maybe(cnnDetail);
-        }
-        // Last priority: connect with host credentials.
-        setting = provider.get(S.DB_ADDRESS);
-        if (setting.hasValue) {
-            cnnDetail.host = {
-                address: provider.get(S.DB_ADDRESS).value,
-                user: provider.get(S.DB_USER).value,
-                password: provider.get(S.DB_PASSWORD).value,
-                database: provider.get(S.DB_NAME).value,
+        // const clientName = provider.get(S.DB_ENGINE) as Maybe<DbClient>
+        // if (!clientName.isJust) {
+        //     return Maybe.Nothing()
+        // }
+        return provider.get(S.DB_ENGINE)
+            .chain(clientName => {
+            const cnnDetail = {
+                clientName,
             };
-            return new common_1.Maybe(cnnDetail);
-        }
-        return new common_1.Maybe;
+            let setting;
+            // 1st priority: connect to a local file.
+            setting = provider.get(S.DB_FILE)
+                .map(value => cnnDetail.filePath = value);
+            if (setting.isJust) {
+                return common_1.Maybe.Just(cnnDetail);
+            }
+            // 2nd priority: connect with a connection string.
+            setting = provider.get(S.DB_CONN_STRING)
+                .map(value => cnnDetail.connectionString = value);
+            if (setting.isJust) {
+                return common_1.Maybe.Just(cnnDetail);
+            }
+            // Last priority: connect with host credentials.
+            setting = provider.get(S.DB_ADDRESS);
+            if (setting.isJust) {
+                cnnDetail.host = {
+                    address: provider.get(S.DB_ADDRESS).value,
+                    user: provider.get(S.DB_USER).value,
+                    password: provider.get(S.DB_PASSWORD).value,
+                    database: provider.get(S.DB_NAME).value,
+                };
+                return common_1.Maybe.Just(cnnDetail);
+            }
+            return common_1.Maybe.Nothing();
+        });
     }
 };
 __decorate([

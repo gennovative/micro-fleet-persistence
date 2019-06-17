@@ -178,8 +178,22 @@ declare module '@micro-fleet/persistence/dist/app/atom/AtomicSessionFactory' {
 
 }
 declare module '@micro-fleet/persistence/dist/app/interfaces' {
-	import { PagedArray } from '@micro-fleet/common';
+	import { PagedArray, Maybe, IdBase, SingleId } from '@micro-fleet/common';
 	import { AtomicSession } from '@micro-fleet/persistence/dist/app/atom/AtomicSession';
+	export enum SortType {
+	    ASC = "asc",
+	    DESC = "desc"
+	}
+	export enum FilterOperator {
+	    CONTAINS = "con",
+	    ENDS_WITH = "end",
+	    STARTS_WITH = "start",
+	    LESS_THAN = "lt",
+	    LESS_OR_EQUAL = "le",
+	    GREATER_THAN = "gt",
+	    GREATER_OR_EQUAL = "ge",
+	    EQUALS = "eq"
+	}
 	/**
 	 * Options for repository's operations.
 	 * Note that different operations care about different option properties.
@@ -190,19 +204,18 @@ declare module '@micro-fleet/persistence/dist/app/interfaces' {
 	     * A transaction to which this operation is restricted.
 	     */
 	    atomicSession?: AtomicSession;
-	    /**
-	     * Account ID.
-	     */
-	    accountId?: string;
 	}
 	export interface RepositoryExistsOptions extends RepositoryOptions {
 	    /**
-	     * Whether to exclude records marked as soft-deleted.
+	     * Whether to include records marked as archived.
 	     * Default to `false`.
 	     */
-	    excludeDeleted?: boolean;
 	    /**
-	     * Tenant ID.
+	     * Whether to include records marked as soft-deleted.
+	     * Default to `false`.
+	     */
+	    /**
+	     * Tenant Id
 	     */
 	    tenantId?: string;
 	}
@@ -212,18 +225,53 @@ declare module '@micro-fleet/persistence/dist/app/interfaces' {
 	}
 	export interface RepositoryDeleteOptions extends RepositoryOptions {
 	}
-	export interface RepositoryFindOptions extends RepositoryOptions {
-	    version?: number;
+	export interface RepositoryFindOptions extends RepositoryExistsOptions {
+	    /**
+	     * Specifies relation entity to fetch, must follow Objection's
+	     * [Object notation](https://vincit.github.io/objection.js/api/types/#relationexpression-object-notation)
+	     *
+	     * @example
+	     *
+	     *  ```
+	     *  {
+	     *    name: true,
+	     *    address: true,
+	     *  }
+	     *  ```
+	     *
+	     *
+	     * @example
+	     *
+	     *  ```
+	     *  {
+	     *    status: true,
+	     *    staff: {
+	     *      name: true,
+	     *    },
+	     *  }
+	     *  ```
+	     *
+	     */
+	    relations?: object;
+	    /**
+	     * Specifies field names to fetch. These fields must not be relation.
+	     */
+	    fields?: string[];
 	}
-	export interface RepositoryPageOptions extends RepositoryCountAllOptions {
+	export interface RepositoryPageOptions extends RepositoryFindOptions {
+	    pageIndex: number;
+	    pageSize: number;
 	    sortBy?: string;
-	    sortType?: string;
+	    sortType?: SortType;
+	    filterBy?: string;
+	    filterValue?: any;
+	    filterOperator?: FilterOperator;
 	}
 	export interface RepositoryPatchOptions extends RepositoryOptions {
 	}
-	export interface RepositoryRecoverOptions extends RepositoryOptions {
-	}
 	export interface RepositoryUpdateOptions extends RepositoryOptions {
+	}
+	export interface RepositoryRecoverOptions extends RepositoryOptions {
 	}
 	export interface RepositorySetMainOptions extends RepositoryOptions {
 	}
@@ -233,9 +281,66 @@ declare module '@micro-fleet/persistence/dist/app/interfaces' {
 	export interface RepositoryRestrictOptions extends RepositoryOptions {
 	}
 	/**
-	 * Provides common CRUD operations, based on Unit of Work pattern.
+	 * Provides common CRUD operations.
 	 */
-	export interface IRepository<TModel, TPk extends PkType = string, TUk = NameUk> {
+	export interface IRepository<TModel, TPk extends IdBase = SingleId> {
+	    /**
+	     * Counts all records in a table.
+	     */
+	    countAll(options?: RepositoryCountAllOptions): Promise<number>;
+	    /**
+	     * Inserts one or more `model` to database.
+	     *
+	     * @param {DTO model} model The model to be inserted.
+	     */
+	    create(model: TModel, options?: RepositoryCreateOptions): Promise<TModel>;
+	    /**
+	     * Permanently deletes one record.
+	     *
+	     * @param {PK Type} pk The primary key object.
+	     */
+	    deleteSingle(pk: TPk, options?: RepositoryDeleteOptions): Promise<number>;
+	    /**
+	     * Permanently deletes many records.
+	     */
+	    deleteMany(pkList: TPk[], options?: RepositoryDeleteOptions): Promise<number>;
+	    /**
+	     * Checks if a record exists or not.
+	     *
+	     * @param {DTO model} uniqPartial An object with non-primary unique properties.
+	     */
+	    exists(uniqPartial: Partial<TModel>, options?: RepositoryExistsOptions): Promise<boolean>;
+	    /**
+	     * Selects only one record with `pk`.
+	     *
+	     * @param {PK Type} pk The primary key object.
+	     */
+	    findByPk(pk: TPk, options?: RepositoryFindOptions): Promise<Maybe<TModel>>;
+	    /**
+	     * Fetches a limited number of records at specified offset.
+	     *
+	     * @param {RepositoryPageOptions} options Page options.
+	     */
+	    page(options: RepositoryPageOptions): Promise<PagedArray<TModel>>;
+	    /**
+	     * Updates new value for specified properties in `model`.
+	     */
+	    patch(model: Partial<TModel>, options?: RepositoryPatchOptions): Promise<Maybe<TModel>>;
+	    /**
+	     * Replaces a record with `model`.
+	     */
+	    update(model: TModel, options?: RepositoryUpdateOptions): Promise<Maybe<TModel>>;
+	}
+	export interface LegacyRepositoryPageOptions extends RepositoryCountAllOptions {
+	    sortBy?: string;
+	    sortType?: SortType;
+	    excludeDeleted?: boolean;
+	}
+	/**
+	 * Provides common CRUD operations, based on Unit of Work pattern.
+	 * @deprecated
+	 */
+	export interface ILegacyRepository<TModel, TPk extends PkType = string, TUk = NameUk> {
 	    /**
 	     * Counts all records in a table.
 	     */
@@ -278,7 +383,7 @@ declare module '@micro-fleet/persistence/dist/app/interfaces' {
 	/**
 	 * Provides common operations to soft-delete and recover models.
 	 */
-	export interface ISoftDelRepository<TModel, TPk extends PkType = string, TUk = NameUk> extends IRepository<TModel, TPk, TUk> {
+	export interface ISoftDelRepository<TModel, TPk extends PkType = string, TUk = NameUk> extends ILegacyRepository<TModel, TPk, TUk> {
 	    /**
 	     * Marks one or many records with `pk` as deleted.
 	     * @param {PK Type} pk The primary key object.
@@ -322,357 +427,82 @@ declare module '@micro-fleet/persistence/dist/app/interfaces' {
 	}
 
 }
-declare module '@micro-fleet/persistence/dist/app/bases/IQueryBuilder' {
-	import { QueryBuilder, Model } from 'objection';
+declare module '@micro-fleet/persistence/dist/app/bases/PgCrudRepositoryBase' {
+	import { QueryBuilder } from 'objection';
+	import { PagedArray, Maybe, SingleId, IdBase } from '@micro-fleet/common';
+	import { EntityBase, IDatabaseConnector, QueryCallback, AtomicSession, QueryCallbackReturn } from '@micro-fleet/persistence';
 	import * as it from '@micro-fleet/persistence/dist/app/interfaces';
-	export interface IQueryBuilder<TEntity extends Model, TModel, TPk extends PkType, TUk = NameUk> {
-	    buildCountAll(prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryCountAllOptions): QueryBuilder<TEntity>;
-	    buildDeleteHard(pk: TPk, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>): QueryBuilder<TEntity>;
-	    buildExists(uniqVals: any, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryExistsOptions): QueryBuilder<TEntity>;
-	    buildFind(pk: TPk, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryFindOptions): QueryBuilder<TEntity>;
-	    buildPage(pageIndex: number, pageSize: number, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryPageOptions): QueryBuilder<TEntity>;
-	    buildPatch(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryPatchOptions): QueryBuilder<TEntity>;
-	    buildRecoverOpts(pk: TPk, prevOpts: it.RepositoryRecoverOptions, rawOpts: it.RepositoryRecoverOptions): it.RepositoryExistsOptions;
-	    buildUpdate(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryPatchOptions): QueryBuilder<TEntity>;
-	}
-
-}
-declare module '@micro-fleet/persistence/dist/app/bases/MonoQueryBuilder' {
-	import { Model, QueryBuilder } from 'objection';
-	import * as it from '@micro-fleet/persistence/dist/app/interfaces';
-	import { IQueryBuilder } from '@micro-fleet/persistence/dist/app/bases/IQueryBuilder';
-	export class MonoQueryBuilder<TEntity extends Model, TModel, TUk = NameUk> implements IQueryBuilder<TEntity, TModel, string, TUk> {
-	    	    	    constructor(_EntityClass: Newable);
-	    buildCountAll(prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryCountAllOptions): QueryBuilder<TEntity>;
-	    buildDeleteHard(pk: string, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>): QueryBuilder<TEntity>;
-	    buildExists(uniqVals: any[], prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryExistsOptions): QueryBuilder<TEntity>;
-	    buildFind(pk: string, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryFindOptions): QueryBuilder<TEntity>;
-	    buildPage(pageIndex: number, pageSize: number, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryPageOptions): QueryBuilder<TEntity>;
-	    buildPatch(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryPatchOptions): QueryBuilder<TEntity>;
-	    buildRecoverOpts(pk: string, prevOpts: it.RepositoryRecoverOptions, rawOpts: it.RepositoryRecoverOptions): it.RepositoryExistsOptions;
-	    buildUpdate(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryPatchOptions): QueryBuilder<TEntity>;
-	}
-
-}
-declare module '@micro-fleet/persistence/dist/app/bases/TenantQueryBuilder' {
-	import { QueryBuilder, Model } from 'objection';
-	import * as it from '@micro-fleet/persistence/dist/app/interfaces';
-	import { IQueryBuilder } from '@micro-fleet/persistence/dist/app/bases/IQueryBuilder';
-	export class TenantQueryBuilder<TEntity extends Model, TModel, TUk = NameUk> implements IQueryBuilder<TEntity, TModel, TenantPk, TUk> {
-	    	    	    constructor(_EntityClass: Newable);
-	    buildCountAll(prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryCountAllOptions): QueryBuilder<TEntity>;
-	    buildDeleteHard(pk: TenantPk, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>): QueryBuilder<TEntity>;
-	    buildExists(props: TUk, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryExistsOptions): QueryBuilder<TEntity>;
-	    buildFind(pk: TenantPk, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryFindOptions): QueryBuilder<TEntity>;
-	    buildPage(pageIndex: number, pageSize: number, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryPageOptions): QueryBuilder<TEntity>;
-	    buildPatch(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryPatchOptions): QueryBuilder<TEntity>;
-	    buildRecoverOpts(pk: TenantPk, prevOpts: it.RepositoryRecoverOptions, rawOpts: it.RepositoryRecoverOptions): it.RepositoryExistsOptions;
-	    buildUpdate(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryPatchOptions): QueryBuilder<TEntity>;
-	    	}
-
-}
-declare module '@micro-fleet/persistence/dist/app/bases/MonoProcessor' {
-	import { Model } from 'objection';
-	import * as moment from 'moment';
-	import { PagedArray } from '@micro-fleet/common';
-	import * as it from '@micro-fleet/persistence/dist/app/interfaces';
-	import { AtomicSession } from '@micro-fleet/persistence/dist/app/atom/AtomicSession';
-	import { IDatabaseConnector, QueryCallback } from '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector';
-	import { IQueryBuilder } from '@micro-fleet/persistence/dist/app/bases/IQueryBuilder';
-	export interface ProcessorOptions {
-	    isMultiTenancy?: boolean;
-	    isVersionControlled?: boolean;
-	    /**
-	     * Property names that triggers new version creation.
-	     */
-	    triggerProps?: string[];
-	}
-	export class MonoProcessor<TEntity extends Model, TModel extends object, TPk extends PkType = string, TUk = NameUk> {
+	export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel extends object, TPk extends IdBase = SingleId> implements it.IRepository<TModel, TPk> {
 	    protected _EntityClass: Newable;
-	    protected _DomainModelClass: Newable;
+	    protected _DomainClass: Newable;
 	    protected _dbConnector: IDatabaseConnector;
-	    protected _options: ProcessorOptions;
 	    /**
-	     * Gets array of non-primary unique property(ies).
+	     * EntityClass' primary key properties.
+	     * Eg: ['id', 'tenantId']
 	     */
-	    readonly ukCol: string[];
-	    protected _queryBuilders: IQueryBuilder<TEntity, TModel, PkType, TUk>[];
-	    constructor(_EntityClass: Newable, _DomainModelClass: Newable, _dbConnector: IDatabaseConnector, _options?: ProcessorOptions);
-	    /**
-	     * Gets current date time in UTC.
-	     */
-	    readonly utcNow: moment.Moment;
+	    	    constructor(_EntityClass: Newable, _DomainClass: Newable, _dbConnector: IDatabaseConnector);
 	    /**
 	     * @see IRepository.countAll
 	     */
 	    countAll(opts?: it.RepositoryCountAllOptions): Promise<number>;
+	    protected _buildCountAllQuery(query: QueryBuilder<TEntity>, opts: it.RepositoryCountAllOptions): QueryCallbackReturn;
 	    /**
 	     * @see IRepository.create
 	     */
-	    create(model: TModel, opts?: it.RepositoryCreateOptions): Promise<TModel | TModel[]>;
+	    create(model: TModel, opts?: it.RepositoryCreateOptions): Promise<TModel>;
+	    protected _buildCreateQuery(query: QueryBuilder<TEntity>, model: TModel, entity: TEntity, opts: it.RepositoryCreateOptions): QueryCallbackReturn;
 	    /**
-	     * @see ISoftDelRepository.deleteSoft
+	     * @see IRepository.deleteSingle
 	     */
-	    deleteSoft(pk: TPk, opts?: it.RepositoryDeleteOptions): Promise<number>;
+	    deleteSingle(pk: TPk, opts?: it.RepositoryDeleteOptions): Promise<number>;
+	    protected _buildDeleteSingleQuery(query: QueryBuilder<TEntity>, pk: TPk, opts: it.RepositoryDeleteOptions): QueryCallbackReturn;
 	    /**
-	     * @see IRepository.deleteHard
+	     * @see IRepository.deleteMany
 	     */
-	    deleteHard(pk: TPk, opts?: it.RepositoryDeleteOptions): Promise<number>;
+	    deleteMany(pkList: TPk[], opts?: it.RepositoryDeleteOptions): Promise<number>;
+	    protected _buildDeleteManyQuery(query: QueryBuilder<TEntity>, pkList: TPk[], opts: it.RepositoryDeleteOptions): QueryCallbackReturn;
 	    /**
 	     * @see IRepository.exists
 	     */
-	    exists(props: TUk, opts?: it.RepositoryExistsOptions): Promise<boolean>;
+	    exists(uniqPartial: Partial<TModel>, opts?: it.RepositoryExistsOptions): Promise<boolean>;
+	    protected _buildExistsQuery(query: QueryBuilder<TEntity>, uniqPartial: Partial<TModel>, opts: it.RepositoryExistsOptions): QueryCallbackReturn;
 	    /**
 	     * @see IRepository.findByPk
 	     */
-	    findByPk(pk: TPk, opts?: it.RepositoryFindOptions): Promise<TModel>;
+	    findByPk(pk: TPk, opts?: it.RepositoryFindOptions): Promise<Maybe<TModel>>;
+	    protected _buildFindByPkQuery(query: QueryBuilder<TEntity>, pk: TPk, opts: it.RepositoryFindOptions): QueryCallbackReturn;
 	    /**
 	     * @see IRepository.page
 	     */
-	    page(pageIndex: number, pageSize: number, opts?: it.RepositoryPageOptions): Promise<PagedArray<TModel>>;
+	    page(opts: it.RepositoryPageOptions): Promise<PagedArray<TModel>>;
+	    protected _buildPageQuery(query: QueryBuilder<TEntity>, opts: it.RepositoryPageOptions): QueryCallbackReturn;
 	    /**
 	     * @see IRepository.patch
 	     */
-	    patch(model: Partial<TModel>, opts?: it.RepositoryPatchOptions): Promise<Partial<TModel> | Partial<TModel>[]>;
-	    /**
-	     * @see ISoftDelRepository.recover
-	     */
-	    recover(pk: TPk, opts?: it.RepositoryRecoverOptions): Promise<number>;
+	    patch(model: Partial<TModel>, opts?: it.RepositoryPatchOptions): Promise<Maybe<TModel>>;
+	    protected _buildPatchQuery(query: QueryBuilder<TEntity>, model: Partial<TModel>, entity: TEntity, opts: it.RepositoryPatchOptions): QueryCallbackReturn;
 	    /**
 	     * @see IRepository.update
 	     */
-	    update(model: TModel, opts?: it.RepositoryUpdateOptions): Promise<TModel>;
+	    update(model: TModel, opts?: it.RepositoryUpdateOptions): Promise<Maybe<TModel>>;
+	    protected _buildUpdateQuery(query: QueryBuilder<TEntity>, model: Partial<TModel>, entity: TEntity, opts: it.RepositoryUpdateOptions): QueryCallbackReturn;
+	    protected executeQuery(callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any>;
 	    /**
-	     * Executing an query
+	     * Translates from a DTO model to an entity model.
 	     */
-	    executeQuery(callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any>;
+	    protected toEntity(dto: TModel | Partial<TModel>, isPartial: boolean): TEntity;
 	    /**
-	     * Translates from DTO model(s) to entity model(s).
+	     * Translates from DTO models to entity models.
 	     */
-	    toEntity(dto: TModel | TModel[] | Partial<TModel>, isPartial: boolean): TEntity | TEntity[];
+	    protected toEntityMany(domainModel: TModel[] | Partial<TModel>[], isPartial: boolean): TEntity[];
 	    /**
-	     * Translates from entity model(s) to domain model(s).
+	     * Translates from an entity model to a domain model.
 	     */
-	    toDomainModel(entity: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel | TModel[];
+	    protected toDomainModel(entity: TEntity | Partial<TEntity>, isPartial: boolean): TModel;
 	    /**
-	     * Maps from an array of columns to array of values.
-	     * @param pk Object to get values from
-	     * @param cols Array of column names
+	     * Translates from entity models to domain models.
 	     */
-	    toArr(pk: TPk | TEntity | Partial<TEntity>, cols: string[]): any[];
-	    /**
-	     * @see IDatabaseConnector.query
-	     */
-	    protected _prepare(callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any>;
-	    protected _buildDeleteState(pk: TPk, isDel: boolean): any;
-	    protected _setDeleteState(pk: TPk, isDel: boolean, opts?: it.RepositoryDeleteOptions): Promise<number>;
-	}
-
-}
-declare module '@micro-fleet/persistence/dist/app/bases/BatchProcessor' {
-	import moment from 'moment';
-	import { PagedArray } from '@micro-fleet/common';
-	import * as it from '@micro-fleet/persistence/dist/app/interfaces';
-	import { AtomicSession } from '@micro-fleet/persistence/dist/app/atom/AtomicSession';
-	import { IDatabaseConnector, QueryCallback } from '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector';
-	import { EntityBase } from '@micro-fleet/persistence/dist/app/bases/EntityBase';
-	import { MonoProcessor } from '@micro-fleet/persistence/dist/app/bases/MonoProcessor';
-	export class BatchProcessor<TEntity extends EntityBase, TModel extends object, TPk extends PkType = string, TUk = NameUk> {
-	    protected _mono: MonoProcessor<TEntity, TModel, TPk, TUk>;
-	    /**
-	     * Gets array of non-primary unique property(ies).
-	     */
-	    ukCol: string[];
-	    	    constructor(_mono: MonoProcessor<TEntity, TModel, TPk, TUk>, dbConnector: IDatabaseConnector);
-	    /**
-	     * Gets current date time in UTC.
-	     */
-	    readonly utcNow: moment.Moment;
-	    /**
-	     * @see IRepository.countAll
-	     */
-	    countAll(opts?: it.RepositoryCountAllOptions): Promise<number>;
-	    /**
-	     * @see IRepository.create
-	     */
-	    create(model: TModel | TModel[], opts?: it.RepositoryCreateOptions): Promise<TModel | TModel[]>;
-	    /**
-	     * @see ISoftDelRepository.deleteSoft
-	     */
-	    deleteSoft(pk: TPk | TPk[], opts?: it.RepositoryDeleteOptions): Promise<number>;
-	    /**
-	     * @see IRepository.deleteHard
-	     */
-	    deleteHard(pk: TPk | TPk[], opts?: it.RepositoryDeleteOptions): Promise<number>;
-	    /**
-	     * @see IRepository.exists
-	     */
-	    exists(props: TUk, opts?: it.RepositoryExistsOptions): Promise<boolean>;
-	    /**
-	     * @see IRepository.findByPk
-	     */
-	    findByPk(pk: TPk, opts?: it.RepositoryFindOptions): Promise<TModel>;
-	    /**
-	     * @see IRepository.page
-	     */
-	    page(pageIndex: number, pageSize: number, opts?: it.RepositoryPageOptions): Promise<PagedArray<TModel>>;
-	    /**
-	     * @see IRepository.patch
-	     */
-	    patch(model: Partial<TModel> | Partial<TModel>[], opts?: it.RepositoryPatchOptions): Promise<Partial<TModel> | Partial<TModel>[]>;
-	    /**
-	     * @see ISoftDelRepository.recover
-	     */
-	    recover(pk: TPk | TPk[], opts?: it.RepositoryRecoverOptions): Promise<number>;
-	    /**
-	     * @see IRepository.update
-	     */
-	    update(model: TModel | TModel[], opts?: it.RepositoryUpdateOptions): Promise<TModel | TModel[]>;
-	    /**
-	     * @see MonoProcessor.executeQuery
-	     */
-	    executeQuery(callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any>;
-	    /**
-	     * Executes batch operation in transaction.
-	     */
-	    execBatch(inputs: any[], func: (m: any, opts?: it.RepositoryOptions) => any, opts?: it.RepositoryOptions): Promise<any>;
-	    /**
-	     * @see MonoProcessor.toEntity
-	     */
-	    toEntity(dto: TModel | TModel[] | Partial<TModel>, isPartial: boolean): TEntity | TEntity[];
-	    /**
-	     * @see MonoProcessor.toDomainModel
-	     */
-	    toDomainModel(entity: TEntity | TEntity[] | Partial<TEntity>, isPartial: boolean): TModel | TModel[];
-	    /**
-	     * Maps from an array of columns to array of values.
-	     * @param pk Object to get values from
-	     * @param cols Array of column names
-	     */
-	    toArr(pk: TPk | TEntity | Partial<TEntity>, cols: string[]): any[];
-	}
-
-}
-declare module '@micro-fleet/persistence/dist/app/bases/VersionQueryBuilder' {
-	import { QueryBuilder, Model } from 'objection';
-	import * as it from '@micro-fleet/persistence/dist/app/interfaces';
-	import { IQueryBuilder } from '@micro-fleet/persistence/dist/app/bases/IQueryBuilder';
-	export class VersionQueryBuilder<TEntity extends Model, TModel, TPk extends PkType, TUk = NameUk> implements IQueryBuilder<TEntity, TModel, TPk, TUk> {
-	    	    	    constructor(_EntityClass: Newable);
-	    buildCountAll(prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryCountAllOptions): QueryBuilder<TEntity>;
-	    buildDeleteHard(pk: TPk, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>): QueryBuilder<TEntity>;
-	    buildExists(props: TUk, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryExistsOptions): QueryBuilder<TEntity>;
-	    buildFind(pk: TPk, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryFindOptions): QueryBuilder<TEntity>;
-	    buildPage(pageIndex: number, pageSize: number, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryPageOptions): QueryBuilder<TEntity>;
-	    buildPatch(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryPatchOptions): QueryBuilder<TEntity>;
-	    buildRecoverOpts(pk: TPk, prevOpts: it.RepositoryRecoverOptions, rawOpts: it.RepositoryRecoverOptions): it.RepositoryExistsOptions;
-	    buildUpdate(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts: it.RepositoryPatchOptions): QueryBuilder<TEntity>;
-	    	}
-
-}
-declare module '@micro-fleet/persistence/dist/app/bases/VersionControlledProcessor' {
-	import * as it from '@micro-fleet/persistence/dist/app/interfaces';
-	import { IDatabaseConnector } from '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector';
-	import { EntityBase } from '@micro-fleet/persistence/dist/app/bases/EntityBase';
-	import { MonoProcessor, ProcessorOptions } from '@micro-fleet/persistence/dist/app/bases/MonoProcessor';
-	export class VersionControlledProcessor<TEntity extends EntityBase, TModel extends object, TPk extends PkType, TUk = NameUk> extends MonoProcessor<TEntity, TModel, TPk, TUk> {
-	    	    	    constructor(EntityClass: Newable, DtoClass: Newable, dbConnector: IDatabaseConnector, options?: ProcessorOptions);
-	    create(model: TModel, opts?: it.RepositoryCreateOptions): Promise<TModel | TModel[]>;
-	    patch(model: Partial<TModel>, opts?: it.RepositoryPatchOptions): Promise<Partial<TModel> | Partial<TModel>[]>;
-	    update(model: TModel, opts?: it.RepositoryUpdateOptions): Promise<TModel & TModel[]>;
-	    	    	}
-
-}
-declare module '@micro-fleet/persistence/dist/app/bases/RepositoryBase' {
-	import { PagedArray } from '@micro-fleet/common';
-	import * as it from '@micro-fleet/persistence/dist/app/interfaces';
-	import { IDatabaseConnector } from '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector';
-	import { EntityBase } from '@micro-fleet/persistence/dist/app/bases/EntityBase';
-	import { MonoProcessor, ProcessorOptions } from '@micro-fleet/persistence/dist/app/bases/MonoProcessor';
-	import { BatchProcessor } from '@micro-fleet/persistence/dist/app/bases/BatchProcessor';
-	import { VersionControlledProcessor } from '@micro-fleet/persistence/dist/app/bases/VersionControlledProcessor';
-	export interface RepositoryBaseOptions<TEntity extends EntityBase, TModel extends object, TPk extends PkType = string, TUk = NameUk> extends ProcessorOptions {
-	    /**
-	     * Used by default version-controlled processor and default batch processor.
-	     */
-	    monoProcessor?: MonoProcessor<TEntity, TModel, TPk, TUk>;
-	    /**
-	     * Version-controlled processor
-	     */
-	    versionProcessor?: VersionControlledProcessor<TEntity, TModel, TPk, TUk>;
-	    /**
-	     * Providing this will ignore `monoProcessor` and `versionProcessor`.
-	     */
-	    batchProcessor?: BatchProcessor<TEntity, TModel, TPk, TUk>;
-	}
-	export abstract class RepositoryBase<TEntity extends EntityBase, TModel extends object, TPk extends PkType = string, TUk = NameUk> implements it.IRepository<TModel, TPk, TUk> {
-	    protected _processor: BatchProcessor<TEntity, TModel, TPk, TUk>;
-	    constructor(EntityClass: Newable, DtoClass: Newable, dbConnector: IDatabaseConnector, options?: RepositoryBaseOptions<TEntity, TModel, TPk, TUk>);
-	    /**
-	     * @see IRepository.countAll
-	     */
-	    countAll(opts?: it.RepositoryCountAllOptions): Promise<number>;
-	    /**
-	     * @see IRepository.create
-	     */
-	    create(model: TModel | TModel[], opts?: it.RepositoryCreateOptions): Promise<TModel | TModel[]>;
-	    /**
-	     * @see IRepository.deleteHard
-	     */
-	    deleteHard(pk: TPk | TPk[], opts?: it.RepositoryDeleteOptions): Promise<number>;
-	    /**
-	     * @see IRepository.exists
-	     */
-	    exists(props: TUk, opts?: it.RepositoryExistsOptions): Promise<boolean>;
-	    /**
-	     * @see IRepository.findByPk
-	     */
-	    findByPk(pk: TPk, opts?: it.RepositoryFindOptions): Promise<TModel>;
-	    /**
-	     * @see IRepository.page
-	     */
-	    page(pageIndex: number, pageSize: number, opts?: it.RepositoryPageOptions): Promise<PagedArray<TModel>>;
-	    /**
-	     * @see IRepository.patch
-	     */
-	    patch(model: Partial<TModel> | Partial<TModel>[], opts?: it.RepositoryPatchOptions): Promise<Partial<TModel> | Partial<TModel>[]>;
-	    /**
-	     * @see IRepository.update
-	     */
-	    update(model: TModel | TModel[], opts?: it.RepositoryUpdateOptions): Promise<TModel | TModel[]>;
-	}
-
-}
-declare module '@micro-fleet/persistence/dist/app/bases/SoftDelRepositoryBase' {
-	import { PagedArray } from '@micro-fleet/common';
-	import * as it from '@micro-fleet/persistence/dist/app/interfaces';
-	import { IDatabaseConnector } from '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector';
-	import { EntityBase } from '@micro-fleet/persistence/dist/app/bases/EntityBase';
-	import { BatchProcessor } from '@micro-fleet/persistence/dist/app/bases/BatchProcessor';
-	import { RepositoryBase, RepositoryBaseOptions } from '@micro-fleet/persistence/dist/app/bases/RepositoryBase';
-	export abstract class SoftDelRepositoryBase<TEntity extends EntityBase, TModel extends object, TPk extends PkType = string, TUk = NameUk> extends RepositoryBase<TEntity, TModel, TPk, TUk> implements it.ISoftDelRepository<TModel, TPk, TUk> {
-	    protected _processor: BatchProcessor<TEntity, TModel, TPk, TUk>;
-	    constructor(EntityClass: Newable, DtoClass: Newable, dbConnector: IDatabaseConnector, options?: RepositoryBaseOptions<TEntity, TModel, TPk, TUk>);
-	    /**
-	     * @see IRepository.countAll
-	     */
-	    countAll(opts?: it.RepositoryCountAllOptions): Promise<number>;
-	    /**
-	     * @see ISoftDelRepository.deleteSoft
-	     */
-	    deleteSoft(pk: TPk | TPk[], opts?: it.RepositoryDeleteOptions): Promise<number>;
-	    /**
-	     * @see IRepository.exists
-	     */
-	    exists(props: TUk, opts?: it.RepositoryExistsOptions): Promise<boolean>;
-	    /**
-	     * @see IRepository.page
-	     */
-	    page(pageIndex: number, pageSize: number, opts?: it.RepositoryPageOptions): Promise<PagedArray<TModel>>;
-	    /**
-	     * @see ISoftDelRepository.recover
-	     */
-	    recover(pk: TPk | TPk[], opts?: it.RepositoryRecoverOptions): Promise<number>;
+	    protected toDomainModelMany(entity: TEntity[] | Partial<TEntity>[], isPartial: boolean): TModel[];
 	}
 
 }
@@ -714,15 +544,8 @@ declare module '@micro-fleet/persistence' {
 	export * from '@micro-fleet/persistence/dist/app/atom/AtomicSessionFactory';
 	export * from '@micro-fleet/persistence/dist/app/atom/AtomicSessionFlow';
 	export * from '@micro-fleet/persistence/dist/app/atom/AtomicSession';
-	export * from '@micro-fleet/persistence/dist/app/bases/BatchProcessor';
 	export * from '@micro-fleet/persistence/dist/app/bases/EntityBase';
-	export * from '@micro-fleet/persistence/dist/app/bases/IQueryBuilder';
-	export * from '@micro-fleet/persistence/dist/app/bases/MonoProcessor';
-	export * from '@micro-fleet/persistence/dist/app/bases/MonoQueryBuilder';
-	export * from '@micro-fleet/persistence/dist/app/bases/RepositoryBase';
-	export * from '@micro-fleet/persistence/dist/app/bases/SoftDelRepositoryBase';
-	export * from '@micro-fleet/persistence/dist/app/bases/TenantQueryBuilder';
-	export * from '@micro-fleet/persistence/dist/app/bases/VersionControlledProcessor';
+	export * from '@micro-fleet/persistence/dist/app/bases/PgCrudRepositoryBase';
 	export * from '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector';
 	export * from '@micro-fleet/persistence/dist/app/connector/KnexDatabaseConnector';
 	export * from '@micro-fleet/persistence/dist/app/DatabaseAddOn';
@@ -733,5 +556,20 @@ declare module '@micro-fleet/persistence' {
 }
 declare module '@micro-fleet/persistence/dist/app/pg-type-parsers' {
 	export {};
+
+}
+declare module '@micro-fleet/persistence/dist/app/bases/IQueryBuilder' {
+	import { QueryBuilder, Model } from 'objection';
+	import * as it from '@micro-fleet/persistence/dist/app/interfaces';
+	export interface IQueryBuilder<TEntity extends Model, TModel, TPk extends PkType, TUk = NameUk> {
+	    buildCountAll(prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryCountAllOptions): QueryBuilder<TEntity>;
+	    buildDeleteHard(pk: TPk, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>): QueryBuilder<TEntity>;
+	    buildExists(uniqVals: any, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryExistsOptions): QueryBuilder<TEntity>;
+	    buildFind(pk: TPk, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryFindOptions): QueryBuilder<TEntity>;
+	    buildPage(pageIndex: number, pageSize: number, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.LegacyRepositoryPageOptions): QueryBuilder<TEntity>;
+	    buildPatch(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryPatchOptions): QueryBuilder<TEntity>;
+	    buildRecoverOpts(pk: TPk, prevOpts: it.RepositoryRecoverOptions, rawOpts: it.RepositoryRecoverOptions): it.RepositoryExistsOptions;
+	    buildUpdate(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryPatchOptions): QueryBuilder<TEntity>;
+	}
 
 }

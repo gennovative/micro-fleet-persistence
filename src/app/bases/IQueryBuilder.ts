@@ -17,7 +17,7 @@ export interface IQueryBuilder<TEntity extends Model, TModel, TPk extends PkType
         opts?: it.RepositoryFindOptions): QueryBuilder<TEntity>
 
     buildPage(pageIndex: number, pageSize: number, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>,
-        opts?: it.RepositoryPageOptions): QueryBuilder<TEntity>
+        opts?: it.LegacyRepositoryPageOptions): QueryBuilder<TEntity>
 
     buildPatch(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>,
         opts?: it.RepositoryPatchOptions): QueryBuilder<TEntity>

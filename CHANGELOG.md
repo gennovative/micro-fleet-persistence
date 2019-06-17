@@ -1,7 +1,7 @@
 ## VERSIONS
 
-### 2.2.0 (Coming soon)
-- **RepositoryBase** will supports version controlling.
+### 2.2.0
+- [Breaking change] Replaced `RepositoryBase` with `PgCrudRepositoryBase`.
 
 ### 2.1.2
 - Removed all references to class `DtoModelBase`.

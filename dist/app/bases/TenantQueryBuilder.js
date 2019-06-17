@@ -1,38 +1,48 @@
 "use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-class TenantQueryBuilder {
-    constructor(_EntityClass) {
-        this._EntityClass = _EntityClass;
-        this._pkProps = this._EntityClass['idProp'];
-    }
-    buildCountAll(prevQuery, rawQuery, opts = {}) {
-        return prevQuery.where('tenant_id', opts.tenantId);
-    }
-    buildDeleteHard(pk, prevQuery, rawQuery) {
-        return rawQuery.deleteById(this._toArr(pk, this._pkProps));
-    }
-    buildExists(props, prevQuery, rawQuery, opts = {}) {
-        return prevQuery.where('tenant_id', opts.tenantId);
-    }
-    buildFind(pk, prevQuery, rawQuery, opts = {}) {
-        return rawQuery.findById(this._toArr(pk, this._pkProps));
-    }
-    buildPage(pageIndex, pageSize, prevQuery, rawQuery, opts = {}) {
-        return prevQuery.where('tenant_id', opts.tenantId);
-    }
-    buildPatch(entity, prevQuery, rawQuery, opts = {}) {
-        return rawQuery.patch(entity).whereComposite(this._EntityClass['idColumn'], '=', this._toArr(entity, this._pkProps));
-    }
-    buildRecoverOpts(pk, prevOpts, rawOpts) {
-        prevOpts['tenantId'] = pk.tenantId;
-        return prevOpts;
-    }
-    buildUpdate(entity, prevQuery, rawQuery, opts = {}) {
-        return rawQuery.update(entity).whereComposite(this._EntityClass['idColumn'], '=', this._toArr(entity, this._pkProps));
-    }
-    _toArr(pk, arr) {
-        return arr.map(c => pk[c]);
-    }
-}
-exports.TenantQueryBuilder = TenantQueryBuilder;
+// import { QueryBuilder, Model } from 'objection'
+// import * as it from '../interfaces'
+// import { IQueryBuilder } from './IQueryBuilder'
+// export class TenantQueryBuilder<TEntity extends Model, TModel, TUk = NameUk>
+//     implements IQueryBuilder<TEntity, TModel, TenantPk, TUk> {
+//     private _pkProps: string[]
+//     constructor(private _EntityClass: Newable) {
+//         this._pkProps = this._EntityClass['idProp']
+//     }
+//     public buildCountAll(prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>,
+//             opts: it.RepositoryCountAllOptions = {}): QueryBuilder<TEntity> {
+//         return prevQuery.where('tenant_id', opts.tenantId as any)
+//     }
+//     public buildDeleteHard(pk: TenantPk, prevQuery: QueryBuilder<TEntity>,
+//             rawQuery: QueryBuilder<TEntity>): QueryBuilder<TEntity> {
+//         return rawQuery.deleteById(this._toArr(pk, this._pkProps)) as any as QueryBuilder<TEntity>
+//     }
+//     public buildExists(props: TUk, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>,
+//             opts: it.RepositoryExistsOptions = {}): QueryBuilder<TEntity> {
+//         return prevQuery.where('tenant_id', opts.tenantId as any)
+//     }
+//     public buildFind(pk: TenantPk, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>,
+//             opts: it.RepositoryFindOptions = {}): QueryBuilder<TEntity> {
+//         return rawQuery.findById(this._toArr(pk, this._pkProps))
+//     }
+//     public buildPage(pageIndex: number, pageSize: number, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>,
+//             opts: it.RepositoryPageOptions = {}): QueryBuilder<TEntity> {
+//         return prevQuery.where('tenant_id', opts.tenantId as any) as any as QueryBuilder<TEntity>
+//     }
+//     public buildPatch(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>,
+//             opts: it.RepositoryPatchOptions = {}): QueryBuilder<TEntity> {
+//         return <any>rawQuery.patch(entity).whereComposite(this._EntityClass['idColumn'], '=', this._toArr(entity, this._pkProps))
+//     }
+//     public buildRecoverOpts(pk: TenantPk, prevOpts: it.RepositoryRecoverOptions,
+//             rawOpts: it.RepositoryRecoverOptions): it.RepositoryExistsOptions {
+//         prevOpts['tenantId'] = pk.tenantId
+//         return prevOpts
+//     }
+//     public buildUpdate(entity: TEntity, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>,
+//             opts: it.RepositoryPatchOptions = {}): QueryBuilder<TEntity> {
+//         return <any>rawQuery.update(entity).whereComposite(this._EntityClass['idColumn'], '=', this._toArr(entity, this._pkProps))
+//     }
+//     private _toArr(pk: TenantPk | TEntity | Partial<TEntity>, arr: any[]): any[] {
+//         return arr.map(c => pk[c])
+//     }
+// }
 //# sourceMappingURL=TenantQueryBuilder.js.map

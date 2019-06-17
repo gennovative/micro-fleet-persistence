@@ -1,9 +1,10 @@
 import { expect } from 'chai'
+import * as moment from 'moment'
 
-import { MinorException, PagedArray, ModelAutoMapper } from '@micro-fleet/common'
+import { MinorException, PagedArray, ModelAutoMapper, SingleId, Maybe } from '@micro-fleet/common'
 import { IdGenerator } from '@micro-fleet/id-generator'
 
-import { RepositoryBase, EntityBase, IDatabaseConnector,
+import { PgCrudRepositoryBase, EntityBase, IDatabaseConnector,
         KnexDatabaseConnector, AtomicSessionFactory, AtomicSessionFlow } from '../app'
 import DB_DETAILS from './database-details'
 
@@ -11,7 +12,7 @@ import DB_DETAILS from './database-details'
 const DB_TABLE = 'usersSoftDel',
     IMPOSSIBLE_ID = '0'
 
-class UserDTO implements ISoftDeletable, IAuditable {
+class UserDTO implements IAuditable {
 
     public static readonly translator: ModelAutoMapper<UserDTO> = new ModelAutoMapper(UserDTO)
 
@@ -20,9 +21,8 @@ class UserDTO implements ISoftDeletable, IAuditable {
     public id: string = undefined
     public name: string = undefined
     public age: number = undefined
-    public deletedAt: Date = undefined
-    public createdAt: Date = undefined
-    public updatedAt: Date = undefined
+    public createdAt: string = undefined
+    public updatedAt: string = undefined
 }
 
 
@@ -44,17 +44,29 @@ class UserEntity extends EntityBase {
     public id: string = undefined
     public name: string = undefined
     public age: number = undefined
-    public deletedAt: string = undefined
     public createdAt: string = undefined
     public updatedAt: string = undefined
+
+    /**
+     * [ObjectionJS]
+     */
+    public $beforeInsert(queryContext: any) {
+        super.$beforeInsert(queryContext)
+        this.createdAt = moment().utc().format()
+    }
+
+    /**
+     * [ObjectionJS]
+     */
+    public $beforeUpdate(opt: any, queryContext: any) {
+        super.$beforeUpdate(opt, queryContext)
+        this.updatedAt = moment().utc().format()
+    }
+
 }
 
-type NameAgeUk = {
-    name?: string,
-    age?: number
-}
 
-class UserRepo extends RepositoryBase<UserEntity, UserDTO, string, NameAgeUk> {
+class UserRepo extends PgCrudRepositoryBase<UserEntity, UserDTO, SingleId> {
 
     private _sessionFactory: AtomicSessionFactory
 
@@ -77,39 +89,6 @@ class UserRepo extends RepositoryBase<UserEntity, UserDTO, string, NameAgeUk> {
                 }
                 return this.create(eva, { atomicSession })
                     .then(createdEva => [createdAdam, createdEva])
-            })
-            .closePipe()
-    }
-
-    private _counter = 0
-    public firstOutput: any
-    public failOnSecondTransaction(adam: UserDTO, eva: UserDTO): Promise<UserDTO[]> {
-        return this._sessionFactory.startSession()
-            .pipe(atomicSession => this.create(adam, { atomicSession }))
-            .pipe((atomicSession, createdAdam) => {
-                this._counter++
-                // If this is transaction of the second connection
-                if (this._counter == 2) {
-                    return new Promise((resolve, reject) => {
-                        // Delay here to let first transaction to finish,
-                        // but throw MinorException before it resolves.
-                        setTimeout(() => {
-                            reject(new MinorException('Error on second transaction'))
-                        }, 100)
-                })
-                } else {
-                    return new Promise((resolve, reject) => {
-                        this.create(eva, { atomicSession })
-                            .then(createdEva => {
-                                this.firstOutput = [createdAdam, createdEva]
-                                // First transaction has finished but not yet resolves,
-                                // it must delay here to let second transaction to fail
-                                setTimeout(() => {
-                                    resolve(this.firstOutput)
-                                }, 200)
-                            })
-                    })
-                }
             })
             .closePipe()
     }
@@ -138,16 +117,8 @@ class UserRepo extends RepositoryBase<UserEntity, UserDTO, string, NameAgeUk> {
             // .closePipe() // Not closing pipe
     }
 
-    public async find(id: string): Promise<UserDTO> {
-        const foundEnt: UserEntity = await this._processor.executeQuery(query => {
-                return query.findById(<any>id)
-            }, null) // Executing on first connection only.
-
-        return this._processor.toDomainModel(foundEnt, false) as UserDTO
-    }
-
     public deleteAll(): Promise<void> {
-        return this._processor.executeQuery(query => query.delete())
+        return this.executeQuery(query => query.delete())
     }
 }
 
@@ -158,7 +129,7 @@ let cachedDTO: UserDTO,
 const idGen = new IdGenerator()
 
 // These test suites make real changes to database.
-describe('RepositoryBase', function() {
+describe('PgCrudRepositoryBase', function() {
     // this.timeout(50000)
 
     beforeEach('Initialize db adapter', () => {
@@ -216,8 +187,8 @@ describe('RepositoryBase', function() {
 
                 // Clean up
                 await Promise.all([
-                    usrRepo.deleteHard(createdOne.id),
-                    usrRepo.deleteHard(createdTwo.id),
+                    usrRepo.deleteSingle(new SingleId(createdOne.id)),
+                    usrRepo.deleteSingle(new SingleId(createdTwo.id)),
                 ])
             } catch (err) {
                 console.error(err)
@@ -283,8 +254,8 @@ describe('RepositoryBase', function() {
 
                 // Clean up
                 await Promise.all([
-                    usrRepo.deleteHard(outputOne[0].id),
-                    usrRepo.deleteHard(outputOne[1].id),
+                    usrRepo.deleteSingle(new SingleId(outputOne[0].id)),
+                    usrRepo.deleteSingle(new SingleId(outputOne[1].id)),
                 ])
             } catch (err) {
                 console.error(err)
@@ -364,8 +335,6 @@ describe('RepositoryBase', function() {
             const isExisting: boolean = await usrRepo.exists({
                 name: cachedDTO.name,
                 age: 123,
-            }, {
-                excludeDeleted: false,
             })
 
             // Assert
@@ -386,30 +355,30 @@ describe('RepositoryBase', function() {
     describe('findByPk', () => {
         it('should return an model instance if found', async () => {
             // Act
-            const foundDTO: UserDTO = await usrRepo.findByPk(cachedDTO.id)
+            const foundDTO: Maybe<UserDTO> = await usrRepo.findByPk(new SingleId(cachedDTO.id))
 
             // Assert
-            expect(foundDTO).to.be.not.null
-            expect(foundDTO.id).to.equal(cachedDTO.id)
-            expect(foundDTO.name).to.equal(cachedDTO.name)
-            expect(foundDTO.age).to.equal(cachedDTO.age)
+            expect(foundDTO.isJust).to.true
+            expect(foundDTO.value.id).to.equal(cachedDTO.id)
+            expect(foundDTO.value.name).to.equal(cachedDTO.name)
+            expect(foundDTO.value.age).to.equal(cachedDTO.age)
         })
 
         it('should return DTO instance if success', async () => {
             // Act
-            const foundDTO: UserDTO = await usrRepo.findByPk(cachedDTO.id)
+            const foundDTO: Maybe<UserDTO> = await usrRepo.findByPk(new SingleId(cachedDTO.id))
 
             // Assert
-            expect(foundDTO).to.be.not.null
-            expect(foundDTO).to.be.instanceOf(UserDTO)
+            expect(foundDTO.isJust).to.be.true
+            expect(foundDTO.value).to.be.instanceOf(UserDTO)
         })
 
         it('should return `null` if not found', async () => {
             // Act
-            const model: UserDTO = await usrRepo.findByPk(IMPOSSIBLE_ID)
+            const model: Maybe<UserDTO> = await usrRepo.findByPk(new SingleId(IMPOSSIBLE_ID))
 
             // Assert
-            expect(model).to.be.null
+            expect(model.isNothing).to.be.true
         })
     }) // END describe 'findByPk'
 
@@ -419,18 +388,19 @@ describe('RepositoryBase', function() {
             const newAge = 45
 
             // Act
-            const partial = await usrRepo.patch({ id: cachedDTO.id, age: newAge}) as Partial<UserDTO>,
-                refetchedDTO: UserDTO = await usrRepo.findByPk(cachedDTO.id)
+            const partial: Maybe<UserDTO> = await usrRepo.patch({ id: cachedDTO.id, age: newAge}),
+                refetchedDTO: Maybe<UserDTO> = await usrRepo.findByPk(new SingleId(cachedDTO.id))
 
             // Assert
-            expect(partial.id).to.equal(cachedDTO.id)
-            expect(partial.age).to.equal(newAge)
-            expect(partial.updatedAt).to.be.instanceof(Date)
-            expect(refetchedDTO).to.be.not.null
-            expect(refetchedDTO.id).to.equal(cachedDTO.id)
-            expect(refetchedDTO.name).to.equal(cachedDTO.name)
-            expect(refetchedDTO.age).to.equal(newAge)
-            expect(refetchedDTO.updatedAt).to.be.instanceof(Date)
+            expect(partial.isJust).to.be.true
+            expect(partial.value.id).to.equal(cachedDTO.id)
+            expect(partial.value.age).to.equal(newAge)
+            expect(partial.value.updatedAt).to.be.not.empty
+            expect(refetchedDTO.isJust).to.be.true
+            expect(refetchedDTO.value.id).to.equal(cachedDTO.id)
+            expect(refetchedDTO.value.name).to.equal(cachedDTO.name)
+            expect(refetchedDTO.value.age).to.equal(newAge)
+            expect(refetchedDTO.value.updatedAt).to.be.not.empty
         })
 
         it('should return `null` if not found', async () => {
@@ -438,13 +408,13 @@ describe('RepositoryBase', function() {
             const newAge = 45
 
             // Act
-            const partial = await usrRepo.patch({ id: IMPOSSIBLE_ID, age: newAge}) as Partial<UserDTO>,
-                refetchedDTO: UserDTO = await usrRepo.findByPk(IMPOSSIBLE_ID)
+            const partial: Maybe<UserDTO> = await usrRepo.patch({ id: IMPOSSIBLE_ID, age: newAge}),
+                refetchedDTO: Maybe<UserDTO> = await usrRepo.findByPk(new SingleId(IMPOSSIBLE_ID))
 
             // Assert
-            expect(partial).to.be.null
-            // If `patch` returns `null`, but we actually find an entity with the id, then something is wrong.
-            expect(refetchedDTO).to.be.null
+            expect(partial.isNothing).to.be.true
+            // If `patch` returns nothing, but we actually find an entity with the id, then something is wrong.
+            expect(refetchedDTO.isNothing).to.be.true
         })
     }) // END describe 'patch'
 
@@ -456,19 +426,19 @@ describe('RepositoryBase', function() {
             updatedDTO.name = newName
 
             // Act
-            const modified = await usrRepo.update(updatedDTO) as UserDTO,
-                refetchedDTO: UserDTO = await usrRepo.findByPk(cachedDTO.id)
+            const modified: Maybe<UserDTO> = await usrRepo.update(updatedDTO),
+                refetchedDTO: Maybe<UserDTO> = await usrRepo.findByPk(new SingleId(cachedDTO.id))
 
             // Assert
-            expect(modified).to.exist
-            expect(modified.id).to.equal(cachedDTO.id)
-            expect(modified.name).to.equal(newName)
-            expect(modified.updatedAt).to.be.instanceof(Date)
-            expect(refetchedDTO).to.be.not.null
-            expect(refetchedDTO.id).to.equal(cachedDTO.id)
-            expect(refetchedDTO.name).to.equal(newName)
-            expect(refetchedDTO.age).to.equal(cachedDTO.age)
-            expect(refetchedDTO.updatedAt).to.be.instanceof(Date)
+            expect(modified.isJust).to.be.true
+            expect(modified.value.id).to.equal(cachedDTO.id)
+            expect(modified.value.name).to.equal(newName)
+            expect(modified.value.updatedAt).to.be.not.empty
+            expect(refetchedDTO.isJust).to.be.true
+            expect(refetchedDTO.value.id).to.equal(cachedDTO.id)
+            expect(refetchedDTO.value.name).to.equal(newName)
+            expect(refetchedDTO.value.age).to.equal(cachedDTO.age)
+            expect(refetchedDTO.value.updatedAt).to.be.not.empty
         })
 
         it('should return DTO instance if found', async () => {
@@ -478,11 +448,11 @@ describe('RepositoryBase', function() {
             updatedDTO.name = newName
 
             // Act
-            const modified = await usrRepo.update(updatedDTO) as UserDTO
+            const modified: Maybe<UserDTO> = await usrRepo.update(updatedDTO)
 
             // Assert
-            expect(modified).to.exist
-            expect(modified).to.be.instanceOf(UserDTO)
+            expect(modified.isJust).to.be.true
+            expect(modified.value).to.be.instanceOf(UserDTO)
         })
 
         it('should return `null` if not found', async () => {
@@ -493,13 +463,13 @@ describe('RepositoryBase', function() {
             updatedDTO.name = newName
 
             // Act
-            const modified = await usrRepo.update(updatedDTO) as UserDTO,
-                refetchedDTO: UserDTO = await usrRepo.findByPk(updatedDTO.id)
+            const modified: Maybe<UserDTO> = await usrRepo.update(updatedDTO),
+                refetchedDTO: Maybe<UserDTO> = await usrRepo.findByPk(new SingleId(updatedDTO.id))
 
             // Assert
-            expect(modified).to.be.null
-            // If `update` returns `null`, but we actually find an entity with the id, then something is wrong.
-            expect(refetchedDTO).to.be.null
+            expect(modified.isJust).to.be.true
+            // If `update` returns nothing, but we actually find an entity with the id, then something is wrong.
+            expect(refetchedDTO.isJust).to.be.true
         })
     }) // END describe 'update'
 
@@ -508,7 +478,7 @@ describe('RepositoryBase', function() {
         it('should return a possitive number and the record is still in database', async () => {
             // Act
             const affectedRows: number = await usrRepo.deleteSoft(cachedDTO.id),
-                refetchedDTO: UserDTO = await usrRepo.findByPk(cachedDTO.id)
+                refetchedDTO: Maybe<UserDTO> = await usrRepo.findByPk(cachedDTO.id)
 
             // Assert
             expect(affectedRows).to.be.greaterThan(0)
@@ -531,7 +501,7 @@ describe('RepositoryBase', function() {
         it('should return a possitive number if success', async () => {
             // Act
             const affectedRows: number = await usrRepo.recover(cachedDTO.id),
-                refetchedDTO: UserDTO = await usrRepo.findByPk(cachedDTO.id)
+                refetchedDTO: Maybe<UserDTO> = await usrRepo.findByPk(cachedDTO.id)
 
             // Assert
             expect(affectedRows).to.be.greaterThan(0)
@@ -560,29 +530,29 @@ describe('RepositoryBase', function() {
     })
     //*/
 
-    describe('delete (hard)', () => {
+    describe('deleteSingle (hard)', () => {
         it('should return a possitive number if found', async () => {
             // Act
-            const affectedRows: number = await usrRepo.deleteHard(cachedDTO.id),
-                refetchedDTO: UserDTO = await usrRepo.findByPk(cachedDTO.id)
+            const affectedRows: number = await usrRepo.deleteSingle(new SingleId(cachedDTO.id)),
+                refetchedDTO: Maybe<UserDTO> = await usrRepo.findByPk(new SingleId(cachedDTO.id))
 
             // Assert
             expect(affectedRows).to.be.greaterThan(0)
             // If `delete` is successful, but we still find an entity with the id, then something is wrong.
-            expect(refetchedDTO).to.be.null
+            expect(refetchedDTO.isNothing).to.be.true
         })
 
         it('should return 0 if not found', async () => {
             // Act
-            const affectedRows: number = await usrRepo.deleteHard(IMPOSSIBLE_ID),
-                refetchedDTO: UserDTO = await usrRepo.findByPk(IMPOSSIBLE_ID)
+            const affectedRows: number = await usrRepo.deleteSingle(new SingleId(IMPOSSIBLE_ID)),
+                refetchedDTO: Maybe<UserDTO> = await usrRepo.findByPk(new SingleId(IMPOSSIBLE_ID))
 
             // Assert
             expect(affectedRows).to.equal(0)
             // If `delete` returns 0, but we actually find an entity with the id, then something is wrong.
-            expect(refetchedDTO).to.be.null
+            expect(refetchedDTO.isNothing).to.be.true
         })
-    }) // END describe 'delete'
+    }) // END describe 'deleteSingle'
 
     describe('page', function() {
         this.timeout(5000)
@@ -596,8 +566,9 @@ describe('RepositoryBase', function() {
             await usrRepo.deleteAll()
 
             // Act
-            const models: PagedArray<UserDTO> = await usrRepo.page(PAGE, SIZE, {
-                excludeDeleted: false,
+            const models: PagedArray<UserDTO> = await usrRepo.page({
+                pageIndex: PAGE,
+                pageSize: SIZE,
             })
 
             // Assert
@@ -629,10 +600,10 @@ describe('RepositoryBase', function() {
             await Promise.all(createJobs)
 
             // Act
-            const fetchedModels: PagedArray<UserDTO> = await usrRepo.page(PAGE, SIZE,
-                {
-                    sortBy: 'id',
-                })
+            const fetchedModels: PagedArray<UserDTO> = await usrRepo.page({
+                pageIndex: PAGE,
+                pageSize: SIZE,
+            })
 
             // Assert
             expect(fetchedModels.length).to.be.equal(SIZE)
@@ -666,7 +637,10 @@ describe('RepositoryBase', function() {
             await Promise.all(createJobs)
 
             // Act
-            const models: PagedArray<UserDTO> = await usrRepo.page(PAGE, SIZE)
+            const models: PagedArray<UserDTO> = await usrRepo.page({
+                pageIndex: PAGE,
+                pageSize: SIZE,
+            })
 
             // Assert
             expect(models).to.be.not.null
@@ -698,7 +672,10 @@ describe('RepositoryBase', function() {
             await Promise.all(createJobs)
 
             // Act
-            const fetchedModels: PagedArray<UserDTO> = await usrRepo.page(PAGE, SIZE)
+            const fetchedModels: PagedArray<UserDTO> = await usrRepo.page({
+                pageIndex: PAGE,
+                pageSize: SIZE,
+            })
 
             // Assert
             expect(
@@ -722,7 +699,7 @@ describe('RepositoryBase', function() {
             await usrRepo.deleteAll()
 
             // Act
-            const count = await usrRepo.countAll({ excludeDeleted: false })
+            const count = await usrRepo.countAll()
 
             // Assert
             expect(count).to.equal(0)

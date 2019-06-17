@@ -4,10 +4,11 @@ import * as _ from 'lodash'
 
 import { IConfigurationProvider, DbConnectionDetail,
     constants, CriticalException, Maybe } from '@micro-fleet/common'
+
 import { IDatabaseConnector, QueryCallback,
     EntityBase, DatabaseAddOn, AtomicSession, KnexConnection } from '../app'
-
 import DB_DETAILS from './database-details'
+
 
 chai.use(spies)
 
@@ -33,27 +34,24 @@ class MockConfigAddOn implements IConfigurationProvider {
     public get(key: string): Maybe<number | boolean | string> {
         if (MODE_FILE == this._mode) {
             switch (key) {
-                case S.DB_ENGINE: return new Maybe(DbClient.SQLITE3)
-                case S.DB_FILE: return new Maybe(CONN_FILE)
-                default: return new Maybe
+                case S.DB_ENGINE: return Maybe.Just(DbClient.SQLITE3)
+                case S.DB_FILE: return Maybe.Just(CONN_FILE)
             }
         } else if (MODE_STRING == this._mode) {
             switch (key) {
-                case S.DB_ENGINE: return new Maybe(DbClient.POSTGRESQL)
-                case S.DB_CONN_STRING: return new Maybe(CONN_STRING)
-                default: return new Maybe
+                case S.DB_ENGINE: return Maybe.Just(DbClient.POSTGRESQL)
+                case S.DB_CONN_STRING: return Maybe.Just(CONN_STRING)
             }
         } else if (MODE_CREDENTIALS  == this._mode) {
             switch (key) {
-                case S.DB_ENGINE: return new Maybe(DB_DETAILS.clientName)
-                case S.DB_ADDRESS: return new Maybe(DB_DETAILS.host.address)
-                case S.DB_USER: return new Maybe(DB_DETAILS.host.user)
-                case S.DB_PASSWORD: return new Maybe(DB_DETAILS.host.password)
-                case S.DB_NAME: return new Maybe(DB_DETAILS.host.database)
-                default: return new Maybe
+                case S.DB_ENGINE: return Maybe.Just(DB_DETAILS.clientName)
+                case S.DB_ADDRESS: return Maybe.Just(DB_DETAILS.host.address)
+                case S.DB_USER: return Maybe.Just(DB_DETAILS.host.user)
+                case S.DB_PASSWORD: return Maybe.Just(DB_DETAILS.host.password)
+                case S.DB_NAME: return Maybe.Just(DB_DETAILS.host.database)
             }
         }
-        return new Maybe
+        return Maybe.Nothing()
     }
 
     public deadLetter(): Promise<void> {

@@ -13,16 +13,19 @@ global['camelCase'] = memoize(require('lodash/camelCase'));
 __export(require("./atom/AtomicSessionFactory"));
 __export(require("./atom/AtomicSessionFlow"));
 __export(require("./atom/AtomicSession"));
-__export(require("./bases/BatchProcessor"));
 __export(require("./bases/EntityBase"));
-__export(require("./bases/MonoProcessor"));
-__export(require("./bases/MonoQueryBuilder"));
-__export(require("./bases/RepositoryBase"));
-__export(require("./bases/SoftDelRepositoryBase"));
-__export(require("./bases/TenantQueryBuilder"));
-__export(require("./bases/VersionControlledProcessor"));
+__export(require("./bases/PgCrudRepositoryBase"));
 __export(require("./connector/KnexDatabaseConnector"));
 __export(require("./DatabaseAddOn"));
+__export(require("./interfaces"));
 __export(require("./register-addon"));
 __export(require("./Types"));
+// export * from './bases/IQueryBuilder'
+// export * from './bases/BatchProcessor'
+// export * from './bases/MonoProcessor'
+// export * from './bases/MonoQueryBuilder'
+// export * from './bases/RepositoryBase'
+// export * from './bases/SoftDelRepositoryBase'
+// export * from './bases/TenantQueryBuilder'
+// export * from './bases/VersionControlledProcessor'
 //# sourceMappingURL=index.js.map
