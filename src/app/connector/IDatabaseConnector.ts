@@ -1,9 +1,10 @@
 import * as knex from 'knex'
 import { QueryBuilder, Model } from 'objection'
-import { DbConnectionDetail } from '@micro-fleet/common'
+import { Newable } from '@micro-fleet/common'
 
 import { AtomicSession } from '../atom/AtomicSession'
 import { EntityBase } from '../bases/EntityBase'
+import { DbConnectionDetail } from '../interfaces'
 
 
 export interface KnexConnection extends knex {
@@ -37,7 +38,7 @@ export interface IDatabaseConnector {
      * Creates a new database connection.
      * @param {IConnectionDetail} detail Credentials to make connection.
      */
-    init(detail: DbConnectionDetail): void
+    init(detail: DbConnectionDetail): this
 
     /**
      * Closes all connections and destroys this connector.

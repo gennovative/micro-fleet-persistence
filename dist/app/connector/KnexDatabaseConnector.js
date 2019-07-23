@@ -40,6 +40,7 @@ let KnexDatabaseConnector = class KnexDatabaseConnector {
             require('../pg-type-parsers');
         }
         this._connection = this._knex(settings);
+        return this;
     }
     /**
      * @see IDatabaseConnector.dispose

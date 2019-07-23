@@ -1,6 +1,6 @@
 {
     "name": "@micro-fleet/persistence",
-    "version": "2.2.0",
+    "version": "2.2.0-rc1",
     "description": "Provides base repository class and database connector that helps connect to database and map db tables to JS objects (ORM).",
     "scripts": {
         "build": "npm run compile && npm run test",

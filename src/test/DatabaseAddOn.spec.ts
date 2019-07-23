@@ -2,10 +2,10 @@ import * as chai from 'chai'
 import * as spies from 'chai-spies'
 import * as _ from 'lodash'
 
-import { IConfigurationProvider, DbConnectionDetail,
-    constants, CriticalException, Maybe } from '@micro-fleet/common'
+import { IConfigurationProvider, constants, CriticalException,
+    Maybe } from '@micro-fleet/common'
 
-import { IDatabaseConnector, QueryCallback,
+import { IDatabaseConnector, QueryCallback, DbConnectionDetail,
     EntityBase, DatabaseAddOn, AtomicSession, KnexConnection } from '../app'
 import DB_DETAILS from './database-details'
 
@@ -23,6 +23,7 @@ const expect = chai.expect,
 class MockConfigAddOn implements IConfigurationProvider {
 
     public readonly name: string = 'MockConfigProvider'
+    public configFilePath: string
 
     constructor(private _mode: string = MODE_CREDENTIALS) {
     }
@@ -82,8 +83,8 @@ class MockDbConnector implements IDatabaseConnector {
         return this._connection
     }
 
-    public init(detail: DbConnectionDetail): void {
-        // Empty
+    public init(detail: DbConnectionDetail): this {
+        return this
     }
 
     public dispose(): Promise<void> {
@@ -103,11 +104,12 @@ describe('DatabaseAddOn', function () {
         it('should call connector.init to configure database connection with database file', async () => {
             // Arrange
             // const dbAddOn = new DatabaseAddOn(new MockConfigAddOn(MODE_FILE), new MockDbConnector())
-            const dbAddOn = new DatabaseAddOn()
             const connector = new MockDbConnector()
             const addConnSpy = chai.spy.on(connector, 'init')
-            dbAddOn['_dbConnector'] = connector
-            dbAddOn['_configProvider'] = new MockConfigAddOn(MODE_FILE)
+            const dbAddOn = new DatabaseAddOn(
+                new MockConfigAddOn(MODE_FILE),
+                connector,
+            )
 
             // Act
             await dbAddOn.init()
@@ -119,11 +121,12 @@ describe('DatabaseAddOn', function () {
 
         it('should call connector.init to configure database connection with connection string', async () => {
             // Arrange
-            const dbAddOn = new DatabaseAddOn()
             const connector = new MockDbConnector()
             const addConnSpy = chai.spy.on(connector, 'init')
-            dbAddOn['_dbConnector'] = connector
-            dbAddOn['_configProvider'] = new MockConfigAddOn(MODE_STRING)
+            const dbAddOn = new DatabaseAddOn(
+                new MockConfigAddOn(MODE_STRING),
+                connector,
+            )
 
             // Act
             await dbAddOn.init()
@@ -135,11 +138,12 @@ describe('DatabaseAddOn', function () {
 
         it('should call connector.init to configure database connection with remote database', async () => {
             // Arrange
-            const dbAddOn = new DatabaseAddOn()
             const connector = new MockDbConnector()
             const addConnSpy = chai.spy.on(connector, 'init')
-            dbAddOn['_dbConnector'] = connector
-            dbAddOn['_configProvider'] = new MockConfigAddOn(MODE_CREDENTIALS)
+            const dbAddOn = new DatabaseAddOn(
+                new MockConfigAddOn(MODE_CREDENTIALS),
+                connector,
+            )
 
             // Act
             await dbAddOn.init()
@@ -151,10 +155,11 @@ describe('DatabaseAddOn', function () {
 
         it('should throw exception if there is no settings for database connection', async () => {
             // Arrange
-            const dbAddOn = new DatabaseAddOn()
             const connector = new MockDbConnector()
-            dbAddOn['_dbConnector'] = connector
-            dbAddOn['_configProvider'] = new MockConfigAddOn('')
+            const dbAddOn = new DatabaseAddOn(
+                new MockConfigAddOn(''),
+                connector,
+            )
 
             let isSuccess = false
             let exception: CriticalException = null
@@ -178,10 +183,11 @@ describe('DatabaseAddOn', function () {
     describe('dispose', () => {
         it('should release all resources', async () => {
             // Arrange
-            const dbAddOn = new DatabaseAddOn(),
-                callMe = chai.spy()
-            dbAddOn['_configProvider'] = new MockConfigAddOn(MODE_FILE)
-            dbAddOn['_dbConnector'] = new MockDbConnector()
+            const callMe = chai.spy()
+            const dbAddOn = new DatabaseAddOn(
+                new MockConfigAddOn(MODE_FILE),
+                new MockDbConnector(),
+            )
 
             // Act
             await dbAddOn.init()

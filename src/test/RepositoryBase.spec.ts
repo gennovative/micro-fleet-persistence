@@ -12,7 +12,7 @@ import DB_DETAILS from './database-details'
 const DB_TABLE = 'usersSoftDel',
     IMPOSSIBLE_ID = '0'
 
-class UserDTO implements IAuditable {
+class UserDTO {
 
     public static readonly translator: ModelAutoMapper<UserDTO> = new ModelAutoMapper(UserDTO)
 

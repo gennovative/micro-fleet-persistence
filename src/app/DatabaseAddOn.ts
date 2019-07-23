@@ -1,7 +1,8 @@
-import { IConfigurationProvider, DbConnectionDetail, Types as ConT, constants,
-    injectable, lazyInject, CriticalException, Maybe } from '@micro-fleet/common'
+import { IConfigurationProvider, Types as ConT, constants,
+    injectable, CriticalException, Maybe, inject, Guard, IServiceAddOn } from '@micro-fleet/common'
 
 import { IDatabaseConnector } from './connector/IDatabaseConnector'
+import { DbConnectionDetail } from './interfaces'
 import { Types as T } from './Types'
 import { DbClient } from '@micro-fleet/common/dist/app/constants/DbClient'
 
@@ -15,11 +16,13 @@ export class DatabaseAddOn implements IServiceAddOn {
 
     public readonly name: string = 'DatabaseAddOn'
 
-    @lazyInject(ConT.CONFIG_PROVIDER)
-    private _configProvider: IConfigurationProvider
-
-    @lazyInject(T.DB_CONNECTOR)
-    private _dbConnector: IDatabaseConnector
+    constructor(
+        @inject(ConT.CONFIG_PROVIDER) private _config: IConfigurationProvider,
+        @inject(T.DB_CONNECTOR) private _dbConnector: IDatabaseConnector,
+    ) {
+        Guard.assertArgDefined('Configuration provider', _config)
+        Guard.assertArgDefined('Database connector', _dbConnector)
+    }
 
     /**
      * @see IServiceAddOn.init
@@ -42,7 +45,7 @@ export class DatabaseAddOn implements IServiceAddOn {
     public async dispose(): Promise<void> {
         await this._dbConnector.dispose()
         this._dbConnector = null
-        this._configProvider = null
+        this._config = null
     }
 
 
@@ -56,11 +59,7 @@ export class DatabaseAddOn implements IServiceAddOn {
     }
 
     private _buildConnDetails(): Maybe<DbConnectionDetail> {
-        const provider = this._configProvider
-        // const clientName = provider.get(S.DB_ENGINE) as Maybe<DbClient>
-        // if (!clientName.isJust) {
-        //     return Maybe.Nothing()
-        // }
+        const provider = this._config
 
         return (provider.get(S.DB_ENGINE) as Maybe<DbClient>)
             .chain(clientName => {
@@ -97,43 +96,4 @@ export class DatabaseAddOn implements IServiceAddOn {
                 return Maybe.Nothing()
             })
     }
-    // private _buildConnDetails(): Maybe<DbConnectionDetail> {
-    //     const provider = this._configProvider
-    //     const clientName = provider.get(S.DB_ENGINE) as Maybe<DbClient> // Must belong to `DbClient`
-    //     if (!clientName.isJust) {
-    //         return Maybe.Nothing()
-    //     }
-
-    //     const cnnDetail: DbConnectionDetail = {
-    //         clientName: clientName.value,
-    //     }
-    //     let setting: Maybe<string>
-
-    //     // 1st priority: connect to a local file.
-    //     setting = provider.get(S.DB_FILE) as Maybe<string>
-    //     if (setting.isJust) {
-    //         cnnDetail.filePath = setting.value
-    //         return Maybe.Just(cnnDetail)
-    //     }
-
-    //     // 2nd priority: connect with a connection string.
-    //     setting = provider.get(S.DB_CONN_STRING) as Maybe<string>
-    //     if (setting.isJust) {
-    //         cnnDetail.connectionString = setting.value
-    //         return Maybe.Just(cnnDetail)
-    //     }
-
-    //     // Last priority: connect with host credentials.
-    //     setting = provider.get(S.DB_ADDRESS) as Maybe<string>
-    //     if (setting.isJust) {
-    //         cnnDetail.host = {
-    //             address: provider.get(S.DB_ADDRESS).value as string,
-    //             user: provider.get(S.DB_USER).value as string,
-    //             password: provider.get(S.DB_PASSWORD).value as string,
-    //             database: provider.get(S.DB_NAME).value as string,
-    //         }
-    //         return Maybe.Just(cnnDetail)
-    //     }
-    //     return Maybe.Nothing()
-    // }
 }

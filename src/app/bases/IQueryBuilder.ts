@@ -3,7 +3,7 @@ import { QueryBuilder, Model } from 'objection'
 import * as it from '../interfaces'
 
 
-export interface IQueryBuilder<TEntity extends Model, TModel, TPk extends PkType, TUk = NameUk>  {
+export interface IQueryBuilder<TEntity extends Model, TModel, TPk, TUk> {
     buildCountAll(prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>,
         opts?: it.RepositoryCountAllOptions): QueryBuilder<TEntity>
 

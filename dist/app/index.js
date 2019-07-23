@@ -17,6 +17,8 @@ __export(require("./bases/EntityBase"));
 __export(require("./bases/PgCrudRepositoryBase"));
 __export(require("./connector/KnexDatabaseConnector"));
 __export(require("./DatabaseAddOn"));
+__export(require("./DatabaseSettings"));
+__export(require("./DatabaseAddOn"));
 __export(require("./interfaces"));
 __export(require("./register-addon"));
 __export(require("./Types"));

@@ -17,6 +17,49 @@ export enum FilterOperator {
 }
 
 /**
+ * Stores a database connection detail.
+ */
+export type DbConnectionDetail = {
+    /**
+     * Database driver name, should use constants in class DbClient.
+     * Eg: DbClient.SQLITE3, DbClient.POSTGRESQL, ...
+     */
+    clientName: string;
+
+    /**
+     * Connection string for specified `clientName`.
+     */
+    connectionString?: string;
+
+    /**
+     * Absolute path to database file name.
+     */
+    filePath?: string;
+
+    host?: {
+        /**
+         * IP Address or Host name.
+         */
+        address: string,
+
+        /**
+         * Username to login database.
+         */
+        user: string,
+
+        /**
+         * Password to login database.
+         */
+        password: string,
+
+        /**
+         * Database name.
+         */
+        database: string
+    };
+}
+
+/**
  * Options for repository's operations.
  * Note that different operations care about different option properties.
  * @deprecated
@@ -193,7 +236,7 @@ export interface LegacyRepositoryPageOptions extends RepositoryCountAllOptions {
  * Provides common CRUD operations, based on Unit of Work pattern.
  * @deprecated
  */
-export interface ILegacyRepository<TModel, TPk extends PkType = string, TUk = NameUk> {
+export interface ILegacyRepository<TModel, TPk, TUk> {
 
     /**
      * Counts all records in a table.
@@ -245,7 +288,7 @@ export interface ILegacyRepository<TModel, TPk extends PkType = string, TUk = Na
 /**
  * Provides common operations to soft-delete and recover models.
  */
-export interface ISoftDelRepository<TModel, TPk extends PkType = string, TUk = NameUk>
+export interface ISoftDelRepository<TModel, TPk, TUk>
         extends ILegacyRepository<TModel, TPk, TUk> {
 
     /**
@@ -265,7 +308,7 @@ export interface ISoftDelRepository<TModel, TPk extends PkType = string, TUk = N
 /**
  * Provides common operations to control models' revisions.
  */
-export interface IVersionRepository<TModel extends IVersionControlled, TPk extends PkType = string, TUk = NameUk>
+export interface IVersionRepository<TModel, TPk, TUk>
         extends ISoftDelRepository<TModel, TPk, TUk> {
 
     /**

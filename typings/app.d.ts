@@ -46,137 +46,6 @@ declare module '@micro-fleet/persistence/dist/app/bases/EntityBase' {
 	}
 
 }
-declare module '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector' {
-	import * as knex from 'knex';
-	import { QueryBuilder, Model } from 'objection';
-	import { DbConnectionDetail } from '@micro-fleet/common';
-	import { AtomicSession } from '@micro-fleet/persistence/dist/app/atom/AtomicSession';
-	import { EntityBase } from '@micro-fleet/persistence/dist/app/bases/EntityBase';
-	export interface KnexConnection extends knex {
-	}
-	export type QueryCallbackReturn = QueryBuilder<any> | Promise<any>;
-	/**
-	 * Invoked when a request for getting query is replied.
-	 * @param {QueryBuilder} queryBuilder A query that is bound to a connection.
-	 * @param {Class} boundEntityClass A class that is bound to a connection.
-	 */
-	export type QueryCallback<TEntity extends Model> = (queryBuilder: QueryBuilder<TEntity>, boundEntityClass?: Newable) => QueryCallbackReturn;
-	/**
-	 * Helps with managing multiple database connections and executing same query with all
-	 * of those connections.
-	 */
-	export interface IDatabaseConnector {
-	    /**
-	     * Gets the established database connection.
-	     */
-	    connection: KnexConnection;
-	    /**
-	     * Creates a new database connection.
-	     * @param {IConnectionDetail} detail Credentials to make connection.
-	     */
-	    init(detail: DbConnectionDetail): void;
-	    /**
-	     * Closes all connections and destroys this connector.
-	     */
-	    dispose(): Promise<void>;
-	    /**
-	     * Executes same query on all managed connections. This connector binds connections
-	     * to `EntityClass` and passes a queryable instance to `callback`.
-	     *
-	     * @param {class} EntityClass An entity class to bind a connection.
-	     * @param {QueryCallback} callback A callback to invoke each time a connection is bound.
-	     * @param {AtomicSession} atomicSession A session which provides transaction to execute queries on.
-	     * @example
-	     *     connector.init({...})
-	     *     const result = await connector.prepare(AccountEntity, (query) => {
-	     *         return query.insert({ name: 'Example' })
-	     *     })
-	     *
-	     * @return {Promise} A promise returned by the `callback`.
-	     */
-	    prepare<TEntity extends EntityBase>(EntityClass: Newable, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any>;
-	}
-
-}
-declare module '@micro-fleet/persistence/dist/app/Types' {
-	export class Types {
-	    static readonly DB_ADDON = "persistence.DatabaseAddOn";
-	    static readonly DB_CONNECTOR = "persistence.IDatabaseConnector";
-	    static readonly ATOMIC_SESSION_FACTORY = "persistence.AtomicSessionFactory";
-	}
-
-}
-declare module '@micro-fleet/persistence/dist/app/DatabaseAddOn' {
-	/**
-	 * Initializes database connections.
-	 */
-	export class DatabaseAddOn implements IServiceAddOn {
-	    readonly name: string;
-	    	    	    /**
-	     * @see IServiceAddOn.init
-	     */
-	    init(): Promise<void>;
-	    /**
-	     * @see IServiceAddOn.deadLetter
-	     */
-	    deadLetter(): Promise<void>;
-	    /**
-	     * @see IServiceAddOn.dispose
-	     */
-	    dispose(): Promise<void>;
-	    	    	}
-
-}
-declare module '@micro-fleet/persistence/dist/app/atom/AtomicSessionFlow' {
-	import { IDatabaseConnector } from '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector';
-	import { AtomicSession } from '@micro-fleet/persistence/dist/app/atom/AtomicSession';
-	export type SessionTask = (session: AtomicSession, previousOutput?: any) => Promise<any>;
-	/**
-	 * Provides method to execute queries on many database connections, but still make
-	 * sure those queries are wrapped in transactions.
-	 */
-	export class AtomicSessionFlow {
-	    protected _dbConnector: IDatabaseConnector;
-	    	    	    	    	    	    /**
-	     *
-	     * @param {string[]} names Only executes the queries on connections with specified names.
-	     */
-	    constructor(_dbConnector: IDatabaseConnector);
-	    /**
-	     * Checks if it is possible to call "pipe()".
-	     */
-	    readonly isPipeClosed: boolean;
-	    /**
-	     * Returns a promise which resolves to the output of the last query
-	     * on primary (first) connection.
-	     * This method must be called at the end of the pipe chain.
-	     */
-	    closePipe(): Promise<any>;
-	    /**
-	     * Adds a task to be executed inside transaction.
-	     * This method is chainable and can only be called before `closePipe()` is invoked.
-	     */
-	    pipe(task: SessionTask): AtomicSessionFlow;
-	    	    	    	    	    	}
-
-}
-declare module '@micro-fleet/persistence/dist/app/atom/AtomicSessionFactory' {
-	import { IDatabaseConnector } from '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector';
-	import { AtomicSessionFlow } from '@micro-fleet/persistence/dist/app/atom/AtomicSessionFlow';
-	/**
-	 * Provides methods to create atomic sessions.
-	 */
-	export class AtomicSessionFactory {
-	    protected _dbConnector: IDatabaseConnector;
-	    constructor(_dbConnector: IDatabaseConnector);
-	    /**
-	     * Starts executing queries in transactions.
-	     * @param {string[]} names Only executes the queries on connections with specified names.
-	     */
-	    startSession(): AtomicSessionFlow;
-	}
-
-}
 declare module '@micro-fleet/persistence/dist/app/interfaces' {
 	import { PagedArray, Maybe, IdBase, SingleId } from '@micro-fleet/common';
 	import { AtomicSession } from '@micro-fleet/persistence/dist/app/atom/AtomicSession';
@@ -194,6 +63,42 @@ declare module '@micro-fleet/persistence/dist/app/interfaces' {
 	    GREATER_OR_EQUAL = "ge",
 	    EQUALS = "eq"
 	}
+	/**
+	 * Stores a database connection detail.
+	 */
+	export type DbConnectionDetail = {
+	    /**
+	     * Database driver name, should use constants in class DbClient.
+	     * Eg: DbClient.SQLITE3, DbClient.POSTGRESQL, ...
+	     */
+	    clientName: string;
+	    /**
+	     * Connection string for specified `clientName`.
+	     */
+	    connectionString?: string;
+	    /**
+	     * Absolute path to database file name.
+	     */
+	    filePath?: string;
+	    host?: {
+	        /**
+	         * IP Address or Host name.
+	         */
+	        address: string;
+	        /**
+	         * Username to login database.
+	         */
+	        user: string;
+	        /**
+	         * Password to login database.
+	         */
+	        password: string;
+	        /**
+	         * Database name.
+	         */
+	        database: string;
+	    };
+	};
 	/**
 	 * Options for repository's operations.
 	 * Note that different operations care about different option properties.
@@ -340,7 +245,7 @@ declare module '@micro-fleet/persistence/dist/app/interfaces' {
 	 * Provides common CRUD operations, based on Unit of Work pattern.
 	 * @deprecated
 	 */
-	export interface ILegacyRepository<TModel, TPk extends PkType = string, TUk = NameUk> {
+	export interface ILegacyRepository<TModel, TPk, TUk> {
 	    /**
 	     * Counts all records in a table.
 	     */
@@ -383,7 +288,7 @@ declare module '@micro-fleet/persistence/dist/app/interfaces' {
 	/**
 	 * Provides common operations to soft-delete and recover models.
 	 */
-	export interface ISoftDelRepository<TModel, TPk extends PkType = string, TUk = NameUk> extends ILegacyRepository<TModel, TPk, TUk> {
+	export interface ISoftDelRepository<TModel, TPk, TUk> extends ILegacyRepository<TModel, TPk, TUk> {
 	    /**
 	     * Marks one or many records with `pk` as deleted.
 	     * @param {PK Type} pk The primary key object.
@@ -398,7 +303,7 @@ declare module '@micro-fleet/persistence/dist/app/interfaces' {
 	/**
 	 * Provides common operations to control models' revisions.
 	 */
-	export interface IVersionRepository<TModel extends IVersionControlled, TPk extends PkType = string, TUk = NameUk> extends ISoftDelRepository<TModel, TPk, TUk> {
+	export interface IVersionRepository<TModel, TPk, TUk> extends ISoftDelRepository<TModel, TPk, TUk> {
 	    /**
 	     * Permanently deletes one or many version of a record.
 	     * Can be filtered with `olderThan` option.
@@ -427,11 +332,165 @@ declare module '@micro-fleet/persistence/dist/app/interfaces' {
 	}
 
 }
+declare module '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector' {
+	import * as knex from 'knex';
+	import { QueryBuilder, Model } from 'objection';
+	import { Newable } from '@micro-fleet/common';
+	import { AtomicSession } from '@micro-fleet/persistence/dist/app/atom/AtomicSession';
+	import { EntityBase } from '@micro-fleet/persistence/dist/app/bases/EntityBase';
+	import { DbConnectionDetail } from '@micro-fleet/persistence/dist/app/interfaces';
+	export interface KnexConnection extends knex {
+	}
+	export type QueryCallbackReturn = QueryBuilder<any> | Promise<any>;
+	/**
+	 * Invoked when a request for getting query is replied.
+	 * @param {QueryBuilder} queryBuilder A query that is bound to a connection.
+	 * @param {Class} boundEntityClass A class that is bound to a connection.
+	 */
+	export type QueryCallback<TEntity extends Model> = (queryBuilder: QueryBuilder<TEntity>, boundEntityClass?: Newable) => QueryCallbackReturn;
+	/**
+	 * Helps with managing multiple database connections and executing same query with all
+	 * of those connections.
+	 */
+	export interface IDatabaseConnector {
+	    /**
+	     * Gets the established database connection.
+	     */
+	    connection: KnexConnection;
+	    /**
+	     * Creates a new database connection.
+	     * @param {IConnectionDetail} detail Credentials to make connection.
+	     */
+	    init(detail: DbConnectionDetail): this;
+	    /**
+	     * Closes all connections and destroys this connector.
+	     */
+	    dispose(): Promise<void>;
+	    /**
+	     * Executes same query on all managed connections. This connector binds connections
+	     * to `EntityClass` and passes a queryable instance to `callback`.
+	     *
+	     * @param {class} EntityClass An entity class to bind a connection.
+	     * @param {QueryCallback} callback A callback to invoke each time a connection is bound.
+	     * @param {AtomicSession} atomicSession A session which provides transaction to execute queries on.
+	     * @example
+	     *     connector.init({...})
+	     *     const result = await connector.prepare(AccountEntity, (query) => {
+	     *         return query.insert({ name: 'Example' })
+	     *     })
+	     *
+	     * @return {Promise} A promise returned by the `callback`.
+	     */
+	    prepare<TEntity extends EntityBase>(EntityClass: Newable, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any>;
+	}
+
+}
+declare module '@micro-fleet/persistence/dist/app/Types' {
+	export class Types {
+	    static readonly DB_ADDON = "persistence.DatabaseAddOn";
+	    static readonly DB_CONNECTOR = "persistence.IDatabaseConnector";
+	    static readonly ATOMIC_SESSION_FACTORY = "persistence.AtomicSessionFactory";
+	}
+
+}
+declare module '@micro-fleet/persistence/dist/app/DatabaseAddOn' {
+	import { IConfigurationProvider, IServiceAddOn } from '@micro-fleet/common';
+	import { IDatabaseConnector } from '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector';
+	/**
+	 * Initializes database connections.
+	 */
+	export class DatabaseAddOn implements IServiceAddOn {
+	    	    	    readonly name: string;
+	    constructor(_config: IConfigurationProvider, _dbConnector: IDatabaseConnector);
+	    /**
+	     * @see IServiceAddOn.init
+	     */
+	    init(): Promise<void>;
+	    /**
+	     * @see IServiceAddOn.deadLetter
+	     */
+	    deadLetter(): Promise<void>;
+	    /**
+	     * @see IServiceAddOn.dispose
+	     */
+	    dispose(): Promise<void>;
+	    	    	}
+
+}
+declare module '@micro-fleet/persistence/dist/app/DatabaseSettings' {
+	import { Maybe, SettingItem } from '@micro-fleet/common';
+	import { DbConnectionDetail } from '@micro-fleet/persistence/dist/app/interfaces';
+	/**
+	 * Represents an array of database settings.
+	 * @deprecated
+	 */
+	export class DatabaseSettings extends Array<SettingItem> {
+	    /**
+	     * Parses from connection detail.
+	     * @param {DbConnectionDetail} detail Connection detail loaded from JSON data source.
+	     */
+	    static fromConnectionDetail(detail: DbConnectionDetail): Maybe<DatabaseSettings>;
+	    constructor();
+	}
+
+}
+declare module '@micro-fleet/persistence/dist/app/atom/AtomicSessionFlow' {
+	import { IDatabaseConnector } from '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector';
+	import { AtomicSession } from '@micro-fleet/persistence/dist/app/atom/AtomicSession';
+	export type SessionTask = (session: AtomicSession, previousOutput?: any) => Promise<any>;
+	/**
+	 * Provides method to execute queries on many database connections, but still make
+	 * sure those queries are wrapped in transactions.
+	 */
+	export class AtomicSessionFlow {
+	    protected _dbConnector: IDatabaseConnector;
+	    	    	    	    	    	    /**
+	     *
+	     * @param {string[]} names Only executes the queries on connections with specified names.
+	     */
+	    constructor(_dbConnector: IDatabaseConnector);
+	    /**
+	     * Checks if it is possible to call "pipe()".
+	     */
+	    readonly isPipeClosed: boolean;
+	    /**
+	     * Returns a promise which resolves to the output of the last query
+	     * on primary (first) connection.
+	     * This method must be called at the end of the pipe chain.
+	     */
+	    closePipe(): Promise<any>;
+	    /**
+	     * Adds a task to be executed inside transaction.
+	     * This method is chainable and can only be called before `closePipe()` is invoked.
+	     */
+	    pipe(task: SessionTask): AtomicSessionFlow;
+	    	    	    	    	    	}
+
+}
+declare module '@micro-fleet/persistence/dist/app/atom/AtomicSessionFactory' {
+	import { IDatabaseConnector } from '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector';
+	import { AtomicSessionFlow } from '@micro-fleet/persistence/dist/app/atom/AtomicSessionFlow';
+	/**
+	 * Provides methods to create atomic sessions.
+	 */
+	export class AtomicSessionFactory {
+	    protected _dbConnector: IDatabaseConnector;
+	    constructor(_dbConnector: IDatabaseConnector);
+	    /**
+	     * Starts executing queries in transactions.
+	     * @param {string[]} names Only executes the queries on connections with specified names.
+	     */
+	    startSession(): AtomicSessionFlow;
+	}
+
+}
 declare module '@micro-fleet/persistence/dist/app/bases/PgCrudRepositoryBase' {
 	import { QueryBuilder } from 'objection';
-	import { PagedArray, Maybe, SingleId, IdBase } from '@micro-fleet/common';
-	import { EntityBase, IDatabaseConnector, QueryCallback, AtomicSession, QueryCallbackReturn } from '@micro-fleet/persistence';
+	import { PagedArray, Maybe, SingleId, IdBase, Newable } from '@micro-fleet/common';
+	import { AtomicSession } from '@micro-fleet/persistence/dist/app/atom/AtomicSession';
+	import { IDatabaseConnector, QueryCallbackReturn, QueryCallback } from '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector';
 	import * as it from '@micro-fleet/persistence/dist/app/interfaces';
+	import { EntityBase } from '@micro-fleet/persistence/dist/app/bases/EntityBase';
 	export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel extends object, TPk extends IdBase = SingleId> implements it.IRepository<TModel, TPk> {
 	    protected _EntityClass: Newable;
 	    protected _DomainClass: Newable;
@@ -490,11 +549,11 @@ declare module '@micro-fleet/persistence/dist/app/bases/PgCrudRepositoryBase' {
 	    /**
 	     * Translates from a DTO model to an entity model.
 	     */
-	    protected toEntity(dto: TModel | Partial<TModel>, isPartial: boolean): TEntity;
+	    protected toEntity(domainModel: TModel | Partial<TModel>, isPartial: boolean): TEntity;
 	    /**
 	     * Translates from DTO models to entity models.
 	     */
-	    protected toEntityMany(domainModel: TModel[] | Partial<TModel>[], isPartial: boolean): TEntity[];
+	    protected toEntityMany(domainModels: TModel[] | Partial<TModel>[], isPartial: boolean): TEntity[];
 	    /**
 	     * Translates from an entity model to a domain model.
 	     */
@@ -502,14 +561,15 @@ declare module '@micro-fleet/persistence/dist/app/bases/PgCrudRepositoryBase' {
 	    /**
 	     * Translates from entity models to domain models.
 	     */
-	    protected toDomainModelMany(entity: TEntity[] | Partial<TEntity>[], isPartial: boolean): TModel[];
+	    protected toDomainModelMany(entities: TEntity[] | Partial<TEntity>[], isPartial: boolean): TModel[];
 	}
 
 }
 declare module '@micro-fleet/persistence/dist/app/connector/KnexDatabaseConnector' {
-	import { DbConnectionDetail } from '@micro-fleet/common';
+	import { Newable } from '@micro-fleet/common';
 	import { AtomicSession } from '@micro-fleet/persistence/dist/app/atom/AtomicSession';
 	import { EntityBase } from '@micro-fleet/persistence/dist/app/bases/EntityBase';
+	import { DbConnectionDetail } from '@micro-fleet/persistence/dist/app/interfaces';
 	import { IDatabaseConnector, QueryCallback, KnexConnection } from '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector';
 	/**
 	 * Provides settings from package
@@ -523,7 +583,7 @@ declare module '@micro-fleet/persistence/dist/app/connector/KnexDatabaseConnecto
 	    /**
 	     * @see IDatabaseConnector.init
 	     */
-	    init(detail: DbConnectionDetail): void;
+	    init(detail: DbConnectionDetail): this;
 	    /**
 	     * @see IDatabaseConnector.dispose
 	     */
@@ -549,6 +609,8 @@ declare module '@micro-fleet/persistence' {
 	export * from '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector';
 	export * from '@micro-fleet/persistence/dist/app/connector/KnexDatabaseConnector';
 	export * from '@micro-fleet/persistence/dist/app/DatabaseAddOn';
+	export * from '@micro-fleet/persistence/dist/app/DatabaseSettings';
+	export * from '@micro-fleet/persistence/dist/app/DatabaseAddOn';
 	export * from '@micro-fleet/persistence/dist/app/interfaces';
 	export * from '@micro-fleet/persistence/dist/app/register-addon';
 	export * from '@micro-fleet/persistence/dist/app/Types';
@@ -561,7 +623,7 @@ declare module '@micro-fleet/persistence/dist/app/pg-type-parsers' {
 declare module '@micro-fleet/persistence/dist/app/bases/IQueryBuilder' {
 	import { QueryBuilder, Model } from 'objection';
 	import * as it from '@micro-fleet/persistence/dist/app/interfaces';
-	export interface IQueryBuilder<TEntity extends Model, TModel, TPk extends PkType, TUk = NameUk> {
+	export interface IQueryBuilder<TEntity extends Model, TModel, TPk, TUk> {
 	    buildCountAll(prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryCountAllOptions): QueryBuilder<TEntity>;
 	    buildDeleteHard(pk: TPk, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>): QueryBuilder<TEntity>;
 	    buildExists(uniqVals: any, prevQuery: QueryBuilder<TEntity>, rawQuery: QueryBuilder<TEntity>, opts?: it.RepositoryExistsOptions): QueryBuilder<TEntity>;

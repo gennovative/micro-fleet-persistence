@@ -4,11 +4,13 @@ const debug: debug.IDebugger = require('debug')('mcft:persistence:PgRepoBase')
 import { QueryBuilder, raw } from 'objection'
 import pick = require('lodash/pick')
 import { Guard, PagedArray, injectable, unmanaged, ModelAutoMapper,
-    Maybe, SingleId, IdBase} from '@micro-fleet/common'
-import { EntityBase, IDatabaseConnector, QueryCallback, AtomicSession,
-    QueryCallbackReturn } from '@micro-fleet/persistence'
+    Maybe, SingleId, IdBase, Newable} from '@micro-fleet/common'
 
+import { AtomicSession } from '../atom/AtomicSession'
+import { IDatabaseConnector, QueryCallbackReturn,
+    QueryCallback } from '../connector/IDatabaseConnector'
 import * as it from '../interfaces'
+import { EntityBase } from './EntityBase'
 
 
 @injectable()
@@ -27,10 +29,9 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
             @unmanaged() protected _DomainClass: Newable,
             @unmanaged() protected _dbConnector: IDatabaseConnector) {
         Guard.assertArgDefined('EntityClass', _EntityClass)
-        Guard.assertIsTruthy(_EntityClass['tableName'] && _EntityClass['translator'],
-            'Param "EntityClass" must have tableName and a translator. It had better inherit "EntityBase"!')
+        Guard.assertIsTruthy(_EntityClass['tableName'],
+            'Param "EntityClass" must have tableName. It had better inherit "EntityBase"!')
         Guard.assertArgDefined('DomainClass', _DomainClass)
-        Guard.assertIsTruthy(_DomainClass['translator'], 'Param "DomainClass" must have a translator!')
         Guard.assertArgDefined('dbConnector', _dbConnector)
 
         this._pkProps = this._EntityClass['idProp']
@@ -206,7 +207,7 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
             return new PagedArray<TModel>()
         }
         const dtoList: TModel[] = this.toDomainModelMany(foundList.results, false) as TModel[]
-        return new PagedArray<TModel>(foundList.total, ...dtoList)
+        return new PagedArray<TModel>(foundList.total, dtoList)
     }
 
     protected _buildPageQuery(query: QueryBuilder<TEntity>,
@@ -281,13 +282,13 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
     /**
      * Translates from a DTO model to an entity model.
      */
-    protected toEntity(dto: TModel | Partial<TModel>, isPartial: boolean): TEntity {
-        if (!dto) { return null }
+    protected toEntity(domainModel: TModel | Partial<TModel>, isPartial: boolean): TEntity {
+        if (!domainModel) { return null }
 
         const translator = this._EntityClass['translator'] as ModelAutoMapper<TEntity>
         const entity: any = (isPartial)
-            ? translator.partial(dto, { enableValidation: false }) // Disable validation because it's unnecessary.
-            : translator.whole(dto, { enableValidation: false })
+            ? translator.partial(domainModel, { enableValidation: false }) // Disable validation because it's unnecessary.
+            : translator.whole(domainModel, { enableValidation: false })
 
         return entity
     }
@@ -295,13 +296,13 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
     /**
      * Translates from DTO models to entity models.
      */
-    protected toEntityMany(domainModel: TModel[] | Partial<TModel>[], isPartial: boolean): TEntity[] {
-        if (!domainModel) { return null }
+    protected toEntityMany(domainModels: TModel[] | Partial<TModel>[], isPartial: boolean): TEntity[] {
+        if (!domainModels) { return null }
 
         const translator = this._EntityClass['translator'] as ModelAutoMapper<TEntity>
         const entity: any = (isPartial)
-            ? translator.partialMany(domainModel, { enableValidation: false }) // Disable validation because it's unnecessary.
-            : translator.wholeMany(domainModel, { enableValidation: false })
+            ? translator.partialMany(domainModels, { enableValidation: false }) // Disable validation because it's unnecessary.
+            : translator.wholeMany(domainModels, { enableValidation: false })
 
         return entity
     }
@@ -323,13 +324,13 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
     /**
      * Translates from entity models to domain models.
      */
-    protected toDomainModelMany(entity: TEntity[] | Partial<TEntity>[], isPartial: boolean): TModel[] {
-        if (!entity) { return null }
+    protected toDomainModelMany(entities: TEntity[] | Partial<TEntity>[], isPartial: boolean): TModel[] {
+        if (!entities) { return null }
 
         const translator = this._DomainClass['translator'] as ModelAutoMapper<TModel>
         const dto: any = (isPartial)
-            ? translator.partialMany(entity, { enableValidation: false }) // Disable validation because it's unnecessary.
-            : translator.wholeMany(entity, { enableValidation: false })
+            ? translator.partialMany(entities, { enableValidation: false }) // Disable validation because it's unnecessary.
+            : translator.wholeMany(entities, { enableValidation: false })
 
         return dto
     }

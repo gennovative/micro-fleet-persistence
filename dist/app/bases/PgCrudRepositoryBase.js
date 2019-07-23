@@ -24,9 +24,8 @@ let PgCrudRepositoryBase = class PgCrudRepositoryBase {
         this._DomainClass = _DomainClass;
         this._dbConnector = _dbConnector;
         common_1.Guard.assertArgDefined('EntityClass', _EntityClass);
-        common_1.Guard.assertIsTruthy(_EntityClass['tableName'] && _EntityClass['translator'], 'Param "EntityClass" must have tableName and a translator. It had better inherit "EntityBase"!');
+        common_1.Guard.assertIsTruthy(_EntityClass['tableName'], 'Param "EntityClass" must have tableName. It had better inherit "EntityBase"!');
         common_1.Guard.assertArgDefined('DomainClass', _DomainClass);
-        common_1.Guard.assertIsTruthy(_DomainClass['translator'], 'Param "DomainClass" must have a translator!');
         common_1.Guard.assertArgDefined('dbConnector', _dbConnector);
         this._pkProps = this._EntityClass['idProp'];
     }
@@ -153,7 +152,7 @@ let PgCrudRepositoryBase = class PgCrudRepositoryBase {
             return new common_1.PagedArray();
         }
         const dtoList = this.toDomainModelMany(foundList.results, false);
-        return new common_1.PagedArray(foundList.total, ...dtoList);
+        return new common_1.PagedArray(foundList.total, dtoList);
     }
     _buildPageQuery(query, opts) {
         const pageIndex = Math.max(0, opts.pageIndex - 1);
@@ -208,27 +207,27 @@ let PgCrudRepositoryBase = class PgCrudRepositoryBase {
     /**
      * Translates from a DTO model to an entity model.
      */
-    toEntity(dto, isPartial) {
-        if (!dto) {
-            return null;
-        }
-        const translator = this._EntityClass['translator'];
-        const entity = (isPartial)
-            ? translator.partial(dto, { enableValidation: false }) // Disable validation because it's unnecessary.
-            : translator.whole(dto, { enableValidation: false });
-        return entity;
-    }
-    /**
-     * Translates from DTO models to entity models.
-     */
-    toEntityMany(domainModel, isPartial) {
+    toEntity(domainModel, isPartial) {
         if (!domainModel) {
             return null;
         }
         const translator = this._EntityClass['translator'];
         const entity = (isPartial)
-            ? translator.partialMany(domainModel, { enableValidation: false }) // Disable validation because it's unnecessary.
-            : translator.wholeMany(domainModel, { enableValidation: false });
+            ? translator.partial(domainModel, { enableValidation: false }) // Disable validation because it's unnecessary.
+            : translator.whole(domainModel, { enableValidation: false });
+        return entity;
+    }
+    /**
+     * Translates from DTO models to entity models.
+     */
+    toEntityMany(domainModels, isPartial) {
+        if (!domainModels) {
+            return null;
+        }
+        const translator = this._EntityClass['translator'];
+        const entity = (isPartial)
+            ? translator.partialMany(domainModels, { enableValidation: false }) // Disable validation because it's unnecessary.
+            : translator.wholeMany(domainModels, { enableValidation: false });
         return entity;
     }
     /**
@@ -247,14 +246,14 @@ let PgCrudRepositoryBase = class PgCrudRepositoryBase {
     /**
      * Translates from entity models to domain models.
      */
-    toDomainModelMany(entity, isPartial) {
-        if (!entity) {
+    toDomainModelMany(entities, isPartial) {
+        if (!entities) {
             return null;
         }
         const translator = this._DomainClass['translator'];
         const dto = (isPartial)
-            ? translator.partialMany(entity, { enableValidation: false }) // Disable validation because it's unnecessary.
-            : translator.wholeMany(entity, { enableValidation: false });
+            ? translator.partialMany(entities, { enableValidation: false }) // Disable validation because it's unnecessary.
+            : translator.wholeMany(entities, { enableValidation: false });
         return dto;
     }
 };

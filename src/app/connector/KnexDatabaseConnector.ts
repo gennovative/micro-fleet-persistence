@@ -1,10 +1,10 @@
 import * as knex from 'knex'
 import { knexSnakeCaseMappers } from 'objection'
-import { injectable, Guard, MinorException, DbConnectionDetail,
-    constants as CmC } from '@micro-fleet/common'
+import { injectable, Guard, MinorException, constants as CmC, Newable } from '@micro-fleet/common'
 
 import { AtomicSession } from '../atom/AtomicSession'
 import { EntityBase } from '../bases/EntityBase'
+import { DbConnectionDetail } from '../interfaces'
 import { IDatabaseConnector, QueryCallback, KnexConnection } from './IDatabaseConnector'
 
 /**
@@ -30,7 +30,7 @@ export class KnexDatabaseConnector implements IDatabaseConnector {
     /**
      * @see IDatabaseConnector.init
      */
-    public init(detail: DbConnectionDetail): void {
+    public init(detail: DbConnectionDetail): this {
         Guard.assertArgDefined('detail', detail)
 
         const settings = {
@@ -44,6 +44,7 @@ export class KnexDatabaseConnector implements IDatabaseConnector {
             require('../pg-type-parsers')
         }
         this._connection = this._knex(settings)
+        return this
     }
 
     /**
