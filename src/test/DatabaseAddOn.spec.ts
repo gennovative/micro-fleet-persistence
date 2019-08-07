@@ -6,7 +6,7 @@ import { IConfigurationProvider, constants, CriticalException,
     Maybe } from '@micro-fleet/common'
 
 import { IDatabaseConnector, QueryCallback, DbConnectionDetail,
-    EntityBase, DatabaseAddOn, AtomicSession, KnexConnection } from '../app'
+    ORMModelBase, DatabaseAddOn, AtomicSession, KnexConnection } from '../app'
 import DB_DETAILS from './database-details'
 
 
@@ -91,7 +91,7 @@ class MockDbConnector implements IDatabaseConnector {
         return Promise.resolve()
     }
 
-    public prepare<TEntity extends EntityBase>(EntityClass: any, callback: QueryCallback<TEntity>,
+    public prepare<TORM extends ORMModelBase>(EntityClass: any, callback: QueryCallback<TORM>,
             atomicSession?: AtomicSession): Promise<any> {
         return Promise.resolve()
     }

@@ -24,10 +24,10 @@ let PgCrudRepositoryBase = class PgCrudRepositoryBase {
         this._DomainClass = _DomainClass;
         this._dbConnector = _dbConnector;
         common_1.Guard.assertArgDefined('EntityClass', _EntityClass);
-        common_1.Guard.assertIsTruthy(_EntityClass['tableName'], 'Param "EntityClass" must have tableName. It had better inherit "EntityBase"!');
+        common_1.Guard.assertIsTruthy(_EntityClass['tableName'], 'Param "EntityClass" must have tableName. It had better inherit "ORMModelBase"!');
         common_1.Guard.assertArgDefined('DomainClass', _DomainClass);
         common_1.Guard.assertArgDefined('dbConnector', _dbConnector);
-        this._pkProps = this._EntityClass['idProp'];
+        this._idProps = this._EntityClass['idProp'];
     }
     /**
      * @see IRepository.countAll
@@ -65,29 +65,29 @@ let PgCrudRepositoryBase = class PgCrudRepositoryBase {
     /**
      * @see IRepository.deleteSingle
      */
-    deleteSingle(pk, opts = {}) {
+    deleteSingle(id, opts = {}) {
         return this.executeQuery(query => {
-            const q = this._buildDeleteSingleQuery(query, pk, opts);
+            const q = this._buildDeleteSingleQuery(query, id, opts);
             debug('DELETE SINGLE: %s', q.toSql());
             return q;
         }, opts.atomicSession);
     }
-    _buildDeleteSingleQuery(query, pk, opts) {
-        return query.deleteById(pk.toArray());
+    _buildDeleteSingleQuery(query, id, opts) {
+        return query.deleteById(id.toArray());
     }
     /**
      * @see IRepository.deleteMany
      */
-    deleteMany(pkList, opts = {}) {
+    deleteMany(idList, opts = {}) {
         return this.executeQuery(query => {
-            const q = this._buildDeleteManyQuery(query, pkList, opts);
+            const q = this._buildDeleteManyQuery(query, idList, opts);
             debug('DELETE MANY: %s', q.toSql());
             return q;
         }, opts.atomicSession);
     }
-    _buildDeleteManyQuery(query, pkList, opts) {
+    _buildDeleteManyQuery(query, idList, opts) {
         const q = query.delete()
-            .whereInComposite(this._EntityClass['idColumn'], pkList.map(pk => pk.toArray()));
+            .whereInComposite(this._EntityClass['idColumn'], idList.map(id => id.toArray()));
         return q;
     }
     /**
@@ -119,12 +119,12 @@ let PgCrudRepositoryBase = class PgCrudRepositoryBase {
         return query;
     }
     /**
-     * @see IRepository.findByPk
+     * @see IRepository.findById
      */
-    findByPk(pk, opts = {}) {
+    findById(id, opts = {}) {
         return this.executeQuery(query => {
-            const q = this._buildFindByPkQuery(query, pk, opts);
-            debug('FIND BY (%o): %s', pk, q.toSql());
+            const q = this._buildFindByIdQuery(query, id, opts);
+            debug('FIND BY (%o): %s', id, q.toSql());
             return q;
         }, opts.atomicSession)
             .then(foundEnt => {
@@ -133,8 +133,8 @@ let PgCrudRepositoryBase = class PgCrudRepositoryBase {
                 : common_1.Maybe.Nothing();
         });
     }
-    _buildFindByPkQuery(query, pk, opts) {
-        const q = query.findById(pk.toArray());
+    _buildFindByIdQuery(query, id, opts) {
+        const q = query.findById(id.toArray());
         opts.relations && q.eager(opts.relations);
         opts.fields && q.select(opts.fields);
         return q;
@@ -179,8 +179,8 @@ let PgCrudRepositoryBase = class PgCrudRepositoryBase {
             : common_1.Maybe.Nothing();
     }
     _buildPatchQuery(query, model, entity, opts) {
-        const pkCondition = pick(entity, this._pkProps);
-        const q = query.patch(entity).where(pkCondition).returning('*');
+        const idCondition = pick(entity, this._idProps);
+        const q = query.patch(entity).where(idCondition).returning('*');
         return q;
     }
     /**
@@ -198,8 +198,8 @@ let PgCrudRepositoryBase = class PgCrudRepositoryBase {
             : common_1.Maybe.Nothing();
     }
     _buildUpdateQuery(query, model, entity, opts) {
-        const pkCondition = pick(entity, this._pkProps);
-        return query.update(entity).where(pkCondition).returning('*');
+        const idCondition = pick(entity, this._idProps);
+        return query.update(entity).where(idCondition).returning('*');
     }
     executeQuery(callback, atomicSession) {
         return this._dbConnector.prepare(this._EntityClass, callback, atomicSession);

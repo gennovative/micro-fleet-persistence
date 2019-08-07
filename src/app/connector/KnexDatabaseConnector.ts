@@ -3,7 +3,7 @@ import { knexSnakeCaseMappers } from 'objection'
 import { injectable, Guard, MinorException, constants as CmC, Newable } from '@micro-fleet/common'
 
 import { AtomicSession } from '../atom/AtomicSession'
-import { EntityBase } from '../bases/EntityBase'
+import { ORMModelBase } from '../bases/ORMModelBase'
 import { DbConnectionDetail } from '../interfaces'
 import { IDatabaseConnector, QueryCallback, KnexConnection } from './IDatabaseConnector'
 
@@ -59,13 +59,13 @@ export class KnexDatabaseConnector implements IDatabaseConnector {
     /**
      * @see IDatabaseConnector.prepare
      */
-    public prepare<TEntity extends EntityBase>(EntityClass: Newable, callback: QueryCallback<TEntity>,
+    public prepare<TORM extends ORMModelBase>(ORMClass: Newable, callback: QueryCallback<TORM>,
             atomicSession?: AtomicSession): Promise<any> {
         Guard.assertIsNotEmpty(this._connection, 'Must call addConnection() before executing any query.')
         if (atomicSession) {
-            return this._prepareTransactionalQuery(EntityClass, callback, atomicSession)
+            return this._prepareTransactionalQuery(ORMClass, callback, atomicSession)
         }
-        return this._prepareSimpleQuery(EntityClass, callback)
+        return this._prepareSimpleQuery(ORMClass, callback)
     }
 
 
@@ -92,13 +92,13 @@ export class KnexDatabaseConnector implements IDatabaseConnector {
         throw new MinorException('No database settings!')
     }
 
-    private _prepareSimpleQuery<TEntity extends EntityBase>(EntityClass: Newable, callback: QueryCallback<TEntity>): Promise<any> {
+    private _prepareSimpleQuery<TORM extends ORMModelBase>(EntityClass: Newable, callback: QueryCallback<TORM>): Promise<any> {
         const BoundClass: any = EntityClass['bindKnex'](this._connection)
         const query = BoundClass['query']()
         return callback(query, BoundClass) as Promise<any>
     }
 
-    private _prepareTransactionalQuery<TEntity extends EntityBase>(EntityClass: Newable, callback: QueryCallback<TEntity>,
+    private _prepareTransactionalQuery<TORM extends ORMModelBase>(EntityClass: Newable, callback: QueryCallback<TORM>,
             atomicSession?: AtomicSession): Promise<any> {
         const BoundClass: any = EntityClass['bindKnex'](atomicSession.knexConnection)
         return callback(BoundClass['query'](atomicSession.knexTransaction), BoundClass) as Promise<any>

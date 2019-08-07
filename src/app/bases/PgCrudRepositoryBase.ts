@@ -10,18 +10,18 @@ import { AtomicSession } from '../atom/AtomicSession'
 import { IDatabaseConnector, QueryCallbackReturn,
     QueryCallback } from '../connector/IDatabaseConnector'
 import * as it from '../interfaces'
-import { EntityBase } from './EntityBase'
+import { ORMModelBase } from './ORMModelBase'
 
 
 @injectable()
-export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel extends object, TPk extends IdBase = SingleId>
-    implements it.IRepository<TModel, TPk> {
+export abstract class PgCrudRepositoryBase<TORM extends ORMModelBase, TDomain extends object, TId extends IdBase = SingleId>
+    implements it.IRepository<TDomain, TId> {
 
     /**
      * EntityClass' primary key properties.
      * Eg: ['id', 'tenantId']
      */
-    private readonly _pkProps: string[]
+    private readonly _idProps: string[]
 
 
     constructor(
@@ -30,11 +30,11 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
             @unmanaged() protected _dbConnector: IDatabaseConnector) {
         Guard.assertArgDefined('EntityClass', _EntityClass)
         Guard.assertIsTruthy(_EntityClass['tableName'],
-            'Param "EntityClass" must have tableName. It had better inherit "EntityBase"!')
+            'Param "EntityClass" must have tableName. It had better inherit "ORMModelBase"!')
         Guard.assertArgDefined('DomainClass', _DomainClass)
         Guard.assertArgDefined('dbConnector', _dbConnector)
 
-        this._pkProps = this._EntityClass['idProp']
+        this._idProps = this._EntityClass['idProp']
     }
 
 
@@ -54,7 +54,7 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
         return (result[0]['total'])
     }
 
-    protected _buildCountAllQuery(query: QueryBuilder<TEntity>,
+    protected _buildCountAllQuery(query: QueryBuilder<TORM>,
             opts: it.RepositoryCountAllOptions): QueryCallbackReturn {
         // Postgres returns count result as int64, so the pg driver returns string.
         // We cast it to int32 to be a valid NodeJS number
@@ -66,8 +66,8 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
     /**
      * @see IRepository.create
      */
-    public create(model: TModel, opts: it.RepositoryCreateOptions = {}): Promise<TModel> {
-        const entity = this.toEntity(model, false) as TEntity
+    public create(model: Partial<TDomain>, opts: it.RepositoryCreateOptions = {}): Promise<TDomain> {
+        const entity = this.toEntity(model, false) as TORM
 
         return this.executeQuery(
             query => {
@@ -77,10 +77,10 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
             },
             opts.atomicSession,
         )
-        .then((refetch: TEntity) => this.toDomainModel(refetch, false))
+        .then((refetch: TORM) => this.toDomainModel(refetch, false))
     }
 
-    protected _buildCreateQuery(query: QueryBuilder<TEntity>, model: TModel, entity: TEntity,
+    protected _buildCreateQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, entity: TORM,
             opts: it.RepositoryCreateOptions): QueryCallbackReturn {
         return query.insert(entity).returning('*') as any
     }
@@ -88,10 +88,10 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
     /**
      * @see IRepository.deleteSingle
      */
-    public deleteSingle(pk: TPk, opts: it.RepositoryDeleteOptions = {}): Promise<number> {
+    public deleteSingle(id: TId, opts: it.RepositoryDeleteOptions = {}): Promise<number> {
         return this.executeQuery(
             query => {
-                const q = this._buildDeleteSingleQuery(query, pk, opts) as QueryBuilder<any>
+                const q = this._buildDeleteSingleQuery(query, id, opts) as QueryBuilder<any>
                 debug('DELETE SINGLE: %s', q.toSql())
                 return q
             },
@@ -99,18 +99,18 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
         )
     }
 
-    protected _buildDeleteSingleQuery(query: QueryBuilder<TEntity>, pk: TPk,
+    protected _buildDeleteSingleQuery(query: QueryBuilder<TORM>, id: TId,
             opts: it.RepositoryDeleteOptions): QueryCallbackReturn {
-        return query.deleteById(pk.toArray())
+        return query.deleteById(id.toArray())
     }
 
     /**
      * @see IRepository.deleteMany
      */
-    public deleteMany(pkList: TPk[], opts: it.RepositoryDeleteOptions = {}): Promise<number> {
+    public deleteMany(idList: TId[], opts: it.RepositoryDeleteOptions = {}): Promise<number> {
         return this.executeQuery(
             query => {
-                const q = this._buildDeleteManyQuery(query, pkList, opts) as QueryBuilder<any>
+                const q = this._buildDeleteManyQuery(query, idList, opts) as QueryBuilder<any>
                 debug('DELETE MANY: %s', q.toSql())
                 return q
             },
@@ -118,12 +118,12 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
         )
     }
 
-    protected _buildDeleteManyQuery(query: QueryBuilder<TEntity>, pkList: TPk[],
+    protected _buildDeleteManyQuery(query: QueryBuilder<TORM>, idList: TId[],
             opts: it.RepositoryDeleteOptions): QueryCallbackReturn {
         const q = query.delete()
             .whereInComposite(
                 this._EntityClass['idColumn'],
-                pkList.map(pk => pk.toArray()),
+                idList.map(id => id.toArray()),
             )
         return q
     }
@@ -131,7 +131,7 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
     /**
      * @see IRepository.exists
      */
-    public async exists(uniqPartial: Partial<TModel>, opts: it.RepositoryExistsOptions = {}): Promise<boolean> {
+    public async exists(uniqPartial: Partial<TDomain>, opts: it.RepositoryExistsOptions = {}): Promise<boolean> {
         const result = await this.executeQuery(
             query => {
                 const q = this._buildExistsQuery(query, uniqPartial, opts) as QueryBuilder<any>
@@ -144,7 +144,7 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
         return result[0]['total'] != 0
     }
 
-    protected _buildExistsQuery(query: QueryBuilder<TEntity>, uniqPartial: Partial<TModel>,
+    protected _buildExistsQuery(query: QueryBuilder<TORM>, uniqPartial: Partial<TDomain>,
             opts: it.RepositoryExistsOptions): QueryCallbackReturn {
         query
             .count(`* as total`)
@@ -163,13 +163,13 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
     }
 
     /**
-     * @see IRepository.findByPk
+     * @see IRepository.findById
      */
-    public findByPk(pk: TPk, opts: it.RepositoryFindOptions = {}): Promise<Maybe<TModel>> {
+    public findById(id: TId, opts: it.RepositoryFindOptions = {}): Promise<Maybe<TDomain>> {
         return this.executeQuery(
             query => {
-                const q = this._buildFindByPkQuery(query, pk, opts) as QueryBuilder<any>
-                debug('FIND BY (%o): %s', pk, q.toSql())
+                const q = this._buildFindByIdQuery(query, id, opts) as QueryBuilder<any>
+                debug('FIND BY (%o): %s', id, q.toSql())
                 return q
             },
             opts.atomicSession
@@ -178,12 +178,12 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
             return foundEnt
                 ? Maybe.Just(this.toDomainModel(foundEnt, false))
                 : Maybe.Nothing()
-        }) as Promise<Maybe<TModel>>
+        }) as Promise<Maybe<TDomain>>
     }
 
-    protected _buildFindByPkQuery(query: QueryBuilder<TEntity>, pk: TPk,
+    protected _buildFindByIdQuery(query: QueryBuilder<TORM>, id: TId,
             opts: it.RepositoryFindOptions): QueryCallbackReturn {
-        const q = query.findById(pk.toArray())
+        const q = query.findById(id.toArray())
         opts.relations && q.eager(opts.relations)
         opts.fields && q.select(opts.fields)
         return q
@@ -192,8 +192,8 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
     /**
      * @see IRepository.page
      */
-    public async page(opts: it.RepositoryPageOptions): Promise<PagedArray<TModel>> {
-        type PageResult = { total: number, results: Array<TEntity> }
+    public async page(opts: it.RepositoryPageOptions): Promise<PagedArray<TDomain>> {
+        type PageResult = { total: number, results: Array<TORM> }
         const foundList: PageResult = await this.executeQuery(
             query => {
                 const q = this._buildPageQuery(query, opts) as QueryBuilder<any>
@@ -204,13 +204,13 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
         )
 
         if (!foundList) {
-            return new PagedArray<TModel>()
+            return new PagedArray<TDomain>()
         }
-        const dtoList: TModel[] = this.toDomainModelMany(foundList.results, false) as TModel[]
-        return new PagedArray<TModel>(foundList.total, dtoList)
+        const dtoList: TDomain[] = this.toDomainModelMany(foundList.results, false) as TDomain[]
+        return new PagedArray<TDomain>(foundList.total, dtoList)
     }
 
-    protected _buildPageQuery(query: QueryBuilder<TEntity>,
+    protected _buildPageQuery(query: QueryBuilder<TORM>,
             opts: it.RepositoryPageOptions): QueryCallbackReturn {
         const pageIndex = Math.max(0, opts.pageIndex - 1)
         const q = query
@@ -226,10 +226,10 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
     /**
      * @see IRepository.patch
      */
-    public async patch(model: Partial<TModel>, opts: it.RepositoryPatchOptions = {}): Promise<Maybe<TModel>> {
-        const entity = this.toEntity(model, true) as TEntity
+    public async patch(model: Partial<TDomain>, opts: it.RepositoryPatchOptions = {}): Promise<Maybe<TDomain>> {
+        const entity = this.toEntity(model, true) as TORM
 
-        const refetchedEntities: TEntity[] = await this.executeQuery(
+        const refetchedEntities: TORM[] = await this.executeQuery(
             query => {
                 const q = this._buildPatchQuery(query, model, entity, opts) as QueryBuilder<any>
                 debug('PATCH: %s', q.toSql())
@@ -242,20 +242,20 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
             : Maybe.Nothing()
     }
 
-    protected _buildPatchQuery(query: QueryBuilder<TEntity>, model: Partial<TModel>, entity: TEntity,
+    protected _buildPatchQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, entity: TORM,
             opts: it.RepositoryPatchOptions): QueryCallbackReturn {
-        const pkCondition = pick(entity, this._pkProps)
-        const q = query.patch(entity).where(pkCondition).returning('*')
+        const idCondition = pick(entity, this._idProps)
+        const q = query.patch(entity).where(idCondition).returning('*')
         return q
     }
 
     /**
      * @see IRepository.update
      */
-    public async update(model: TModel, opts: it.RepositoryUpdateOptions = {}): Promise<Maybe<TModel>> {
-        const entity = this.toEntity(model, false) as TEntity
+    public async update(model: TDomain, opts: it.RepositoryUpdateOptions = {}): Promise<Maybe<TDomain>> {
+        const entity = this.toEntity(model, false) as TORM
 
-        const refetchedEntities: TEntity[] = await this.executeQuery(
+        const refetchedEntities: TORM[] = await this.executeQuery(
             query => {
                 const q = this._buildUpdateQuery(query, model, entity, opts) as QueryBuilder<any>
                 debug('UPDATE: %s', q.toSql())
@@ -268,24 +268,24 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
             : Maybe.Nothing()
     }
 
-    protected _buildUpdateQuery(query: QueryBuilder<TEntity>, model: Partial<TModel>, entity: TEntity,
+    protected _buildUpdateQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, entity: TORM,
             opts: it.RepositoryUpdateOptions): QueryCallbackReturn {
-        const pkCondition = pick(entity, this._pkProps)
-        return query.update(entity).where(pkCondition).returning('*')
+        const idCondition = pick(entity, this._idProps)
+        return query.update(entity).where(idCondition).returning('*')
     }
 
 
-    protected executeQuery(callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any> {
+    protected executeQuery(callback: QueryCallback<TORM>, atomicSession?: AtomicSession): Promise<any> {
         return this._dbConnector.prepare(this._EntityClass, <any>callback, atomicSession)
     }
 
     /**
      * Translates from a DTO model to an entity model.
      */
-    protected toEntity(domainModel: TModel | Partial<TModel>, isPartial: boolean): TEntity {
+    protected toEntity(domainModel: TDomain | Partial<TDomain>, isPartial: boolean): TORM {
         if (!domainModel) { return null }
 
-        const translator = this._EntityClass['translator'] as ModelAutoMapper<TEntity>
+        const translator = this._EntityClass['translator'] as ModelAutoMapper<TORM>
         const entity: any = (isPartial)
             ? translator.partial(domainModel, { enableValidation: false }) // Disable validation because it's unnecessary.
             : translator.whole(domainModel, { enableValidation: false })
@@ -296,10 +296,10 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
     /**
      * Translates from DTO models to entity models.
      */
-    protected toEntityMany(domainModels: TModel[] | Partial<TModel>[], isPartial: boolean): TEntity[] {
+    protected toEntityMany(domainModels: TDomain[] | Partial<TDomain>[], isPartial: boolean): TORM[] {
         if (!domainModels) { return null }
 
-        const translator = this._EntityClass['translator'] as ModelAutoMapper<TEntity>
+        const translator = this._EntityClass['translator'] as ModelAutoMapper<TORM>
         const entity: any = (isPartial)
             ? translator.partialMany(domainModels, { enableValidation: false }) // Disable validation because it's unnecessary.
             : translator.wholeMany(domainModels, { enableValidation: false })
@@ -310,10 +310,10 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
     /**
      * Translates from an entity model to a domain model.
      */
-    protected toDomainModel(entity: TEntity | Partial<TEntity>, isPartial: boolean): TModel {
+    protected toDomainModel(entity: TORM | Partial<TORM>, isPartial: boolean): TDomain {
         if (!entity) { return null }
 
-        const translator = this._DomainClass['translator'] as ModelAutoMapper<TModel>
+        const translator = this._DomainClass['translator'] as ModelAutoMapper<TDomain>
         const dto: any = (isPartial)
             ? translator.partial(entity, { enableValidation: false }) // Disable validation because it's unnecessary.
             : translator.whole(entity, { enableValidation: false })
@@ -324,10 +324,10 @@ export abstract class PgCrudRepositoryBase<TEntity extends EntityBase, TModel ex
     /**
      * Translates from entity models to domain models.
      */
-    protected toDomainModelMany(entities: TEntity[] | Partial<TEntity>[], isPartial: boolean): TModel[] {
+    protected toDomainModelMany(entities: TORM[] | Partial<TORM>[], isPartial: boolean): TDomain[] {
         if (!entities) { return null }
 
-        const translator = this._DomainClass['translator'] as ModelAutoMapper<TModel>
+        const translator = this._DomainClass['translator'] as ModelAutoMapper<TDomain>
         const dto: any = (isPartial)
             ? translator.partialMany(entities, { enableValidation: false }) // Disable validation because it's unnecessary.
             : translator.wholeMany(entities, { enableValidation: false })

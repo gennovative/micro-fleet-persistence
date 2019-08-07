@@ -150,24 +150,12 @@ export interface RepositoryPatchOptions extends RepositoryOptions {
 export interface RepositoryUpdateOptions extends RepositoryOptions {
 }
 
-export interface RepositoryRecoverOptions extends RepositoryOptions {
-}
-
-export interface RepositorySetMainOptions extends RepositoryOptions {
-}
-
-export interface RepositoryDelVersionOptions extends RepositoryOptions {
-    olderThan?: Date
-}
-
-export interface RepositoryRestrictOptions extends RepositoryOptions {
-}
 
 
 /**
  * Provides common CRUD operations.
  */
-export interface IRepository<TModel, TPk extends IdBase = SingleId> {
+export interface IRepository<TDomain, TId extends IdBase = SingleId> {
 
     /**
      * Counts all records in a table.
@@ -179,165 +167,48 @@ export interface IRepository<TModel, TPk extends IdBase = SingleId> {
      *
      * @param {DTO model} model The model to be inserted.
      */
-    create(model: TModel, options?: RepositoryCreateOptions): Promise<TModel>
+    create(model: Partial<TDomain>, options?: RepositoryCreateOptions): Promise<TDomain>
 
     /**
      * Permanently deletes one record.
      *
-     * @param {PK Type} pk The primary key object.
+     * @param {TId} id The id object.
      */
-    deleteSingle(pk: TPk, options?: RepositoryDeleteOptions): Promise<number>
+    deleteSingle(id: TId, options?: RepositoryDeleteOptions): Promise<number>
 
     /**
      * Permanently deletes many records.
      */
-    deleteMany(pkList: TPk[], options?: RepositoryDeleteOptions): Promise<number>
+    deleteMany(idList: TId[], options?: RepositoryDeleteOptions): Promise<number>
 
     /**
      * Checks if a record exists or not.
      *
      * @param {DTO model} uniqPartial An object with non-primary unique properties.
      */
-    exists(uniqPartial: Partial<TModel>, options?: RepositoryExistsOptions): Promise<boolean>
+    exists(uniqPartial: Partial<TDomain>, options?: RepositoryExistsOptions): Promise<boolean>
 
     /**
-     * Selects only one record with `pk`.
+     * Selects only one record with `id`.
      *
-     * @param {PK Type} pk The primary key object.
+     * @param {TId} id The ID object.
      */
-    findByPk(pk: TPk, options?: RepositoryFindOptions): Promise<Maybe<TModel>>
+    findById(id: TId, options?: RepositoryFindOptions): Promise<Maybe<TDomain>>
 
     /**
      * Fetches a limited number of records at specified offset.
      *
      * @param {RepositoryPageOptions} options Page options.
      */
-    page(options: RepositoryPageOptions): Promise<PagedArray<TModel>>
+    page(options: RepositoryPageOptions): Promise<PagedArray<TDomain>>
 
     /**
      * Updates new value for specified properties in `model`.
      */
-    patch(model: Partial<TModel>, options?: RepositoryPatchOptions): Promise<Maybe<TModel>>
+    patch(model: Partial<TDomain>, options?: RepositoryPatchOptions): Promise<Maybe<TDomain>>
 
     /**
      * Replaces a record with `model`.
      */
-    update(model: TModel, options?: RepositoryUpdateOptions): Promise<Maybe<TModel>>
-}
-
-
-export interface LegacyRepositoryPageOptions extends RepositoryCountAllOptions {
-    sortBy?: string
-    sortType?: SortType
-    excludeDeleted?: boolean
-}
-
-/**
- * Provides common CRUD operations, based on Unit of Work pattern.
- * @deprecated
- */
-export interface ILegacyRepository<TModel, TPk, TUk> {
-
-    /**
-     * Counts all records in a table.
-     */
-    countAll(options?: RepositoryCountAllOptions): Promise<number>
-
-    /**
-     * Inserts one or more `model` to database.
-     * @param {DTO model} model The model to be inserted.
-     */
-    create(model: TModel | TModel[], options?: RepositoryCreateOptions): Promise<TModel | TModel[]>
-
-    /**
-     * Permanently deletes one or many records.
-     * @param {PK Type} pk The primary key object.
-     */
-    deleteHard(pk: TPk | TPk[], options?: RepositoryDeleteOptions): Promise<number>
-
-    /**
-     * Checks if a record exists or not.
-     * @param {TUk} props An object with non-primary unique properties.
-     */
-    exists(props: TUk, options?: RepositoryExistsOptions): Promise<boolean>
-
-    /**
-     * Selects only one record with `pk`.
-     * @param {PK Type} pk The primary key object.
-     */
-    findByPk(pk: TPk, options?: RepositoryFindOptions): Promise<TModel>
-
-    /**
-     * Selects `pageSize` number of records at page `pageIndex`.
-     * @param {number} pageIndex Index of the page.
-     * @param {number} pageSize Number of records in a page.
-     */
-    page(pageIndex: number, pageSize: number, options?: RepositoryPageOptions): Promise<PagedArray<TModel>>
-
-    /**
-     * Updates new value for specified properties in `model`.
-     */
-    patch(model: Partial<TModel> | Partial<TModel>[], options?: RepositoryPatchOptions): Promise<Partial<TModel> | Partial<TModel>[]>
-
-    /**
-     * Replaces a record with `model`.
-     */
-    update(model: TModel | TModel[], options?: RepositoryUpdateOptions): Promise<TModel | TModel[]>
-}
-
-/**
- * Provides common operations to soft-delete and recover models.
- */
-export interface ISoftDelRepository<TModel, TPk, TUk>
-        extends ILegacyRepository<TModel, TPk, TUk> {
-
-    /**
-     * Marks one or many records with `pk` as deleted.
-     * @param {PK Type} pk The primary key object.
-     */
-    deleteSoft(pk: TPk | TPk[], options?: RepositoryDeleteOptions): Promise<number>
-
-    /**
-     * Marks one or many records with `pk` as NOT deleted.
-     * @param {PK Type} pk The primary key object.
-     */
-    recover(pk: TPk | TPk[], options?: RepositoryRecoverOptions): Promise<number>
-
-}
-
-/**
- * Provides common operations to control models' revisions.
- */
-export interface IVersionRepository<TModel, TPk, TUk>
-        extends ISoftDelRepository<TModel, TPk, TUk> {
-
-    /**
-     * Permanently deletes one or many version of a record.
-     * Can be filtered with `olderThan` option.
-     * @param {PK Type} pk The primary key object.
-     */
-    deleteHardVersions(pk: TPk, versions: number | number[], options?: RepositoryDelVersionOptions): Promise<number>
-
-    /**
-     * Selects `pageSize` number of version of a record at page `pageIndex`.
-     * @param {PK Type} pk The primary key object.
-     * @param {number} pageIndex Index of the page.
-     * @param {number} pageSize Number of records in a page.
-     */
-    pageVersions(pk: TPk, pageIndex: number, pageSize: number, options?: RepositoryPageOptions): Promise<number>
-
-    /**
-     * Marks a revision as main version of the record with `pk`.
-     * @param {PK Type} pk The primary key object.
-     * @param {number} version The version number.
-     */
-    setAsMain(pk: TPk, version: number, options?: RepositorySetMainOptions): Promise<number>
-
-    /**
-     * Removes old versions to keep number of version to be equal or less than `nVersion`.
-     * @param {PK Type} pk The primary key object.
-     * @param {number} nVersion Number of versions to keep.
-     */
-
-    restrictQuantity(pk: TPk, nVersion: number, options?: RepositoryRestrictOptions): void
+    update(model: TDomain, options?: RepositoryUpdateOptions): Promise<Maybe<TDomain>>
 }

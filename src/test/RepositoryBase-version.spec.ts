@@ -4,7 +4,7 @@
 // import { IdGenerator } from '@micro-fleet/id-generator'
 
 // import {
-//     RepositoryBase, EntityBase, IDatabaseConnector,
+//     RepositoryBase, ORMModelBase, IDatabaseConnector,
 //     KnexDatabaseConnector, AtomicSessionFactory, AtomicSessionFlow
 // } from '../app'
 // import DB_DETAILS from './database-details'
@@ -28,7 +28,7 @@
 //     public isMain: boolean = undefined
 // }
 
-// class UserVersionEntity extends EntityBase {
+// class UserVersionEntity extends ORMModelBase {
 //     /**
 //      * @override
 //      */

@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const objection_1 = require("objection");
 const camelCase = global['camelCase'];
-class EntityBase extends objection_1.Model {
+class ORMModelBase extends objection_1.Model {
     /**
      * @abstract
      */
@@ -23,20 +23,14 @@ class EntityBase extends objection_1.Model {
     }
 }
 /**
- * @abstract
- * Function to convert other object to this class type.
- * This method must be implemented by derived class!
- */
-EntityBase.translator = undefined;
-/**
  * [ObjectionJS] Array of primary column names.
  * Should be overriden (['id', 'tenant_id']) for composite PK.
  */
-EntityBase.idColumn = ['id'];
+ORMModelBase.idColumn = ['id'];
 /**
  * An array of non-primary unique column names.
  */
-EntityBase.uniqColumn = [];
-exports.EntityBase = EntityBase;
-EntityBase.knex(null);
-//# sourceMappingURL=EntityBase.js.map
+ORMModelBase.uniqColumn = [];
+exports.ORMModelBase = ORMModelBase;
+ORMModelBase.knex(null);
+//# sourceMappingURL=ORMModelBase.js.map

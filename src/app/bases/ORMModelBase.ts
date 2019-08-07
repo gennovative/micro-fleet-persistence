@@ -1,10 +1,9 @@
 import { Model } from 'objection'
-import { ModelAutoMapper } from '@micro-fleet/common'
 
 const camelCase = global['camelCase']
 
 
-export abstract class EntityBase extends Model {
+export abstract class ORMModelBase extends Model {
 
     /**
      * @abstract
@@ -12,13 +11,6 @@ export abstract class EntityBase extends Model {
     public static get tableName(): string {
         throw new Error('This method must be implemented by derived class!')
     }
-
-    /**
-     * @abstract
-     * Function to convert other object to this class type.
-     * This method must be implemented by derived class!
-     */
-    public static readonly translator: ModelAutoMapper<any> = undefined
 
     /**
      * [ObjectionJS] Array of primary column names.
@@ -46,4 +38,4 @@ export abstract class EntityBase extends Model {
     }
 }
 
-EntityBase.knex(null)
+ORMModelBase.knex(null)

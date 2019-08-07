@@ -1,20 +1,20 @@
 import { expect } from 'chai'
 
-import { EntityBase } from '../app'
+import { ORMModelBase } from '../app'
 
 const TABLE_NAME = 'tblGood'
 
-class BadEntity extends EntityBase {
+class BadEntity extends ORMModelBase {
 
 }
 
-class GoodEntity extends EntityBase {
+class GoodEntity extends ORMModelBase {
     /* override */ static get tableName(): string {
         return TABLE_NAME
     }
 }
 
-describe('EntityBase', () => {
+describe('ORMModelBase', () => {
     describe('get tableName', () => {
         it('should throw exception if not overriden', () => {
             let exception = null,

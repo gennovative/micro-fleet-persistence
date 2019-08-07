@@ -53,12 +53,12 @@ let KnexDatabaseConnector = class KnexDatabaseConnector {
     /**
      * @see IDatabaseConnector.prepare
      */
-    prepare(EntityClass, callback, atomicSession) {
+    prepare(ORMClass, callback, atomicSession) {
         common_1.Guard.assertIsNotEmpty(this._connection, 'Must call addConnection() before executing any query.');
         if (atomicSession) {
-            return this._prepareTransactionalQuery(EntityClass, callback, atomicSession);
+            return this._prepareTransactionalQuery(ORMClass, callback, atomicSession);
         }
-        return this._prepareSimpleQuery(EntityClass, callback);
+        return this._prepareSimpleQuery(ORMClass, callback);
     }
     _buildConnSettings(detail) {
         // 1st priority: connect to a local file.

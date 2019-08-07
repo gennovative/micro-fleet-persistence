@@ -3,7 +3,7 @@ import { QueryBuilder, Model } from 'objection'
 import { Newable } from '@micro-fleet/common'
 
 import { AtomicSession } from '../atom/AtomicSession'
-import { EntityBase } from '../bases/EntityBase'
+import { ORMModelBase } from '../bases/ORMModelBase'
 import { DbConnectionDetail } from '../interfaces'
 
 
@@ -21,7 +21,7 @@ export type QueryCallbackReturn = QueryBuilder<any> | Promise<any>
  * @param {QueryBuilder} queryBuilder A query that is bound to a connection.
  * @param {Class} boundEntityClass A class that is bound to a connection.
  */
-export type QueryCallback<TEntity extends Model> = (queryBuilder: QueryBuilder<TEntity>,
+export type QueryCallback<TORM extends Model> = (queryBuilder: QueryBuilder<TORM>,
     boundEntityClass?: Newable) => QueryCallbackReturn
 
 /**
@@ -49,7 +49,7 @@ export interface IDatabaseConnector {
      * Executes same query on all managed connections. This connector binds connections
      * to `EntityClass` and passes a queryable instance to `callback`.
      *
-     * @param {class} EntityClass An entity class to bind a connection.
+     * @param {class} ORMClass An ORM class to bind a connection.
      * @param {QueryCallback} callback A callback to invoke each time a connection is bound.
      * @param {AtomicSession} atomicSession A session which provides transaction to execute queries on.
      * @example
@@ -60,5 +60,5 @@ export interface IDatabaseConnector {
      *
      * @return {Promise} A promise returned by the `callback`.
      */
-    prepare<TEntity extends EntityBase>(EntityClass: Newable, callback: QueryCallback<TEntity>, atomicSession?: AtomicSession): Promise<any>
+    prepare<TORM extends ORMModelBase>(ORMClass: Newable, callback: QueryCallback<TORM>, atomicSession?: AtomicSession): Promise<any>
 }

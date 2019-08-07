@@ -4,7 +4,7 @@ import * as moment from 'moment'
 import { MinorException, PagedArray, ModelAutoMapper, SingleId, Maybe } from '@micro-fleet/common'
 import { IdGenerator } from '@micro-fleet/id-generator'
 
-import { PgCrudRepositoryBase, EntityBase, IDatabaseConnector,
+import { PgCrudRepositoryBase, ORMModelBase, IDatabaseConnector,
         KnexDatabaseConnector, AtomicSessionFactory, AtomicSessionFlow } from '../app'
 import DB_DETAILS from './database-details'
 
@@ -26,7 +26,7 @@ class UserDTO {
 }
 
 
-class UserEntity extends EntityBase {
+class UserEntity extends ORMModelBase {
     /**
      * @override
      */
@@ -355,7 +355,7 @@ describe('PgCrudRepositoryBase', function() {
     describe('findByPk', () => {
         it('should return an model instance if found', async () => {
             // Act
-            const foundDTO: Maybe<UserDTO> = await usrRepo.findByPk(new SingleId(cachedDTO.id))
+            const foundDTO: Maybe<UserDTO> = await usrRepo.findById(new SingleId(cachedDTO.id))
 
             // Assert
             expect(foundDTO.isJust).to.true
@@ -366,7 +366,7 @@ describe('PgCrudRepositoryBase', function() {
 
         it('should return DTO instance if success', async () => {
             // Act
-            const foundDTO: Maybe<UserDTO> = await usrRepo.findByPk(new SingleId(cachedDTO.id))
+            const foundDTO: Maybe<UserDTO> = await usrRepo.findById(new SingleId(cachedDTO.id))
 
             // Assert
             expect(foundDTO.isJust).to.be.true
@@ -375,7 +375,7 @@ describe('PgCrudRepositoryBase', function() {
 
         it('should return `null` if not found', async () => {
             // Act
-            const model: Maybe<UserDTO> = await usrRepo.findByPk(new SingleId(IMPOSSIBLE_ID))
+            const model: Maybe<UserDTO> = await usrRepo.findById(new SingleId(IMPOSSIBLE_ID))
 
             // Assert
             expect(model.isNothing).to.be.true
@@ -389,7 +389,7 @@ describe('PgCrudRepositoryBase', function() {
 
             // Act
             const partial: Maybe<UserDTO> = await usrRepo.patch({ id: cachedDTO.id, age: newAge}),
-                refetchedDTO: Maybe<UserDTO> = await usrRepo.findByPk(new SingleId(cachedDTO.id))
+                refetchedDTO: Maybe<UserDTO> = await usrRepo.findById(new SingleId(cachedDTO.id))
 
             // Assert
             expect(partial.isJust).to.be.true
@@ -409,7 +409,7 @@ describe('PgCrudRepositoryBase', function() {
 
             // Act
             const partial: Maybe<UserDTO> = await usrRepo.patch({ id: IMPOSSIBLE_ID, age: newAge}),
-                refetchedDTO: Maybe<UserDTO> = await usrRepo.findByPk(new SingleId(IMPOSSIBLE_ID))
+                refetchedDTO: Maybe<UserDTO> = await usrRepo.findById(new SingleId(IMPOSSIBLE_ID))
 
             // Assert
             expect(partial.isNothing).to.be.true
@@ -427,7 +427,7 @@ describe('PgCrudRepositoryBase', function() {
 
             // Act
             const modified: Maybe<UserDTO> = await usrRepo.update(updatedDTO),
-                refetchedDTO: Maybe<UserDTO> = await usrRepo.findByPk(new SingleId(cachedDTO.id))
+                refetchedDTO: Maybe<UserDTO> = await usrRepo.findById(new SingleId(cachedDTO.id))
 
             // Assert
             expect(modified.isJust).to.be.true
@@ -464,7 +464,7 @@ describe('PgCrudRepositoryBase', function() {
 
             // Act
             const modified: Maybe<UserDTO> = await usrRepo.update(updatedDTO),
-                refetchedDTO: Maybe<UserDTO> = await usrRepo.findByPk(new SingleId(updatedDTO.id))
+                refetchedDTO: Maybe<UserDTO> = await usrRepo.findById(new SingleId(updatedDTO.id))
 
             // Assert
             expect(modified.isJust).to.be.true
@@ -534,7 +534,7 @@ describe('PgCrudRepositoryBase', function() {
         it('should return a possitive number if found', async () => {
             // Act
             const affectedRows: number = await usrRepo.deleteSingle(new SingleId(cachedDTO.id)),
-                refetchedDTO: Maybe<UserDTO> = await usrRepo.findByPk(new SingleId(cachedDTO.id))
+                refetchedDTO: Maybe<UserDTO> = await usrRepo.findById(new SingleId(cachedDTO.id))
 
             // Assert
             expect(affectedRows).to.be.greaterThan(0)
@@ -545,7 +545,7 @@ describe('PgCrudRepositoryBase', function() {
         it('should return 0 if not found', async () => {
             // Act
             const affectedRows: number = await usrRepo.deleteSingle(new SingleId(IMPOSSIBLE_ID)),
-                refetchedDTO: Maybe<UserDTO> = await usrRepo.findByPk(new SingleId(IMPOSSIBLE_ID))
+                refetchedDTO: Maybe<UserDTO> = await usrRepo.findById(new SingleId(IMPOSSIBLE_ID))
 
             // Assert
             expect(affectedRows).to.equal(0)

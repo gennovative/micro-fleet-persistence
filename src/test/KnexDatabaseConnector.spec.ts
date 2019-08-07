@@ -3,7 +3,7 @@ import * as spies from 'chai-spies'
 import * as _ from 'lodash'
 import { constants, MinorException } from '@micro-fleet/common'
 
-import { KnexDatabaseConnector, EntityBase } from '../app'
+import { KnexDatabaseConnector, ORMModelBase } from '../app'
 import DB_DETAILS from './database-details'
 
 chai.use(spies)
@@ -15,7 +15,7 @@ const expect = chai.expect,
     DB_TABLE = 'unittestOne.userdata'
 
 
-class DummyEntity extends EntityBase {
+class DummyEntity extends ORMModelBase {
     /**
      * @override
      */

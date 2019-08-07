@@ -4,7 +4,7 @@ import { MinorException, PagedArray, ModelAutoMapper,
     TenantId, Maybe } from '@micro-fleet/common'
 import { IdGenerator } from '@micro-fleet/id-generator'
 
-import { EntityBase, IDatabaseConnector,
+import { ORMModelBase, IDatabaseConnector,
     KnexDatabaseConnector, AtomicSessionFactory, AtomicSessionFlow,
     PgCrudRepositoryBase} from '../app'
 import DB_DETAILS from './database-details'
@@ -27,7 +27,7 @@ class UserTenantDTO {
 }
 
 
-class UserTenantEntity extends EntityBase {
+class UserTenantEntity extends ORMModelBase {
     /**
      * @override
      */
@@ -345,7 +345,7 @@ describe.only('RepositoryBase-tenant', function() {
     describe('find', () => {
         it('should return an model instance if found', async () => {
             // Act
-            const foundDTO: Maybe<UserTenantDTO> = await usrRepo.findByPk(new TenantId(
+            const foundDTO: Maybe<UserTenantDTO> = await usrRepo.findById(new TenantId(
                 cachedDTO.id,
                 cachedDTO.tenantId,
             ))
@@ -359,7 +359,7 @@ describe.only('RepositoryBase-tenant', function() {
 
         it('should return `null` if not found', async () => {
             // Act
-            const model: Maybe<UserTenantDTO> = await usrRepo.findByPk(new TenantId(
+            const model: Maybe<UserTenantDTO> = await usrRepo.findById(new TenantId(
                 IMPOSSIBLE_ID,
                 '0',
             ))
@@ -380,7 +380,7 @@ describe.only('RepositoryBase-tenant', function() {
                     tenantId: cachedDTO.tenantId,
                     age: newAge,
                 })
-            const refetchedDTO: Maybe<UserTenantDTO> = await usrRepo.findByPk(new TenantId(
+            const refetchedDTO: Maybe<UserTenantDTO> = await usrRepo.findById(new TenantId(
                     cachedDTO.id,
                     cachedDTO.tenantId,
                 ))
@@ -405,7 +405,7 @@ describe.only('RepositoryBase-tenant', function() {
                     tenantId: '0',
                     age: newAge,
                 })
-            const refetchedDTO: Maybe<UserTenantDTO> = await usrRepo.findByPk(new TenantId(
+            const refetchedDTO: Maybe<UserTenantDTO> = await usrRepo.findById(new TenantId(
                     IMPOSSIBLE_ID,
                     '0',
                 ))
@@ -426,7 +426,7 @@ describe.only('RepositoryBase-tenant', function() {
 
             // Act
             const modified: Maybe<UserTenantDTO> = await usrRepo.update(updatedDTO),
-                refetchedDTO: Maybe<UserTenantDTO> = await usrRepo.findByPk(new TenantId(
+                refetchedDTO: Maybe<UserTenantDTO> = await usrRepo.findById(new TenantId(
                     cachedDTO.id,
                     cachedDTO.tenantId,
                 ))
@@ -450,7 +450,7 @@ describe.only('RepositoryBase-tenant', function() {
 
             // Act
             const modified: Maybe<UserTenantDTO> = await usrRepo.update(updatedDTO),
-                refetchedDTO: Maybe<UserTenantDTO> = await usrRepo.findByPk(new TenantId(
+                refetchedDTO: Maybe<UserTenantDTO> = await usrRepo.findById(new TenantId(
                     updatedDTO.id,
                     updatedDTO.tenantId,
                 ))
@@ -469,7 +469,7 @@ describe.only('RepositoryBase-tenant', function() {
                     cachedDTO.id,
                     cachedDTO.tenantId,
                 ))
-            const refetchedDTO: Maybe<UserTenantDTO> = await usrRepo.findByPk(new TenantId(
+            const refetchedDTO: Maybe<UserTenantDTO> = await usrRepo.findById(new TenantId(
                     cachedDTO.id,
                     cachedDTO.tenantId,
                 ))
@@ -486,7 +486,7 @@ describe.only('RepositoryBase-tenant', function() {
                     IMPOSSIBLE_ID,
                     '0',
                 )),
-                refetchedDTO: Maybe<UserTenantDTO> = await usrRepo.findByPk(new TenantId(
+                refetchedDTO: Maybe<UserTenantDTO> = await usrRepo.findById(new TenantId(
                     IMPOSSIBLE_ID,
                     '0',
                 ))

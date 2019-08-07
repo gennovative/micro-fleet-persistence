@@ -6,7 +6,7 @@ import { expect } from 'chai'
 import { ModelAutoMapper, SingleId, Maybe } from '@micro-fleet/common'
 import { IdGenerator } from '@micro-fleet/id-generator'
 
-import { PgCrudRepositoryBase, EntityBase, IRepository, IDatabaseConnector,
+import { PgCrudRepositoryBase, ORMModelBase, IRepository, IDatabaseConnector,
         KnexDatabaseConnector, AtomicSessionFactory } from '../app'
 import DB_DETAILS from './database-details'
 
@@ -26,7 +26,7 @@ class UserBatchDTO {
 }
 
 
-class UserBatchEntity extends EntityBase {
+class UserBatchEntity extends ORMModelBase {
     /**
      * @override
      */
@@ -234,8 +234,8 @@ describe('RepositoryBase-batch', function() {
         it('should return a possitive number if found', async () => {
             // Act
             const affectedRows: number = await usrRepo.deleteMany([new SingleId(cachedDTOs[0].id), new SingleId(cachedDTOs[1].id)]),
-                refetchedOne: Maybe<UserBatchDTO> = await usrRepo.findByPk(new SingleId(cachedDTOs[0].id)),
-                refetchedTwo: Maybe<UserBatchDTO> = await usrRepo.findByPk(new SingleId(cachedDTOs[1].id))
+                refetchedOne: Maybe<UserBatchDTO> = await usrRepo.findById(new SingleId(cachedDTOs[0].id)),
+                refetchedTwo: Maybe<UserBatchDTO> = await usrRepo.findById(new SingleId(cachedDTOs[1].id))
 
             // Assert
             expect(affectedRows).to.be.equal(2)
@@ -247,8 +247,8 @@ describe('RepositoryBase-batch', function() {
         it('should return 0 if not found', async () => {
             // Act
             const affectedRows: number = await usrRepo.deleteMany(IMPOSSIBLE_IDs),
-                refetchedOne: Maybe<UserBatchDTO> = await usrRepo.findByPk(IMPOSSIBLE_IDs[0]),
-                refetchedTwo: Maybe<UserBatchDTO> = await usrRepo.findByPk(IMPOSSIBLE_IDs[1])
+                refetchedOne: Maybe<UserBatchDTO> = await usrRepo.findById(IMPOSSIBLE_IDs[0]),
+                refetchedTwo: Maybe<UserBatchDTO> = await usrRepo.findById(IMPOSSIBLE_IDs[1])
 
             // Assert
             expect(affectedRows).to.equal(0)
