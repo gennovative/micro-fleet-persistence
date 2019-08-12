@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import * as moment from 'moment'
 
-import { MinorException, PagedArray, ModelAutoMapper, SingleId, Maybe } from '@micro-fleet/common'
+import { MinorException, PagedData, ModelAutoMapper, SingleId, Maybe } from '@micro-fleet/common'
 import { IdGenerator } from '@micro-fleet/id-generator'
 
 import { PgCrudRepositoryBase, ORMModelBase, IDatabaseConnector,
@@ -52,7 +52,7 @@ class UserEntity extends ORMModelBase {
      */
     public $beforeInsert(queryContext: any) {
         super.$beforeInsert(queryContext)
-        this.createdAt = moment().utc().format()
+        this.createdAt = moment.utc().format()
     }
 
     /**
@@ -60,7 +60,7 @@ class UserEntity extends ORMModelBase {
      */
     public $beforeUpdate(opt: any, queryContext: any) {
         super.$beforeUpdate(opt, queryContext)
-        this.updatedAt = moment().utc().format()
+        this.updatedAt = moment.utc().format()
     }
 
 }
@@ -175,15 +175,15 @@ describe('PgCrudRepositoryBase', function() {
                 expect(createdOne.id).to.be.equal(modelOne.id)
                 expect(createdOne.name).to.equal(modelOne.name)
                 expect(createdOne.age).to.equal(modelOne.age)
-                expect(createdOne.createdAt).to.be.instanceof(Date)
-                expect(createdOne.updatedAt).to.be.instanceof(Date)
+                expect(moment.utc(createdOne.createdAt).isValid()).to.be.true
+                expect(createdOne.updatedAt).not.to.exist
 
                 expect(createdTwo).to.exist
                 expect(createdTwo.id).to.be.equal(modelTwo.id)
                 expect(createdTwo.name).to.equal(modelTwo.name)
                 expect(createdTwo.age).to.equal(modelTwo.age)
-                expect(createdTwo.createdAt).to.be.instanceof(Date)
-                expect(createdTwo.updatedAt).to.be.instanceof(Date)
+                expect(moment.utc(createdTwo.createdAt).isValid()).to.be.true
+                expect(createdTwo.updatedAt).not.to.exist
 
                 // Clean up
                 await Promise.all([
@@ -309,8 +309,8 @@ describe('PgCrudRepositoryBase', function() {
             expect(createdDTO.id).to.equal(model.id)
             expect(createdDTO.name).to.equal(model.name)
             expect(createdDTO.age).to.equal(model.age)
-            expect(createdDTO.createdAt).to.be.instanceof(Date)
-            expect(createdDTO.updatedAt).to.be.instanceof(Date)
+            expect(moment.utc(createdDTO.createdAt).isValid()).to.be.true
+            expect(createdDTO.updatedAt).not.to.exist
         })
 
         it('should return DTO instance if success', async () => {
@@ -373,7 +373,7 @@ describe('PgCrudRepositoryBase', function() {
             expect(foundDTO.value).to.be.instanceOf(UserDTO)
         })
 
-        it('should return `null` if not found', async () => {
+        it('should return Maybe.Nothing if not found', async () => {
             // Act
             const model: Maybe<UserDTO> = await usrRepo.findById(new SingleId(IMPOSSIBLE_ID))
 
@@ -403,7 +403,7 @@ describe('PgCrudRepositoryBase', function() {
             expect(refetchedDTO.value.updatedAt).to.be.not.empty
         })
 
-        it('should return `null` if not found', async () => {
+        it('should return Maybe.Nothing if not found', async () => {
             // Arrange
             const newAge = 45
 
@@ -455,7 +455,7 @@ describe('PgCrudRepositoryBase', function() {
             expect(modified.value).to.be.instanceOf(UserDTO)
         })
 
-        it('should return `null` if not found', async () => {
+        it('should return Maybe.Nothing if not found', async () => {
             // Arrange
             const newName = 'Brian',
                 updatedDTO: UserDTO = Object.assign(new UserDTO, cachedDTO)
@@ -467,9 +467,9 @@ describe('PgCrudRepositoryBase', function() {
                 refetchedDTO: Maybe<UserDTO> = await usrRepo.findById(new SingleId(updatedDTO.id))
 
             // Assert
-            expect(modified.isJust).to.be.true
-            // If `update` returns nothing, but we actually find an entity with the id, then something is wrong.
-            expect(refetchedDTO.isJust).to.be.true
+            expect(modified.isNothing).to.be.true
+            // If `update` returns Maybe.Nothing, but we actually find an entity with the id, then something is wrong.
+            expect(refetchedDTO.isNothing).to.be.true
         })
     }) // END describe 'update'
 
@@ -566,13 +566,13 @@ describe('PgCrudRepositoryBase', function() {
             await usrRepo.deleteAll()
 
             // Act
-            const models: PagedArray<UserDTO> = await usrRepo.page({
+            const models: PagedData<UserDTO> = await usrRepo.page({
                 pageIndex: PAGE,
                 pageSize: SIZE,
             })
 
             // Assert
-            expect(models).to.be.null
+            expect(models.length).to.equal(0)
         })
 
         it('Should return first page for pageIndex=1', async () => {
@@ -600,18 +600,19 @@ describe('PgCrudRepositoryBase', function() {
             await Promise.all(createJobs)
 
             // Act
-            const fetchedModels: PagedArray<UserDTO> = await usrRepo.page({
+            const fetchedModels: PagedData<UserDTO> = await usrRepo.page({
                 pageIndex: PAGE,
                 pageSize: SIZE,
+                sortBy: 'id',
             })
 
             // Assert
             expect(fetchedModels.length).to.be.equal(SIZE)
-            for (let i = 0; i < SIZE; ++i) {
-                expect(fetchedModels[i].id).to.equal(firstPageModel[i].id)
-                expect(fetchedModels[i].name).to.equal(firstPageModel[i].name)
-                expect(fetchedModels[i].age).to.equal(firstPageModel[i].age)
-            }
+            fetchedModels.forEach((m, i) => {
+                expect(m.id, `[${i}].id`).to.equal(firstPageModel[i].id)
+                expect(m.name, `[${i}].name`).to.equal(firstPageModel[i].name)
+                expect(m.age, `[${i}].age`).to.equal(firstPageModel[i].age)
+            })
         })
 
         it('Should return specified number of items if there are more records in database', async () => {
@@ -637,9 +638,10 @@ describe('PgCrudRepositoryBase', function() {
             await Promise.all(createJobs)
 
             // Act
-            const models: PagedArray<UserDTO> = await usrRepo.page({
+            const models: PagedData<UserDTO> = await usrRepo.page({
                 pageIndex: PAGE,
                 pageSize: SIZE,
+                sortBy: 'id',
             })
 
             // Assert
@@ -672,14 +674,14 @@ describe('PgCrudRepositoryBase', function() {
             await Promise.all(createJobs)
 
             // Act
-            const fetchedModels: PagedArray<UserDTO> = await usrRepo.page({
+            const fetchedModels: PagedData<UserDTO> = await usrRepo.page({
                 pageIndex: PAGE,
                 pageSize: SIZE,
             })
 
             // Assert
             expect(
-                fetchedModels.every((m: any) => m instanceof UserDTO)
+                fetchedModels.items.every((m: any) => m instanceof UserDTO)
             ).to.be.true
         })
 

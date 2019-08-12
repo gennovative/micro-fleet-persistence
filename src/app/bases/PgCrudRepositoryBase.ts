@@ -3,7 +3,7 @@ const debug: debug.IDebugger = require('debug')('mcft:persistence:PgRepoBase')
 
 import { QueryBuilder, raw } from 'objection'
 import pick = require('lodash/pick')
-import { Guard, PagedArray, injectable, unmanaged, ModelAutoMapper,
+import { Guard, PagedData, injectable, unmanaged, ModelAutoMapper,
     Maybe, SingleId, IdBase, Newable} from '@micro-fleet/common'
 
 import { AtomicSession } from '../atom/AtomicSession'
@@ -192,7 +192,7 @@ export abstract class PgCrudRepositoryBase<TORM extends ORMModelBase, TDomain ex
     /**
      * @see IRepository.page
      */
-    public async page(opts: it.RepositoryPageOptions): Promise<PagedArray<TDomain>> {
+    public async page(opts: it.RepositoryPageOptions): Promise<PagedData<TDomain>> {
         type PageResult = { total: number, results: Array<TORM> }
         const foundList: PageResult = await this.executeQuery(
             query => {
@@ -204,10 +204,10 @@ export abstract class PgCrudRepositoryBase<TORM extends ORMModelBase, TDomain ex
         )
 
         if (!foundList) {
-            return new PagedArray<TDomain>()
+            return new PagedData<TDomain>()
         }
         const dtoList: TDomain[] = this.toDomainModelMany(foundList.results, false) as TDomain[]
-        return new PagedArray<TDomain>(foundList.total, dtoList)
+        return new PagedData<TDomain>(dtoList, foundList.total)
     }
 
     protected _buildPageQuery(query: QueryBuilder<TORM>,

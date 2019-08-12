@@ -1,4 +1,4 @@
-import { PagedArray, Maybe, IdBase, SingleId } from '@micro-fleet/common'
+import { PagedData, Maybe, IdBase, SingleId } from '@micro-fleet/common'
 
 import { AtomicSession } from './atom/AtomicSession'
 
@@ -200,7 +200,7 @@ export interface IRepository<TDomain, TId extends IdBase = SingleId> {
      *
      * @param {RepositoryPageOptions} options Page options.
      */
-    page(options: RepositoryPageOptions): Promise<PagedArray<TDomain>>
+    page(options: RepositoryPageOptions): Promise<PagedData<TDomain>>
 
     /**
      * Updates new value for specified properties in `model`.

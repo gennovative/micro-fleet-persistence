@@ -40,7 +40,7 @@ declare module '@micro-fleet/persistence/dist/app/bases/ORMModelBase' {
 
 }
 declare module '@micro-fleet/persistence/dist/app/interfaces' {
-	import { PagedArray, Maybe, IdBase, SingleId } from '@micro-fleet/common';
+	import { PagedData, Maybe, IdBase, SingleId } from '@micro-fleet/common';
 	import { AtomicSession } from '@micro-fleet/persistence/dist/app/atom/AtomicSession';
 	export enum SortType {
 	    ASC = "asc",
@@ -182,7 +182,7 @@ declare module '@micro-fleet/persistence/dist/app/interfaces' {
 	     *
 	     * @param {DTO model} model The model to be inserted.
 	     */
-	    create(model: TDomain, options?: RepositoryCreateOptions): Promise<TDomain>;
+	    create(model: Partial<TDomain>, options?: RepositoryCreateOptions): Promise<TDomain>;
 	    /**
 	     * Permanently deletes one record.
 	     *
@@ -210,7 +210,7 @@ declare module '@micro-fleet/persistence/dist/app/interfaces' {
 	     *
 	     * @param {RepositoryPageOptions} options Page options.
 	     */
-	    page(options: RepositoryPageOptions): Promise<PagedArray<TDomain>>;
+	    page(options: RepositoryPageOptions): Promise<PagedData<TDomain>>;
 	    /**
 	     * Updates new value for specified properties in `model`.
 	     */
@@ -376,7 +376,7 @@ declare module '@micro-fleet/persistence/dist/app/atom/AtomicSessionFactory' {
 }
 declare module '@micro-fleet/persistence/dist/app/bases/PgCrudRepositoryBase' {
 	import { QueryBuilder } from 'objection';
-	import { PagedArray, Maybe, SingleId, IdBase, Newable } from '@micro-fleet/common';
+	import { PagedData, Maybe, SingleId, IdBase, Newable } from '@micro-fleet/common';
 	import { AtomicSession } from '@micro-fleet/persistence/dist/app/atom/AtomicSession';
 	import { IDatabaseConnector, QueryCallbackReturn, QueryCallback } from '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector';
 	import * as it from '@micro-fleet/persistence/dist/app/interfaces';
@@ -423,7 +423,7 @@ declare module '@micro-fleet/persistence/dist/app/bases/PgCrudRepositoryBase' {
 	    /**
 	     * @see IRepository.page
 	     */
-	    page(opts: it.RepositoryPageOptions): Promise<PagedArray<TDomain>>;
+	    page(opts: it.RepositoryPageOptions): Promise<PagedData<TDomain>>;
 	    protected _buildPageQuery(query: QueryBuilder<TORM>, opts: it.RepositoryPageOptions): QueryCallbackReturn;
 	    /**
 	     * @see IRepository.patch

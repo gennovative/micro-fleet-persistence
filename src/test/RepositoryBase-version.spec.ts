@@ -1,6 +1,6 @@
 // import { expect } from 'chai'
 
-// import { MinorException, PagedArray, ModelAutoMapper } from '@micro-fleet/common'
+// import { MinorException, PagedData, ModelAutoMapper } from '@micro-fleet/common'
 // import { IdGenerator } from '@micro-fleet/id-generator'
 
 // import {
@@ -435,7 +435,7 @@
 //             await usrRepo.deleteAll()
 
 //             // Act
-//             const models: PagedArray<UserVersionDTO> = await usrRepo.page(PAGE, SIZE, {
+//             const models: PagedData<UserVersionDTO> = await usrRepo.page(PAGE, SIZE, {
 //                 excludeDeleted: false,
 //             })
 
@@ -462,7 +462,7 @@
 //             }
 
 //             // Act
-//             const models: PagedArray<UserVersionDTO> = await usrRepo.page(PAGE, SIZE)
+//             const models: PagedData<UserVersionDTO> = await usrRepo.page(PAGE, SIZE)
 
 //             // Assert
 //             expect(models).to.be.not.null

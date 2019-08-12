@@ -149,10 +149,10 @@ let PgCrudRepositoryBase = class PgCrudRepositoryBase {
             return q;
         }, opts.atomicSession);
         if (!foundList) {
-            return new common_1.PagedArray();
+            return new common_1.PagedData();
         }
         const dtoList = this.toDomainModelMany(foundList.results, false);
-        return new common_1.PagedArray(foundList.total, dtoList);
+        return new common_1.PagedData(dtoList, foundList.total);
     }
     _buildPageQuery(query, opts) {
         const pageIndex = Math.max(0, opts.pageIndex - 1);

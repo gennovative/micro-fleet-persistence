@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 
-import { MinorException, PagedArray, ModelAutoMapper,
+import { MinorException, PagedData, ModelAutoMapper,
     TenantId, Maybe } from '@micro-fleet/common'
 import { IdGenerator } from '@micro-fleet/id-generator'
 
@@ -147,7 +147,7 @@ const idGen = new IdGenerator()
 
 
 // These test suites make real changes to database.
-describe.only('RepositoryBase-tenant', function() {
+describe('RepositoryBase-tenant', function() {
     // this.timeout(50000)
 
     beforeEach('Initialize db adapter', () => {
@@ -510,14 +510,14 @@ describe.only('RepositoryBase-tenant', function() {
             await usrRepo.deleteAll()
 
             // Act
-            const models: PagedArray<UserTenantDTO> = await usrRepo.page({
+            const models: PagedData<UserTenantDTO> = await usrRepo.page({
                 pageIndex: PAGE,
                 pageSize: SIZE,
                 tenantId: '0',
             })
 
             // Assert
-            expect(models).to.be.empty
+            expect(models.length).to.equal(0)
         })
 
         it('Should return specified number of items if there are more records in database', async () => {
@@ -545,7 +545,7 @@ describe.only('RepositoryBase-tenant', function() {
             await Promise.all(createJobs)
 
             // Act
-            const models: PagedArray<UserTenantDTO> = await usrRepo.page({
+            const models: PagedData<UserTenantDTO> = await usrRepo.page({
                 pageIndex: PAGE,
                 pageSize: SIZE,
                 tenantId: tenantId,
