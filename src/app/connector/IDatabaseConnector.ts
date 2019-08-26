@@ -22,7 +22,7 @@ export type QueryCallbackReturn = QueryBuilder<any> | Promise<any>
  * @param {Class} boundEntityClass A class that is bound to a connection.
  */
 export type QueryCallback<TORM extends Model> = (queryBuilder: QueryBuilder<TORM>,
-    boundEntityClass?: Newable) => QueryCallbackReturn
+    boundEntityClass?: any) => QueryCallbackReturn
 
 /**
  * Helps with managing multiple database connections and executing same query with all

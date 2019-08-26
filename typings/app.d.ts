@@ -237,7 +237,7 @@ declare module '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector' 
 	 * @param {QueryBuilder} queryBuilder A query that is bound to a connection.
 	 * @param {Class} boundEntityClass A class that is bound to a connection.
 	 */
-	export type QueryCallback<TORM extends Model> = (queryBuilder: QueryBuilder<TORM>, boundEntityClass?: Newable) => QueryCallbackReturn;
+	export type QueryCallback<TORM extends Model> = (queryBuilder: QueryBuilder<TORM>, boundEntityClass?: any) => QueryCallbackReturn;
 	/**
 	 * Helps with managing multiple database connections and executing same query with all
 	 * of those connections.

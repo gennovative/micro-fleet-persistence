@@ -1,6 +1,6 @@
 {
     "name": "@micro-fleet/persistence",
-    "version": "2.2.0-rc3",
+    "version": "2.2.0",
     "description": "Provides base repository class and database connector that helps connect to database and map db tables to JS objects (ORM).",
     "scripts": {
         "build": "npm run compile && npm run test",
@@ -12,12 +12,11 @@
         "test": "nyc --reporter=json --reporter=html --include dist/app/**/*.js mocha --recursive dist/test",
         "lint": "tslint --fix 'src/**/*.ts'",
         "watch": "npm run clean && npm run lint && tsc --watch --pretty",
-        "linkPackages": "node ../../../scripts/linkPackages.js",
         "prepublishOnly": "npm run release"
     },
     "dependencies": {
         "knex": "~0.16",
-        "lodash": "~4.17",
+        "lodash": "^4.17.15",
         "objection": "~1.6",
         "pg": "~7.8",
         "reflect-metadata": "~0.1"
@@ -34,19 +33,18 @@
         "@types/pg": "~7.4",
         "chai": "~4.1",
         "chai-spies": "git://github.com/chaijs/chai-spies.git#b11aeebf",
-        "debug": "^3.1.0",
+        "debug": "~3.1.0",
         "mocha": "~5.2",
         "moment": "~2.24",
         "nyc": "~12.0",
         "rimraf": "~2.6",
-        "sqlite3": "~4.0",
+        "sqlite3": "~4.0.9",
         "ts-declarator": "~1.0",
         "tslint": "~5.11",
         "typescript": "~3.3"
     },
     "peerDependencies": {
-        "@micro-fleet/common": "~1.4",
-        "@micro-fleet/service-communication": "~0.3"
+        "@micro-fleet/common": "~1.4"
     },
     "publishConfig": {
         "access": "public"
