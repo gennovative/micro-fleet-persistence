@@ -19,15 +19,15 @@ const pick = require("lodash/pick");
 const common_1 = require("@micro-fleet/common");
 const it = require("../interfaces");
 let PgCrudRepositoryBase = class PgCrudRepositoryBase {
-    constructor(_EntityClass, _DomainClass, _dbConnector) {
-        this._EntityClass = _EntityClass;
+    constructor(_ORMClass, _DomainClass, _dbConnector) {
+        this._ORMClass = _ORMClass;
         this._DomainClass = _DomainClass;
         this._dbConnector = _dbConnector;
-        common_1.Guard.assertArgDefined('EntityClass', _EntityClass);
-        common_1.Guard.assertIsTruthy(_EntityClass['tableName'], 'Param "EntityClass" must have tableName. It had better inherit "ORMModelBase"!');
+        common_1.Guard.assertArgDefined('EntityClass', _ORMClass);
+        common_1.Guard.assertIsTruthy(_ORMClass['tableName'], 'Param "ORMClass" must have tableName. It had better inherit "ORMModelBase"!');
         common_1.Guard.assertArgDefined('DomainClass', _DomainClass);
         common_1.Guard.assertArgDefined('dbConnector', _dbConnector);
-        this._idProps = this._EntityClass['idProp'];
+        this._idProps = this._ORMClass['idProp'];
     }
     /**
      * @see IRepository.countAll
@@ -50,17 +50,17 @@ let PgCrudRepositoryBase = class PgCrudRepositoryBase {
     /**
      * @see IRepository.create
      */
-    create(model, opts = {}) {
-        const entity = this.toEntity(model, false);
+    create(domainModelOrModels, opts = {}) {
+        const ormModelOrModels = this.toORMModel(domainModelOrModels, false);
         return this.executeQuery(query => {
-            const q = this._buildCreateQuery(query, model, entity, opts);
+            const q = this._buildCreateQuery(query, domainModelOrModels, ormModelOrModels, opts);
             debug('CREATE: %s', q.toSql());
             return q;
         }, opts.atomicSession)
             .then((refetch) => this.toDomainModel(refetch, false));
     }
-    _buildCreateQuery(query, model, entity, opts) {
-        return query.insert(entity).returning('*');
+    _buildCreateQuery(query, model, ormModelOrModels, opts) {
+        return query.insert(ormModelOrModels).returning('*');
     }
     /**
      * @see IRepository.deleteSingle
@@ -87,7 +87,7 @@ let PgCrudRepositoryBase = class PgCrudRepositoryBase {
     }
     _buildDeleteManyQuery(query, idList, opts) {
         const q = query.delete()
-            .whereInComposite(this._EntityClass['idColumn'], idList.map(id => id.toArray()));
+            .whereInComposite(this._ORMClass['idColumn'], idList.map(id => id.toArray()));
         return q;
     }
     /**
@@ -127,9 +127,9 @@ let PgCrudRepositoryBase = class PgCrudRepositoryBase {
             debug('FIND BY (%o): %s', id, q.toSql());
             return q;
         }, opts.atomicSession)
-            .then(foundEnt => {
-            return foundEnt
-                ? common_1.Maybe.Just(this.toDomainModel(foundEnt, false))
+            .then(foundORM => {
+            return foundORM
+                ? common_1.Maybe.Just(this.toDomainModel(foundORM, false))
                 : common_1.Maybe.Nothing();
         });
     }
@@ -167,10 +167,10 @@ let PgCrudRepositoryBase = class PgCrudRepositoryBase {
     /**
      * @see IRepository.patch
      */
-    async patch(model, opts = {}) {
-        const entity = this.toEntity(model, true);
+    async patch(domainModel, opts = {}) {
+        const ormModel = this.toORMModel(domainModel, true);
         const refetchedEntities = await this.executeQuery(query => {
-            const q = this._buildPatchQuery(query, model, entity, opts);
+            const q = this._buildPatchQuery(query, domainModel, ormModel, opts);
             debug('PATCH: %s', q.toSql());
             return q;
         }, opts.atomicSession);
@@ -178,18 +178,18 @@ let PgCrudRepositoryBase = class PgCrudRepositoryBase {
             ? common_1.Maybe.Just(this.toDomainModel(refetchedEntities[0], false))
             : common_1.Maybe.Nothing();
     }
-    _buildPatchQuery(query, model, entity, opts) {
-        const idCondition = pick(entity, this._idProps);
-        const q = query.patch(entity).where(idCondition).returning('*');
+    _buildPatchQuery(query, model, ormModel, opts) {
+        const idCondition = pick(ormModel, this._idProps);
+        const q = query.patch(ormModel).where(idCondition).returning('*');
         return q;
     }
     /**
      * @see IRepository.update
      */
-    async update(model, opts = {}) {
-        const entity = this.toEntity(model, false);
+    async update(domainModel, opts = {}) {
+        const ormModel = this.toORMModel(domainModel, false);
         const refetchedEntities = await this.executeQuery(query => {
-            const q = this._buildUpdateQuery(query, model, entity, opts);
+            const q = this._buildUpdateQuery(query, domainModel, ormModel, opts);
             debug('UPDATE: %s', q.toSql());
             return q;
         }, opts.atomicSession);
@@ -197,64 +197,54 @@ let PgCrudRepositoryBase = class PgCrudRepositoryBase {
             ? common_1.Maybe.Just(this.toDomainModel(refetchedEntities[0], false))
             : common_1.Maybe.Nothing();
     }
-    _buildUpdateQuery(query, model, entity, opts) {
-        const idCondition = pick(entity, this._idProps);
-        return query.update(entity).where(idCondition).returning('*');
+    _buildUpdateQuery(query, model, ormModel, opts) {
+        const idCondition = pick(ormModel, this._idProps);
+        return query.update(ormModel).where(idCondition).returning('*');
     }
     executeQuery(callback, atomicSession) {
-        return this._dbConnector.prepare(this._EntityClass, callback, atomicSession);
+        return this._dbConnector.prepare(this._ORMClass, callback, atomicSession);
     }
     /**
-     * Translates from a DTO model to an entity model.
+     * Translates from a domain model to an ORM model.
      */
-    toEntity(domainModel, isPartial) {
+    toORMModel(domainModel, isPartial) {
         if (!domainModel) {
             return null;
         }
-        const translator = this._EntityClass['translator'];
-        const entity = (isPartial)
+        const translator = this._ORMClass['translator'];
+        const ormModel = (isPartial)
             ? translator.partial(domainModel, { enableValidation: false }) // Disable validation because it's unnecessary.
             : translator.whole(domainModel, { enableValidation: false });
-        return entity;
+        return ormModel;
     }
     /**
-     * Translates from DTO models to entity models.
+     * Translates from domain models to ORM models.
      */
-    toEntityMany(domainModels, isPartial) {
-        if (!domainModels) {
-            return null;
-        }
-        const translator = this._EntityClass['translator'];
-        const entity = (isPartial)
-            ? translator.partialMany(domainModels, { enableValidation: false }) // Disable validation because it's unnecessary.
-            : translator.wholeMany(domainModels, { enableValidation: false });
-        return entity;
+    toORMModelMany(domainModels, isPartial) {
+        // ModelAutoMapper can handle both single and array of models
+        // We separate into two methods for prettier typing.
+        return this.toORMModel(domainModels, isPartial);
     }
     /**
-     * Translates from an entity model to a domain model.
+     * Translates from an ORM model to a domain model.
      */
-    toDomainModel(entity, isPartial) {
-        if (!entity) {
+    toDomainModel(ormModel, isPartial) {
+        if (!ormModel) {
             return null;
         }
         const translator = this._DomainClass['translator'];
-        const dto = (isPartial)
-            ? translator.partial(entity, { enableValidation: false }) // Disable validation because it's unnecessary.
-            : translator.whole(entity, { enableValidation: false });
-        return dto;
+        const domainModel = (isPartial)
+            ? translator.partial(ormModel, { enableValidation: false }) // Disable validation because it's unnecessary.
+            : translator.whole(ormModel, { enableValidation: false });
+        return domainModel;
     }
     /**
-     * Translates from entity models to domain models.
+     * Translates from ORM models to domain models.
      */
-    toDomainModelMany(entities, isPartial) {
-        if (!entities) {
-            return null;
-        }
-        const translator = this._DomainClass['translator'];
-        const dto = (isPartial)
-            ? translator.partialMany(entities, { enableValidation: false }) // Disable validation because it's unnecessary.
-            : translator.wholeMany(entities, { enableValidation: false });
-        return dto;
+    toDomainModelMany(ormModels, isPartial) {
+        // ModelAutoMapper can handle both single and array of models
+        // We separate into two methods for prettier typing.
+        return this.toDomainModel(ormModels, isPartial);
     }
 };
 PgCrudRepositoryBase = __decorate([

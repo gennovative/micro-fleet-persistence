@@ -3,7 +3,7 @@ const debug: debug.IDebugger = require('debug')('mcft:persistence:PgRepoBase')
 
 import { QueryBuilder, raw } from 'objection'
 import pick = require('lodash/pick')
-import { Guard, PagedData, injectable, unmanaged, ModelAutoMapper,
+import { Guard, PagedData, injectable, unmanaged, IModelAutoMapper,
     Maybe, SingleId, IdBase, Newable} from '@micro-fleet/common'
 
 import { AtomicSession } from '../atom/AtomicSession'
@@ -14,7 +14,7 @@ import { ORMModelBase } from './ORMModelBase'
 
 
 @injectable()
-export abstract class PgCrudRepositoryBase<TORM extends ORMModelBase, TDomain extends object, TId extends IdBase = SingleId>
+export class PgCrudRepositoryBase<TORM extends ORMModelBase, TDomain extends object, TId extends IdBase = SingleId>
     implements it.IRepository<TDomain, TId> {
 
     /**
@@ -25,16 +25,16 @@ export abstract class PgCrudRepositoryBase<TORM extends ORMModelBase, TDomain ex
 
 
     constructor(
-            @unmanaged() protected _EntityClass: Newable,
+            @unmanaged() protected _ORMClass: Newable,
             @unmanaged() protected _DomainClass: Newable,
             @unmanaged() protected _dbConnector: IDatabaseConnector) {
-        Guard.assertArgDefined('EntityClass', _EntityClass)
-        Guard.assertIsTruthy(_EntityClass['tableName'],
-            'Param "EntityClass" must have tableName. It had better inherit "ORMModelBase"!')
+        Guard.assertArgDefined('EntityClass', _ORMClass)
+        Guard.assertIsTruthy(_ORMClass['tableName'],
+            'Param "ORMClass" must have tableName. It had better inherit "ORMModelBase"!')
         Guard.assertArgDefined('DomainClass', _DomainClass)
         Guard.assertArgDefined('dbConnector', _dbConnector)
 
-        this._idProps = this._EntityClass['idProp']
+        this._idProps = this._ORMClass['idProp']
     }
 
 
@@ -66,12 +66,13 @@ export abstract class PgCrudRepositoryBase<TORM extends ORMModelBase, TDomain ex
     /**
      * @see IRepository.create
      */
-    public create(model: Partial<TDomain>, opts: it.RepositoryCreateOptions = {}): Promise<TDomain> {
-        const entity = this.toEntity(model, false) as TORM
+    public create(domainModelOrModels: Partial<TDomain>, opts: it.RepositoryCreateOptions = {}): Promise<TDomain> {
+        const ormModelOrModels = this.toORMModel(domainModelOrModels, false) as TORM
+        // TODO: Should split to createSingle and createMany
 
         return this.executeQuery(
             query => {
-                const q = this._buildCreateQuery(query, model, entity, opts) as QueryBuilder<any>
+                const q = this._buildCreateQuery(query, domainModelOrModels, ormModelOrModels, opts) as QueryBuilder<any>
                 debug('CREATE: %s', q.toSql())
                 return q
             },
@@ -80,9 +81,9 @@ export abstract class PgCrudRepositoryBase<TORM extends ORMModelBase, TDomain ex
         .then((refetch: TORM) => this.toDomainModel(refetch, false))
     }
 
-    protected _buildCreateQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, entity: TORM,
+    protected _buildCreateQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModelOrModels: TORM,
             opts: it.RepositoryCreateOptions): QueryCallbackReturn {
-        return query.insert(entity).returning('*') as any
+        return query.insert(ormModelOrModels).returning('*') as any
     }
 
     /**
@@ -122,7 +123,7 @@ export abstract class PgCrudRepositoryBase<TORM extends ORMModelBase, TDomain ex
             opts: it.RepositoryDeleteOptions): QueryCallbackReturn {
         const q = query.delete()
             .whereInComposite(
-                this._EntityClass['idColumn'],
+                this._ORMClass['idColumn'],
                 idList.map(id => id.toArray()),
             )
         return q
@@ -174,9 +175,9 @@ export abstract class PgCrudRepositoryBase<TORM extends ORMModelBase, TDomain ex
             },
             opts.atomicSession
         )
-        .then(foundEnt => {
-            return foundEnt
-                ? Maybe.Just(this.toDomainModel(foundEnt, false))
+        .then(foundORM => {
+            return foundORM
+                ? Maybe.Just(this.toDomainModel(foundORM, false))
                 : Maybe.Nothing()
         }) as Promise<Maybe<TDomain>>
     }
@@ -226,12 +227,12 @@ export abstract class PgCrudRepositoryBase<TORM extends ORMModelBase, TDomain ex
     /**
      * @see IRepository.patch
      */
-    public async patch(model: Partial<TDomain>, opts: it.RepositoryPatchOptions = {}): Promise<Maybe<TDomain>> {
-        const entity = this.toEntity(model, true) as TORM
+    public async patch(domainModel: Partial<TDomain>, opts: it.RepositoryPatchOptions = {}): Promise<Maybe<TDomain>> {
+        const ormModel = this.toORMModel(domainModel, true) as TORM
 
         const refetchedEntities: TORM[] = await this.executeQuery(
             query => {
-                const q = this._buildPatchQuery(query, model, entity, opts) as QueryBuilder<any>
+                const q = this._buildPatchQuery(query, domainModel, ormModel, opts) as QueryBuilder<any>
                 debug('PATCH: %s', q.toSql())
                 return q
             },
@@ -242,22 +243,22 @@ export abstract class PgCrudRepositoryBase<TORM extends ORMModelBase, TDomain ex
             : Maybe.Nothing()
     }
 
-    protected _buildPatchQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, entity: TORM,
+    protected _buildPatchQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM,
             opts: it.RepositoryPatchOptions): QueryCallbackReturn {
-        const idCondition = pick(entity, this._idProps)
-        const q = query.patch(entity).where(idCondition).returning('*')
+        const idCondition = pick(ormModel, this._idProps)
+        const q = query.patch(ormModel).where(idCondition).returning('*')
         return q
     }
 
     /**
      * @see IRepository.update
      */
-    public async update(model: TDomain, opts: it.RepositoryUpdateOptions = {}): Promise<Maybe<TDomain>> {
-        const entity = this.toEntity(model, false) as TORM
+    public async update(domainModel: TDomain, opts: it.RepositoryUpdateOptions = {}): Promise<Maybe<TDomain>> {
+        const ormModel = this.toORMModel(domainModel, false) as TORM
 
         const refetchedEntities: TORM[] = await this.executeQuery(
             query => {
-                const q = this._buildUpdateQuery(query, model, entity, opts) as QueryBuilder<any>
+                const q = this._buildUpdateQuery(query, domainModel, ormModel, opts) as QueryBuilder<any>
                 debug('UPDATE: %s', q.toSql())
                 return q
             },
@@ -268,70 +269,60 @@ export abstract class PgCrudRepositoryBase<TORM extends ORMModelBase, TDomain ex
             : Maybe.Nothing()
     }
 
-    protected _buildUpdateQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, entity: TORM,
+    protected _buildUpdateQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM,
             opts: it.RepositoryUpdateOptions): QueryCallbackReturn {
-        const idCondition = pick(entity, this._idProps)
-        return query.update(entity).where(idCondition).returning('*')
+        const idCondition = pick(ormModel, this._idProps)
+        return query.update(ormModel).where(idCondition).returning('*')
     }
 
 
     protected executeQuery(callback: QueryCallback<TORM>, atomicSession?: AtomicSession): Promise<any> {
-        return this._dbConnector.prepare(this._EntityClass, <any>callback, atomicSession)
+        return this._dbConnector.prepare(this._ORMClass, <any>callback, atomicSession)
     }
 
     /**
-     * Translates from a DTO model to an entity model.
+     * Translates from a domain model to an ORM model.
      */
-    protected toEntity(domainModel: TDomain | Partial<TDomain>, isPartial: boolean): TORM {
+    protected toORMModel(domainModel: TDomain | Partial<TDomain>, isPartial: boolean): TORM {
         if (!domainModel) { return null }
 
-        const translator = this._EntityClass['translator'] as ModelAutoMapper<TORM>
-        const entity: any = (isPartial)
+        const translator = this._ORMClass['translator'] as IModelAutoMapper<TORM>
+        const ormModel: any = (isPartial)
             ? translator.partial(domainModel, { enableValidation: false }) // Disable validation because it's unnecessary.
             : translator.whole(domainModel, { enableValidation: false })
 
-        return entity
+        return ormModel
     }
 
     /**
-     * Translates from DTO models to entity models.
+     * Translates from domain models to ORM models.
      */
-    protected toEntityMany(domainModels: TDomain[] | Partial<TDomain>[], isPartial: boolean): TORM[] {
-        if (!domainModels) { return null }
-
-        const translator = this._EntityClass['translator'] as ModelAutoMapper<TORM>
-        const entity: any = (isPartial)
-            ? translator.partialMany(domainModels, { enableValidation: false }) // Disable validation because it's unnecessary.
-            : translator.wholeMany(domainModels, { enableValidation: false })
-
-        return entity
+    protected toORMModelMany(domainModels: TDomain[] | Partial<TDomain>[], isPartial: boolean): TORM[] {
+        // ModelAutoMapper can handle both single and array of models
+        // We separate into two methods for prettier typing.
+        return this.toORMModel(domainModels as any, isPartial as any) as any
     }
 
     /**
-     * Translates from an entity model to a domain model.
+     * Translates from an ORM model to a domain model.
      */
-    protected toDomainModel(entity: TORM | Partial<TORM>, isPartial: boolean): TDomain {
-        if (!entity) { return null }
+    protected toDomainModel(ormModel: TORM | Partial<TORM>, isPartial: boolean): TDomain {
+        if (!ormModel) { return null }
 
-        const translator = this._DomainClass['translator'] as ModelAutoMapper<TDomain>
-        const dto: any = (isPartial)
-            ? translator.partial(entity, { enableValidation: false }) // Disable validation because it's unnecessary.
-            : translator.whole(entity, { enableValidation: false })
+        const translator = this._DomainClass['translator'] as IModelAutoMapper<TDomain>
+        const domainModel: any = (isPartial)
+            ? translator.partial(ormModel, { enableValidation: false }) // Disable validation because it's unnecessary.
+            : translator.whole(ormModel, { enableValidation: false })
 
-        return dto
+        return domainModel
     }
 
     /**
-     * Translates from entity models to domain models.
+     * Translates from ORM models to domain models.
      */
-    protected toDomainModelMany(entities: TORM[] | Partial<TORM>[], isPartial: boolean): TDomain[] {
-        if (!entities) { return null }
-
-        const translator = this._DomainClass['translator'] as ModelAutoMapper<TDomain>
-        const dto: any = (isPartial)
-            ? translator.partialMany(entities, { enableValidation: false }) // Disable validation because it's unnecessary.
-            : translator.wholeMany(entities, { enableValidation: false })
-
-        return dto
+    protected toDomainModelMany(ormModels: TORM[] | Partial<TORM>[], isPartial: boolean): TDomain[] {
+        // ModelAutoMapper can handle both single and array of models
+        // We separate into two methods for prettier typing.
+        return this.toDomainModel(ormModels as any, isPartial as any) as any
     }
 }

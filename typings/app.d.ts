@@ -381,15 +381,15 @@ declare module '@micro-fleet/persistence/dist/app/bases/PgCrudRepositoryBase' {
 	import { IDatabaseConnector, QueryCallbackReturn, QueryCallback } from '@micro-fleet/persistence/dist/app/connector/IDatabaseConnector';
 	import * as it from '@micro-fleet/persistence/dist/app/interfaces';
 	import { ORMModelBase } from '@micro-fleet/persistence/dist/app/bases/ORMModelBase';
-	export abstract class PgCrudRepositoryBase<TORM extends ORMModelBase, TDomain extends object, TId extends IdBase = SingleId> implements it.IRepository<TDomain, TId> {
-	    protected _EntityClass: Newable;
+	export class PgCrudRepositoryBase<TORM extends ORMModelBase, TDomain extends object, TId extends IdBase = SingleId> implements it.IRepository<TDomain, TId> {
+	    protected _ORMClass: Newable;
 	    protected _DomainClass: Newable;
 	    protected _dbConnector: IDatabaseConnector;
 	    /**
 	     * EntityClass' primary key properties.
 	     * Eg: ['id', 'tenantId']
 	     */
-	    	    constructor(_EntityClass: Newable, _DomainClass: Newable, _dbConnector: IDatabaseConnector);
+	    	    constructor(_ORMClass: Newable, _DomainClass: Newable, _dbConnector: IDatabaseConnector);
 	    /**
 	     * @see IRepository.countAll
 	     */
@@ -398,8 +398,8 @@ declare module '@micro-fleet/persistence/dist/app/bases/PgCrudRepositoryBase' {
 	    /**
 	     * @see IRepository.create
 	     */
-	    create(model: Partial<TDomain>, opts?: it.RepositoryCreateOptions): Promise<TDomain>;
-	    protected _buildCreateQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, entity: TORM, opts: it.RepositoryCreateOptions): QueryCallbackReturn;
+	    create(domainModelOrModels: Partial<TDomain>, opts?: it.RepositoryCreateOptions): Promise<TDomain>;
+	    protected _buildCreateQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModelOrModels: TORM, opts: it.RepositoryCreateOptions): QueryCallbackReturn;
 	    /**
 	     * @see IRepository.deleteSingle
 	     */
@@ -428,30 +428,30 @@ declare module '@micro-fleet/persistence/dist/app/bases/PgCrudRepositoryBase' {
 	    /**
 	     * @see IRepository.patch
 	     */
-	    patch(model: Partial<TDomain>, opts?: it.RepositoryPatchOptions): Promise<Maybe<TDomain>>;
-	    protected _buildPatchQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, entity: TORM, opts: it.RepositoryPatchOptions): QueryCallbackReturn;
+	    patch(domainModel: Partial<TDomain>, opts?: it.RepositoryPatchOptions): Promise<Maybe<TDomain>>;
+	    protected _buildPatchQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM, opts: it.RepositoryPatchOptions): QueryCallbackReturn;
 	    /**
 	     * @see IRepository.update
 	     */
-	    update(model: TDomain, opts?: it.RepositoryUpdateOptions): Promise<Maybe<TDomain>>;
-	    protected _buildUpdateQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, entity: TORM, opts: it.RepositoryUpdateOptions): QueryCallbackReturn;
+	    update(domainModel: TDomain, opts?: it.RepositoryUpdateOptions): Promise<Maybe<TDomain>>;
+	    protected _buildUpdateQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM, opts: it.RepositoryUpdateOptions): QueryCallbackReturn;
 	    protected executeQuery(callback: QueryCallback<TORM>, atomicSession?: AtomicSession): Promise<any>;
 	    /**
-	     * Translates from a DTO model to an entity model.
+	     * Translates from a domain model to an ORM model.
 	     */
-	    protected toEntity(domainModel: TDomain | Partial<TDomain>, isPartial: boolean): TORM;
+	    protected toORMModel(domainModel: TDomain | Partial<TDomain>, isPartial: boolean): TORM;
 	    /**
-	     * Translates from DTO models to entity models.
+	     * Translates from domain models to ORM models.
 	     */
-	    protected toEntityMany(domainModels: TDomain[] | Partial<TDomain>[], isPartial: boolean): TORM[];
+	    protected toORMModelMany(domainModels: TDomain[] | Partial<TDomain>[], isPartial: boolean): TORM[];
 	    /**
-	     * Translates from an entity model to a domain model.
+	     * Translates from an ORM model to a domain model.
 	     */
-	    protected toDomainModel(entity: TORM | Partial<TORM>, isPartial: boolean): TDomain;
+	    protected toDomainModel(ormModel: TORM | Partial<TORM>, isPartial: boolean): TDomain;
 	    /**
-	     * Translates from entity models to domain models.
+	     * Translates from ORM models to domain models.
 	     */
-	    protected toDomainModelMany(entities: TORM[] | Partial<TORM>[], isPartial: boolean): TDomain[];
+	    protected toDomainModelMany(ormModels: TORM[] | Partial<TORM>[], isPartial: boolean): TDomain[];
 	}
 
 }
