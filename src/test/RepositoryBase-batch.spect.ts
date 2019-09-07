@@ -3,7 +3,7 @@ const debug: debug.IDebugger = require('debug')('mcft:persistence:test:PgRepoBas
 
 import { expect } from 'chai'
 
-import { ModelAutoMapper, SingleId, Maybe } from '@micro-fleet/common'
+import { SingleId, Maybe, Translatable, translatable } from '@micro-fleet/common'
 import { IdGenerator } from '@micro-fleet/id-generator'
 
 import { PgCrudRepositoryBase, ORMModelBase, IRepository, IDatabaseConnector,
@@ -14,9 +14,7 @@ import DB_DETAILS from './database-details'
 const DB_TABLE = 'usersBatch',
     IMPOSSIBLE_IDs = [new SingleId('0'), new SingleId('-1')]
 
-class UserBatchDTO {
-
-    public static readonly translator: ModelAutoMapper<UserBatchDTO> = new ModelAutoMapper(UserBatchDTO)
+class UserBatchDTO extends Translatable {
 
     // NOTE: Class properties must be initialized, otherwise they
     // will disappear in transpiled code.
@@ -25,7 +23,7 @@ class UserBatchDTO {
     public age: number = undefined
 }
 
-
+@translatable()
 class UserBatchEntity extends ORMModelBase {
     /**
      * @override
@@ -36,8 +34,6 @@ class UserBatchEntity extends ORMModelBase {
 
     public static readonly idColumn = ['id']
     public static readonly uniqColumn = ['name', 'age']
-
-    public static readonly translator: ModelAutoMapper<UserBatchEntity> = new ModelAutoMapper(UserBatchEntity)
 
     // NOTE: Class properties must be initialized, otherwise they
     // will disappear in transpiled code.

@@ -1,5 +1,11 @@
 ## VERSIONS
 
+
+### 2.3.0
+- Sync version with other packages.
+- Added `GeneralCrudRepositoryBase`
+- Added settings for connection pool.
+
 ### 2.2.0
 - [Breaking change] Replaced `RepositoryBase` with `PgCrudRepositoryBase`.
 

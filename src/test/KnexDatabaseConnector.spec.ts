@@ -1,6 +1,5 @@
 import * as chai from 'chai'
 import * as spies from 'chai-spies'
-import * as _ from 'lodash'
 import { constants, MinorException } from '@micro-fleet/common'
 
 import { KnexDatabaseConnector, ORMModelBase } from '../app'
@@ -159,10 +158,11 @@ describe('KnexDatabaseConnector', function () {
             await dbConnector.dispose()
 
             // Assert
-            _.forOwn(dbConnector, (value: any, key: string) => {
+            // tslint:disable-next-line:prefer-const
+            for (let key in dbConnector) {
                 callMe()
                 expect(dbConnector[key], key).to.be.null
-            })
+            }
             expect(callMe).to.be.called
         })
     }) // END describe 'dispose'

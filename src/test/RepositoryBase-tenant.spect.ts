@@ -1,7 +1,6 @@
 import { expect } from 'chai'
 
-import { MinorException, PagedData, ModelAutoMapper,
-    TenantId, Maybe } from '@micro-fleet/common'
+import { MinorException, PagedData, TenantId, Maybe, Translatable, translatable } from '@micro-fleet/common'
 import { IdGenerator } from '@micro-fleet/id-generator'
 
 import { ORMModelBase, IDatabaseConnector,
@@ -14,9 +13,7 @@ const DB_TABLE = 'usersTenant',
     IMPOSSIBLE_ID = '0'
 
 
-class UserTenantDTO {
-
-    public static readonly translator: ModelAutoMapper<UserTenantDTO> = new ModelAutoMapper(UserTenantDTO)
+class UserTenantDTO extends Translatable {
 
     // NOTE: Class properties must be initialized, otherwise they
     // will disappear in transpiled code.
@@ -26,7 +23,7 @@ class UserTenantDTO {
     public age: number = undefined
 }
 
-
+@translatable()
 class UserTenantEntity extends ORMModelBase {
     /**
      * @override
@@ -39,8 +36,6 @@ class UserTenantEntity extends ORMModelBase {
     // public static readonly idProp = ['id', 'tenantId']
     public static readonly uniqColumn = ['name']
 
-    public static readonly translator: ModelAutoMapper<UserTenantEntity> = new ModelAutoMapper(UserTenantEntity)
-
     // NOTE: Class properties must be initialized, otherwise they
     // will disappear in transpiled code.
     public id: string = undefined
@@ -48,6 +43,7 @@ class UserTenantEntity extends ORMModelBase {
     public name: string = undefined
     public age: number = undefined
 }
+
 
 class UserTenantRepo extends PgCrudRepositoryBase<UserTenantEntity, UserTenantDTO, TenantId> {
 

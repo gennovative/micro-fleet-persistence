@@ -4,7 +4,7 @@ import { Maybe, constants } from '@micro-fleet/common'
 
 import { DbConnectionDetail, DatabaseSettings } from '../app'
 
-const { DbSettingKeys: S, DbClient } = constants
+const { Database: D, DbClient } = constants
 
 describe('DatabaseSettings', () => {
     describe('constructor', () => {
@@ -39,15 +39,15 @@ describe('DatabaseSettings', () => {
 
             const settings: DatabaseSettings = parseResult.tryGetValue(null)
             expect(settings.length).to.equal(5)
-            expect(settings[0].name).to.equal(S.DB_ENGINE)
+            expect(settings[0].name).to.equal(D.DB_ENGINE)
             expect(settings[0].value).to.equal(detail.clientName)
-            expect(settings[1].name).to.equal(S.DB_ADDRESS)
+            expect(settings[1].name).to.equal(D.DB_HOST)
             expect(settings[1].value).to.equal(detail.host.address)
-            expect(settings[2].name).to.equal(S.DB_USER)
+            expect(settings[2].name).to.equal(D.DB_USER)
             expect(settings[2].value).to.equal(detail.host.user)
-            expect(settings[3].name).to.equal(S.DB_PASSWORD)
+            expect(settings[3].name).to.equal(D.DB_PASSWORD)
             expect(settings[3].value).to.equal(detail.host.password)
-            expect(settings[4].name).to.equal(S.DB_NAME)
+            expect(settings[4].name).to.equal(D.DB_NAME)
             expect(settings[4].value).to.equal(detail.host.database)
         })
 
@@ -66,9 +66,9 @@ describe('DatabaseSettings', () => {
 
             const settings: DatabaseSettings = parseResult.tryGetValue(null)
             expect(settings.length).to.equal(2)
-            expect(settings[0].name).to.equal(S.DB_ENGINE)
+            expect(settings[0].name).to.equal(D.DB_ENGINE)
             expect(settings[0].value).to.equal(detail.clientName)
-            expect(settings[1].name).to.equal(S.DB_FILE)
+            expect(settings[1].name).to.equal(D.DB_FILE)
             expect(settings[1].value).to.equal(detail.filePath)
         })
 
@@ -87,9 +87,9 @@ describe('DatabaseSettings', () => {
 
             const settings: DatabaseSettings = parseResult.tryGetValue(null)
             expect(settings.length).to.equal(2)
-            expect(settings[0].name).to.equal(S.DB_ENGINE)
+            expect(settings[0].name).to.equal(D.DB_ENGINE)
             expect(settings[0].value).to.equal(detail.clientName)
-            expect(settings[1].name).to.equal(S.DB_CONN_STRING)
+            expect(settings[1].name).to.equal(D.DB_CONN_STRING)
             expect(settings[1].value).to.equal(detail.connectionString)
         })
 

@@ -43,6 +43,11 @@ export type DbConnectionDetail = {
         address: string,
 
         /**
+         * Database engine port.
+         */
+        port?: number,
+
+        /**
          * Username to login database.
          */
         user: string,
@@ -56,7 +61,21 @@ export type DbConnectionDetail = {
          * Database name.
          */
         database: string
-    };
+    },
+
+    pool?: {
+        /*
+         * Minimum number of connections in pool.
+         * Default is 2.
+         */
+        min?: number,
+
+        /*
+         * Maximum number of connections in pool.
+         * Default is 10.
+         */
+        max?: number,
+    }
 }
 
 /**
@@ -73,18 +92,6 @@ export interface RepositoryOptions {
 
 export interface RepositoryExistsOptions extends RepositoryOptions {
     /**
-     * Whether to include records marked as archived.
-     * Default to `false`.
-     */
-    // includeArchived?: boolean
-
-    /**
-     * Whether to include records marked as soft-deleted.
-     * Default to `false`.
-     */
-    // includeDeleted?: boolean
-
-    /**
      * Tenant Id
      */
     tenantId?: string,
@@ -94,6 +101,12 @@ export interface RepositoryCountAllOptions extends RepositoryExistsOptions {
 }
 
 export interface RepositoryCreateOptions extends RepositoryOptions {
+    /**
+     * Whether to refetch created records.
+     *
+     * Default is false.
+     */
+    refetch?: boolean,
 }
 
 export interface RepositoryDeleteOptions extends RepositoryOptions {
@@ -144,10 +157,10 @@ export interface RepositoryPageOptions extends RepositoryFindOptions {
     filterOperator?: FilterOperator
 }
 
-export interface RepositoryPatchOptions extends RepositoryOptions {
+export interface RepositoryPatchOptions extends RepositoryCreateOptions {
 }
 
-export interface RepositoryUpdateOptions extends RepositoryOptions {
+export interface RepositoryUpdateOptions extends RepositoryCreateOptions {
 }
 
 
@@ -163,11 +176,18 @@ export interface IRepository<TDomain, TId extends IdBase = SingleId> {
     countAll(options?: RepositoryCountAllOptions): Promise<number>
 
     /**
-     * Inserts one or more `model` to database.
+     * Inserts one `model` to database.
      *
-     * @param {DTO model} model The model to be inserted.
+     * @param {TDomain} model The model to be inserted.
      */
-    create(model: Partial<TDomain>, options?: RepositoryCreateOptions): Promise<TDomain>
+    create(model: TDomain, options?: RepositoryCreateOptions): Promise<TDomain>
+
+    /**
+     * Inserts many `models` to database.
+     *
+     * @param {TDomain[]} models The models to be inserted.
+     */
+    createMany(models: TDomain[], options?: RepositoryCreateOptions): Promise<TDomain[]>
 
     /**
      * Permanently deletes one record.
@@ -205,7 +225,7 @@ export interface IRepository<TDomain, TId extends IdBase = SingleId> {
     /**
      * Updates new value for specified properties in `model`.
      */
-    patch(model: Partial<TDomain>, options?: RepositoryPatchOptions): Promise<Maybe<TDomain>>
+    patch(model: Partial<TDomain>, options?: RepositoryPatchOptions): Promise<Maybe<Partial<TDomain>>>
 
     /**
      * Replaces a record with `model`.

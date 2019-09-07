@@ -1,6 +1,5 @@
 import * as chai from 'chai'
 import * as spies from 'chai-spies'
-import * as _ from 'lodash'
 
 import { IConfigurationProvider, constants, CriticalException,
     Maybe } from '@micro-fleet/common'
@@ -12,7 +11,7 @@ import DB_DETAILS from './database-details'
 
 chai.use(spies)
 
-const { DbClient, DbSettingKeys: S } = constants
+const { DbClient, Database: D } = constants
 const expect = chai.expect,
     MODE_FILE = 'file',
     MODE_STRING = 'string',
@@ -35,21 +34,21 @@ class MockConfigAddOn implements IConfigurationProvider {
     public get(key: string): Maybe<number | boolean | string> {
         if (MODE_FILE == this._mode) {
             switch (key) {
-                case S.DB_ENGINE: return Maybe.Just(DbClient.SQLITE3)
-                case S.DB_FILE: return Maybe.Just(CONN_FILE)
+                case D.DB_ENGINE: return Maybe.Just(DbClient.SQLITE3)
+                case D.DB_FILE: return Maybe.Just(CONN_FILE)
             }
         } else if (MODE_STRING == this._mode) {
             switch (key) {
-                case S.DB_ENGINE: return Maybe.Just(DbClient.POSTGRESQL)
-                case S.DB_CONN_STRING: return Maybe.Just(CONN_STRING)
+                case D.DB_ENGINE: return Maybe.Just(DbClient.POSTGRESQL)
+                case D.DB_CONN_STRING: return Maybe.Just(CONN_STRING)
             }
         } else if (MODE_CREDENTIALS  == this._mode) {
             switch (key) {
-                case S.DB_ENGINE: return Maybe.Just(DB_DETAILS.clientName)
-                case S.DB_ADDRESS: return Maybe.Just(DB_DETAILS.host.address)
-                case S.DB_USER: return Maybe.Just(DB_DETAILS.host.user)
-                case S.DB_PASSWORD: return Maybe.Just(DB_DETAILS.host.password)
-                case S.DB_NAME: return Maybe.Just(DB_DETAILS.host.database)
+                case D.DB_ENGINE: return Maybe.Just(DB_DETAILS.clientName)
+                case D.DB_HOST: return Maybe.Just(DB_DETAILS.host.address)
+                case D.DB_USER: return Maybe.Just(DB_DETAILS.host.user)
+                case D.DB_PASSWORD: return Maybe.Just(DB_DETAILS.host.password)
+                case D.DB_NAME: return Maybe.Just(DB_DETAILS.host.database)
             }
         }
         return Maybe.Nothing()
@@ -194,11 +193,12 @@ describe('DatabaseAddOn', function () {
             await dbAddOn.dispose()
 
             // Assert
-            _.forOwn(dbAddOn, (value, key) => {
-                if ('name' === key) { return }
+            // tslint:disable-next-line:prefer-const
+            for ( let key in dbAddOn) {
+                if ('name' === key) { continue }
                 callMe()
                 expect(dbAddOn[key], key).to.be.null
-            })
+            }
             expect(callMe).to.be.called
         })
     }) // describe 'dispose'

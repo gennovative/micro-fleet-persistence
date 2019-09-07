@@ -1,6 +1,10 @@
 import { Model } from 'objection'
+import { Newable, IModelAutoMapper, IModelValidator } from '@micro-fleet/common'
 
 const camelCase = global['camelCase']
+
+
+type ORMClass<U> = Newable<U> & typeof ORMModelBase
 
 
 export abstract class ORMModelBase extends Model {
@@ -36,6 +40,14 @@ export abstract class ORMModelBase extends Model {
     public static get uniqProp(): string[] {
         return this.uniqColumn.map<string>(camelCase)
     }
+
+    // These methods will be implemented by @translatable()
+    // They are here for better typing and compatible with ITranslatable
+
+    public static getTranslator: <TT extends ORMModelBase>(this: ORMClass<TT>) => IModelAutoMapper<TT>
+    public static getValidator: <VT extends ORMModelBase>(this: ORMClass<VT>) => IModelValidator<VT>
+    public static from: <FT extends ORMModelBase>(this: ORMClass<FT>, source: object) => FT
+    public static fromMany: <FT extends ORMModelBase>(this: ORMClass<FT>, source: object[]) => FT[]
 }
 
 ORMModelBase.knex(null)

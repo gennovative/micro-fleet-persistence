@@ -1,4 +1,4 @@
-import { injectable, inject, Guard } from '@micro-fleet/common'
+import { Guard, decorators as d } from '@micro-fleet/common'
 
 import { Types } from '../Types'
 import { IDatabaseConnector } from '../connector/IDatabaseConnector'
@@ -8,11 +8,11 @@ import { AtomicSessionFlow } from './AtomicSessionFlow'
 /**
  * Provides methods to create atomic sessions.
  */
-@injectable()
+@d.injectable()
 export class AtomicSessionFactory {
 
     constructor(
-        @inject(Types.DB_CONNECTOR) protected _dbConnector: IDatabaseConnector
+        @d.inject(Types.DB_CONNECTOR) protected _dbConnector: IDatabaseConnector
     ) {
         Guard.assertArgDefined('_dbConnector', _dbConnector)
     }

@@ -30,7 +30,13 @@ let KnexDatabaseConnector = class KnexDatabaseConnector {
      */
     init(detail) {
         common_1.Guard.assertArgDefined('detail', detail);
-        const settings = Object.assign({ client: detail.clientName, useNullAsDefault: true, connection: this._buildConnSettings(detail) }, objection_1.knexSnakeCaseMappers());
+        const settings = {
+            client: detail.clientName,
+            useNullAsDefault: true,
+            connection: this._buildConnSettings(detail),
+            pool: detail.pool,
+            ...objection_1.knexSnakeCaseMappers(),
+        };
         if (detail.clientName === common_1.constants.DbClient.POSTGRESQL) {
             require('../pg-type-parsers');
         }
@@ -86,7 +92,7 @@ let KnexDatabaseConnector = class KnexDatabaseConnector {
     }
 };
 KnexDatabaseConnector = __decorate([
-    common_1.injectable(),
+    common_1.decorators.injectable(),
     __metadata("design:paramtypes", [])
 ], KnexDatabaseConnector);
 exports.KnexDatabaseConnector = KnexDatabaseConnector;

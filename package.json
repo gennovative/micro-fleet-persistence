@@ -1,6 +1,6 @@
 {
     "name": "@micro-fleet/persistence",
-    "version": "2.2.0",
+    "version": "2.3.0-rc1",
     "description": "Provides base repository class and database connector that helps connect to database and map db tables to JS objects (ORM).",
     "scripts": {
         "build": "npm run compile && npm run test",
@@ -16,9 +16,11 @@
     },
     "dependencies": {
         "knex": "~0.16",
-        "lodash": "^4.17.15",
+        "lodash.camelcase": "~4.3",
+        "lodash.memoize": "~4.1",
+        "lodash.pick": "~4.4",
+        "lodash.snakecase": "~4.1",
         "objection": "~1.6",
-        "pg": "~7.8",
         "reflect-metadata": "~0.1"
     },
     "devDependencies": {
@@ -26,7 +28,10 @@
         "@types/chai-spies": "~0.0.1",
         "@types/debug": "~4.1",
         "@types/knex": "~0.16",
-        "@types/lodash": "~4.14",
+        "@types/lodash.camelcase": "~4.3",
+        "@types/lodash.memoize": "~4.1",
+        "@types/lodash.pick": "~4.4",
+        "@types/lodash.snakecase": "~4.1",
         "@types/mocha": "~5.2",
         "@types/moment": "~2.13",
         "@types/node": "~10.14",
@@ -44,7 +49,8 @@
         "typescript": "~3.3"
     },
     "peerDependencies": {
-        "@micro-fleet/common": "~1.4"
+        "pg": "~7.8",
+        "@micro-fleet/common": "=2.3.0-rc1"
     },
     "publishConfig": {
         "access": "public"

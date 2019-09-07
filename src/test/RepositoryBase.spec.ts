@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import * as moment from 'moment'
 
-import { MinorException, PagedData, ModelAutoMapper, SingleId, Maybe } from '@micro-fleet/common'
+import { MinorException, PagedData, SingleId, Maybe, Translatable, translatable } from '@micro-fleet/common'
 import { IdGenerator } from '@micro-fleet/id-generator'
 
 import { PgCrudRepositoryBase, ORMModelBase, IDatabaseConnector,
@@ -12,9 +12,7 @@ import DB_DETAILS from './database-details'
 const DB_TABLE = 'usersSoftDel',
     IMPOSSIBLE_ID = '0'
 
-class UserDTO {
-
-    public static readonly translator: ModelAutoMapper<UserDTO> = new ModelAutoMapper(UserDTO)
+class UserDTO extends Translatable {
 
     // NOTE: Class properties must be initialized, otherwise they
     // will disappear in transpiled code.
@@ -26,7 +24,8 @@ class UserDTO {
 }
 
 
-class UserEntity extends ORMModelBase {
+@translatable()
+class UserORM extends ORMModelBase {
     /**
      * @override
      */
@@ -36,8 +35,6 @@ class UserEntity extends ORMModelBase {
 
     public static readonly idColumn = ['id']
     public static readonly uniqColumn = ['name', 'age']
-
-    public static readonly translator: ModelAutoMapper<UserEntity> = new ModelAutoMapper(UserEntity)
 
     // NOTE: Class properties must be initialized, otherwise they
     // will disappear in transpiled code.
@@ -66,14 +63,14 @@ class UserEntity extends ORMModelBase {
 }
 
 
-class UserRepo extends PgCrudRepositoryBase<UserEntity, UserDTO, SingleId> {
+class UserRepo extends PgCrudRepositoryBase<UserORM, UserDTO, SingleId> {
 
     private _sessionFactory: AtomicSessionFactory
 
     constructor(
         dbConnector: IDatabaseConnector
     ) {
-        super(UserEntity, UserDTO, dbConnector)
+        super(UserORM, UserDTO, dbConnector)
         this._sessionFactory = new AtomicSessionFactory(dbConnector)
     }
 

@@ -3,7 +3,7 @@ import { Maybe, SettingItem, SettingItemDataType, constants } from '@micro-fleet
 import { DbConnectionDetail } from './interfaces'
 
 
-const { DbSettingKeys: S} = constants
+const { Database: S } = constants
 
 /**
  * Represents an array of database settings.
@@ -20,49 +20,49 @@ export class DatabaseSettings
         const settings = new DatabaseSettings
 
         if (detail.clientName) {
-            settings.push(SettingItem.translator.whole({
+            settings.push(SettingItem.from({
                 name: S.DB_ENGINE,
                 dataType: SettingItemDataType.String,
                 value: detail.clientName,
-            }) as SettingItem)
+            }))
         } else {
             return Maybe.Nothing()
         }
 
         if (detail.filePath) {
-            settings.push(SettingItem.translator.whole({
+            settings.push(SettingItem.from({
                 name: S.DB_FILE,
                 dataType: SettingItemDataType.String,
                 value: detail.filePath,
-            }) as SettingItem)
+            }))
         } else if (detail.connectionString) {
-            settings.push(SettingItem.translator.whole(
+            settings.push(SettingItem.from(
                 {
                     name: S.DB_CONN_STRING,
                     dataType: SettingItemDataType.String,
                     value: detail.connectionString,
-                }) as SettingItem)
+                }))
         } else if (detail.host) {
-            settings.push(SettingItem.translator.whole({
-                name: S.DB_ADDRESS,
+            settings.push(SettingItem.from({
+                name: S.DB_HOST,
                 dataType: SettingItemDataType.String,
                 value: detail.host.address,
-            }) as SettingItem)
-            settings.push(SettingItem.translator.whole({
+            }))
+            settings.push(SettingItem.from({
                 name: S.DB_USER,
                 dataType: SettingItemDataType.String,
                 value: detail.host.user,
-            }) as SettingItem)
-            settings.push(SettingItem.translator.whole({
+            }))
+            settings.push(SettingItem.from({
                 name: S.DB_PASSWORD,
                 dataType: SettingItemDataType.String,
                 value: detail.host.password,
-            }) as SettingItem)
-            settings.push(SettingItem.translator.whole({
+            }))
+            settings.push(SettingItem.from({
                 name: S.DB_NAME,
                 dataType: SettingItemDataType.String,
                 value: detail.host.database,
-            }) as SettingItem)
+            }))
         } else {
             return Maybe.Nothing()
         }
