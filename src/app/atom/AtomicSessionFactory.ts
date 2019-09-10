@@ -19,7 +19,6 @@ export class AtomicSessionFactory {
 
     /**
      * Starts executing queries in transactions.
-     * @param {string[]} names Only executes the queries on connections with specified names.
      */
     public startSession(): AtomicSessionFlow {
         return new AtomicSessionFlow(this._dbConnector)

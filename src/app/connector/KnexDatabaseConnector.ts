@@ -53,7 +53,7 @@ export class KnexDatabaseConnector implements IDatabaseConnector {
      * @see IDatabaseConnector.dispose
      */
     public async dispose(): Promise<void> {
-        this._connection.destroy()
+        await this._connection.destroy()
         this._connection = null
         this._knex = null
     }

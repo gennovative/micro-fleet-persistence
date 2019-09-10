@@ -22,6 +22,7 @@ class ORMModelBase extends objection_1.Model {
         return this.uniqColumn.map(camelCase);
     }
 }
+exports.ORMModelBase = ORMModelBase;
 /**
  * [ObjectionJS] Array of primary column names.
  * Should be overriden (['id', 'tenant_id']) for composite PK.
@@ -31,6 +32,5 @@ ORMModelBase.idColumn = ['id'];
  * An array of non-primary unique column names.
  */
 ORMModelBase.uniqColumn = [];
-exports.ORMModelBase = ORMModelBase;
 ORMModelBase.knex(null);
 //# sourceMappingURL=ORMModelBase.js.map

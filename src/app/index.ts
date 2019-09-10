@@ -4,7 +4,6 @@ if (!Reflect || typeof Reflect['hasOwnMetadata'] !== 'function') {
 }
 
 import memoize = require('lodash.memoize')
-global['snakeCase'] = memoize(require('lodash.snakeCase'))
 global['camelCase'] = memoize(require('lodash.camelCase'))
 
 export * from './atom/AtomicSessionFactory'

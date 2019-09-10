@@ -1,6 +1,6 @@
 {
     "name": "@micro-fleet/persistence",
-    "version": "2.3.0-rc1",
+    "version": "2.3.0-rc3",
     "description": "Provides base repository class and database connector that helps connect to database and map db tables to JS objects (ORM).",
     "scripts": {
         "build": "npm run compile && npm run test",
@@ -9,48 +9,45 @@
         "dedup": "rimraf node_modules/**/node_modules/**/typings",
         "compile": "npm run clean && npm run lint && tsc --pretty",
         "release": "npm run build && npm run definition",
-        "test": "nyc --reporter=json --reporter=html --include dist/app/**/*.js mocha --recursive dist/test",
-        "lint": "tslint --fix 'src/**/*.ts'",
+        "test": "nyc --extension=.ts --reporter=json --reporter=html --include dist/app/**/*.js --include src/app/**/*.ts mocha --recursive dist/test",
+        "lint": "tslint --fix -p tsconfig.json --exclude '**/*.d.ts'",
         "watch": "npm run clean && npm run lint && tsc --watch --pretty",
         "prepublishOnly": "npm run release"
     },
     "dependencies": {
-        "knex": "~0.16",
+        "knex": "~0.19",
         "lodash.camelcase": "~4.3",
         "lodash.memoize": "~4.1",
         "lodash.pick": "~4.4",
-        "lodash.snakecase": "~4.1",
         "objection": "~1.6",
         "reflect-metadata": "~0.1"
     },
     "devDependencies": {
-        "@types/chai": "~4.1",
-        "@types/chai-spies": "~0.0.1",
+        "@types/chai": "~4.2",
+        "@types/chai-spies": "~1.0",
         "@types/debug": "~4.1",
         "@types/knex": "~0.16",
         "@types/lodash.camelcase": "~4.3",
         "@types/lodash.memoize": "~4.1",
         "@types/lodash.pick": "~4.4",
-        "@types/lodash.snakecase": "~4.1",
         "@types/mocha": "~5.2",
         "@types/moment": "~2.13",
-        "@types/node": "~10.14",
-        "@types/pg": "~7.4",
-        "chai": "~4.1",
-        "chai-spies": "git://github.com/chaijs/chai-spies.git#b11aeebf",
-        "debug": "~3.1.0",
-        "mocha": "~5.2",
+        "@types/pg": "~7.11",
+        "chai": "~4.2",
+        "chai-spies": "~1.0",
+        "debug": "~4.1",
+        "mocha": "~6.2",
         "moment": "~2.24",
-        "nyc": "~12.0",
-        "rimraf": "~2.6",
-        "sqlite3": "~4.0.9",
-        "ts-declarator": "~1.0",
-        "tslint": "~5.11",
-        "typescript": "~3.3"
+        "nyc": "~14.1",
+        "pg": "~7.12",
+        "rimraf": "~3.0",
+        "sqlite3": "~4.1",
+        "tslint": "~5.19",
+        "typescript": "~3.6"
     },
     "peerDependencies": {
-        "pg": "~7.8",
-        "@micro-fleet/common": "=2.3.0-rc1"
+        "pg": "~7.12",
+        "@micro-fleet/common": "=2.3.0-rc3"
     },
     "publishConfig": {
         "access": "public"

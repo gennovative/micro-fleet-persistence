@@ -3,12 +3,12 @@ const debug: debug.IDebugger = require('debug')('mcft:persistence:test:PgRepoBas
 
 import { expect } from 'chai'
 
-import { SingleId, Maybe, Translatable, translatable } from '@micro-fleet/common'
-import { IdGenerator } from '@micro-fleet/id-generator'
+import { SingleId, Maybe, Translatable, decorators as d } from '@micro-fleet/common'
 
 import { PgCrudRepositoryBase, ORMModelBase, IRepository, IDatabaseConnector,
         KnexDatabaseConnector, AtomicSessionFactory } from '../app'
 import DB_DETAILS from './database-details'
+import { genBigInt } from './test-utils'
 
 
 const DB_TABLE = 'usersBatch',
@@ -23,7 +23,7 @@ class UserBatchDTO extends Translatable {
     public age: number = undefined
 }
 
-@translatable()
+@d.translatable()
 class UserBatchEntity extends ORMModelBase {
     /**
      * @override
@@ -106,8 +106,6 @@ let cachedDTOs: UserBatchDTO[],
     globalDbConnector: IDatabaseConnector,
     usrRepo: UserBatchRepo
 
-const idGen = new IdGenerator()
-
 // These test suites make real changes to database.
 describe('RepositoryBase-batch', function() {
     // this.timeout(50000)
@@ -145,19 +143,19 @@ describe('RepositoryBase-batch', function() {
                 evaOne = new UserBatchDTO(),
                 evaTwo = new UserBatchDTO()
 
-            adamOne.id = idGen.nextBigInt().toString()
+            adamOne.id = genBigInt()
             adamOne.name = 'Adam One'
             adamOne.age = 11
 
-            adamTwo.id = idGen.nextBigInt().toString()
+            adamTwo.id = genBigInt()
             adamTwo.name = 'Adam Two'
             adamTwo.age = 22
 
-            evaOne.id = idGen.nextBigInt().toString()
+            evaOne.id = genBigInt()
             evaOne.name = 'Eva One'
             evaOne.age = 33
 
-            evaTwo.id = idGen.nextBigInt().toString()
+            evaTwo.id = genBigInt()
             evaTwo.name = null // fail
             evaTwo.age = 44
 
@@ -182,19 +180,19 @@ describe('RepositoryBase-batch', function() {
                 evaOne = new UserBatchDTO(),
                 evaTwo = new UserBatchDTO()
 
-            adamOne.id = idGen.nextBigInt().toString()
+            adamOne.id = genBigInt()
             adamOne.name = 'Adam One'
             adamOne.age = 11
 
-            adamTwo.id = idGen.nextBigInt().toString()
+            adamTwo.id = genBigInt()
             adamTwo.name = 'Adam Two'
             adamTwo.age = 22
 
-            evaOne.id = idGen.nextBigInt().toString()
+            evaOne.id = genBigInt()
             evaOne.name = 'Eva One'
             evaOne.age = 33
 
-            evaTwo.id = idGen.nextBigInt().toString()
+            evaTwo.id = genBigInt()
             evaTwo.name = 'Eva Two'
             evaTwo.age = 44
 

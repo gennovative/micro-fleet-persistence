@@ -23,7 +23,7 @@ export class PgCrudRepositoryBase<TORM extends ORMModelBase, TDomain extends obj
     /**
      * @override
      */
-    protected _buildCountAllQuery(query: QueryBuilder<TORM>,
+    protected $buildCountAllQuery(query: QueryBuilder<TORM>,
             opts: it.RepositoryCountAllOptions): QueryCallbackReturn {
         // Postgres returns count result as int64, so the pg driver returns string.
         // We cast it to int32 to be a valid NodeJS number
@@ -35,37 +35,37 @@ export class PgCrudRepositoryBase<TORM extends ORMModelBase, TDomain extends obj
     /**
      * @override
      */
-    protected _buildCreateQuery(query: QueryBuilder<TORM>, model: TDomain, ormModel: TORM,
+    protected $buildCreateQuery(query: QueryBuilder<TORM>, model: TDomain, ormModel: TORM,
             opts: it.RepositoryCreateOptions): QueryCallbackReturn {
-        return (super._buildCreateQuery(query, model, ormModel, opts) as QueryBuilder<TORM>)
+        return (super.$buildCreateQuery(query, model, ormModel, opts) as QueryBuilder<TORM>)
             .returning('*') as any
     }
 
     /**
      * @override
      */
-    protected _buildCreateManyQuery(query: QueryBuilder<TORM>, models: TDomain[], ormModels: TORM[],
+    protected $buildCreateManyQuery(query: QueryBuilder<TORM>, models: TDomain[], ormModels: TORM[],
             opts: it.RepositoryCreateOptions): QueryCallbackReturn {
         // Bulk insert only works with PostgreSQL, MySQL, and SQL Server 2008 RC2
-        return (super._buildCreateManyQuery(query, models, ormModels, opts) as QueryBuilder<TORM>)
+        return (super.$buildCreateManyQuery(query, models, ormModels, opts) as QueryBuilder<TORM>)
             .returning('*') as any
     }
 
     /**
      * @override
      */
-    protected _buildPatchQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM,
+    protected $buildPatchQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM,
             opts: it.RepositoryPatchOptions): QueryCallbackReturn {
-        return (super._buildPatchQuery(query, model, ormModel, opts) as QueryBuilder<TORM>)
+        return (super.$buildPatchQuery(query, model, ormModel, opts) as QueryBuilder<TORM>)
             .returning('*') as any
     }
 
     /**
      * @override
      */
-    protected _buildUpdateQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM,
+    protected $buildUpdateQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM,
             opts: it.RepositoryUpdateOptions): QueryCallbackReturn {
-        return (super._buildPatchQuery(query, model, ormModel, opts) as QueryBuilder<TORM>)
+        return (super.$buildPatchQuery(query, model, ormModel, opts) as QueryBuilder<TORM>)
             .returning('*') as any
     }
 }

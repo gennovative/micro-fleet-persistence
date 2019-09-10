@@ -24,11 +24,12 @@ class DummyEntity extends ORMModelBase {
 }
 
 describe('KnexDatabaseConnector', function () {
+    // tslint:disable-next-line:no-invalid-this
     this.timeout(5000)
     // this.timeout(60000) // For debugging
 
     describe('init', () => {
-        it('should configure connection with file name settings', async () => {
+        it('should configure connection with file name settings', () => {
             // Arrange
             const dbConnector = new KnexDatabaseConnector()
             const expectedSettings = {
@@ -58,7 +59,7 @@ describe('KnexDatabaseConnector', function () {
             expect(dbConnector['_knex']).to.have.been.called.once
         })
 
-        it('should configure connection with connection string', async () => {
+        it('should configure connection with connection string', () => {
             // Arrange
             const dbConnector = new KnexDatabaseConnector()
             const expectedSettings = {
@@ -84,7 +85,7 @@ describe('KnexDatabaseConnector', function () {
             expect(dbConnector['_knex']).to.have.been.called.once
         })
 
-        it('should configure connection with host credentials', async () => {
+        it('should configure connection with host credentials', () => {
             // Arrange
             const dbConnector = new KnexDatabaseConnector(),
                 expectedSettings = {
@@ -116,7 +117,7 @@ describe('KnexDatabaseConnector', function () {
             expect(dbConnector['_knex']).to.have.been.called.once
         })
 
-        it('should throw exception if there is no settings for database connection', async () => {
+        it('should throw exception if there is no settings for database connection', () => {
             // Arrange
             const dbConnector = new KnexDatabaseConnector()
             let exception: MinorException = null,

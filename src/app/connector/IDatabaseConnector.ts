@@ -7,6 +7,7 @@ import { ORMModelBase } from '../bases/ORMModelBase'
 import { DbConnectionDetail } from '../interfaces'
 
 
+// tslint:disable-next-line:interface-name
 export interface KnexConnection extends knex {
     /**
      * Connection name.

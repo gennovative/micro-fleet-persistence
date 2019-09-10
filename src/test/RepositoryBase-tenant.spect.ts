@@ -1,12 +1,12 @@
 import { expect } from 'chai'
 
-import { MinorException, PagedData, TenantId, Maybe, Translatable, translatable } from '@micro-fleet/common'
-import { IdGenerator } from '@micro-fleet/id-generator'
+import { MinorException, PagedData, TenantId, Maybe, Translatable, decorators as d } from '@micro-fleet/common'
 
 import { ORMModelBase, IDatabaseConnector,
     KnexDatabaseConnector, AtomicSessionFactory, AtomicSessionFlow,
     PgCrudRepositoryBase} from '../app'
 import DB_DETAILS from './database-details'
+import { genBigInt } from './test-utils'
 
 
 const DB_TABLE = 'usersTenant',
@@ -23,7 +23,7 @@ class UserTenantDTO extends Translatable {
     public age: number = undefined
 }
 
-@translatable()
+@d.translatable()
 class UserTenantEntity extends ORMModelBase {
     /**
      * @override
@@ -87,20 +87,20 @@ class UserTenantRepo extends PgCrudRepositoryBase<UserTenantEntity, UserTenantDT
                         setTimeout(() => {
                             reject(new MinorException('Error on second transaction'))
                         }, 100)
-                })
-                } else {
-                    return new Promise((resolve, reject) => {
-                        this.create(eva, { atomicSession })
-                            .then(createdEva => {
-                                this.firstOutput = [createdAdam, createdEva]
-                                // First transaction has finished but not yet resolves,
-                                // it must delay here to let second transaction to fail
-                                setTimeout(() => {
-                                    resolve(this.firstOutput)
-                                }, 200)
-                            })
                     })
                 }
+                return new Promise((resolve, reject) => {
+                    this.create(eva, { atomicSession })
+                        .then(createdEva => {
+                            this.firstOutput = [createdAdam, createdEva]
+                            // First transaction has finished but not yet resolves,
+                            // it must delay here to let second transaction to fail
+                            setTimeout(() => {
+                                resolve(this.firstOutput)
+                            }, 200)
+                        })
+                        .catch(reject)
+                    })
             })
             .closePipe()
     }
@@ -139,8 +139,6 @@ let cachedDTO: UserTenantDTO,
     globalDbConnector: IDatabaseConnector,
     usrRepo: UserTenantRepo
 
-const idGen = new IdGenerator()
-
 
 // These test suites make real changes to database.
 describe('RepositoryBase-tenant', function() {
@@ -170,13 +168,13 @@ describe('RepositoryBase-tenant', function() {
             const modelOne = new UserTenantDTO(),
                 modelTwo = new UserTenantDTO()
 
-            modelOne.id = idGen.nextBigInt().toString()
-            modelOne.tenantId = idGen.nextBigInt().toString()
+            modelOne.id = genBigInt()
+            modelOne.tenantId = genBigInt()
             modelOne.name = 'One'
             modelOne.age = 11
 
             modelTwo.id = modelOne.id
-            modelTwo.tenantId = idGen.nextBigInt().toString()
+            modelTwo.tenantId = genBigInt()
             modelTwo.name = 'Two'
             modelTwo.age = 22
 
@@ -218,12 +216,12 @@ describe('RepositoryBase-tenant', function() {
             const modelOne = new UserTenantDTO(),
                 modelTwo = new UserTenantDTO()
 
-            modelOne.id = modelTwo.id = idGen.nextBigInt().toString()
-            modelOne.tenantId = idGen.nextBigInt().toString()
+            modelOne.id = modelTwo.id = genBigInt()
+            modelOne.tenantId = genBigInt()
             modelOne.name = 'One'
             modelOne.age = 11
 
-            modelTwo.tenantId = idGen.nextBigInt().toString()
+            modelTwo.tenantId = genBigInt()
             modelTwo.name = null // fail
             modelTwo.age = 22
 
@@ -253,12 +251,12 @@ describe('RepositoryBase-tenant', function() {
             const modelOne = new UserTenantDTO(),
                 modelTwo = new UserTenantDTO()
 
-            modelOne.id = modelTwo.id = idGen.nextBigInt().toString()
-            modelOne.tenantId = idGen.nextBigInt().toString()
+            modelOne.id = modelTwo.id = genBigInt()
+            modelOne.tenantId = genBigInt()
             modelOne.name = 'One'
             modelOne.age = 11
 
-            modelTwo.tenantId = idGen.nextBigInt().toString()
+            modelTwo.tenantId = genBigInt()
             modelTwo.name = 'Two'
             modelTwo.age = 22
 
@@ -290,12 +288,12 @@ describe('RepositoryBase-tenant', function() {
             const modelOne = new UserTenantDTO(),
                 modelTwo = new UserTenantDTO()
 
-            modelOne.id = modelTwo.id = idGen.nextBigInt().toString()
-            modelOne.tenantId = idGen.nextBigInt().toString()
+            modelOne.id = modelTwo.id = genBigInt()
+            modelOne.tenantId = genBigInt()
             modelOne.name = 'One'
             modelOne.age = 11
 
-            modelTwo.tenantId = idGen.nextBigInt().toString()
+            modelTwo.tenantId = genBigInt()
             modelTwo.name = 'Two'
             modelTwo.age = 22
 
@@ -321,8 +319,8 @@ describe('RepositoryBase-tenant', function() {
         it('should insert a row to database without transaction', async () => {
             // Arrange
             const model = new UserTenantDTO(),
-                tenantId = idGen.nextBigInt().toString()
-            model.id = idGen.nextBigInt().toString()
+                tenantId = genBigInt()
+            model.id = genBigInt()
             model.tenantId = tenantId
             model.name = 'Hiri'
             model.age = 29
@@ -495,6 +493,7 @@ describe('RepositoryBase-tenant', function() {
     }) // END describe 'deleteSingle (hard)'
 
     describe('page', function() {
+        // tslint:disable-next-line:no-invalid-this
         this.timeout(5000)
 
         it('Should return empty array if there is no records', async () => {
@@ -521,7 +520,7 @@ describe('RepositoryBase-tenant', function() {
             const PAGE = 1,
                 SIZE = 10,
                 TOTAL = SIZE * 2
-            const tenantId = cachedTenantId = idGen.nextBigInt().toString()
+            const tenantId = cachedTenantId = genBigInt()
 
             // Deletes all from DB
             await usrRepo.deleteAll()
@@ -531,9 +530,9 @@ describe('RepositoryBase-tenant', function() {
             let model: UserTenantDTO
             for (let i = 0; i < TOTAL; i++) {
                 model = new UserTenantDTO()
-                model.id = idGen.nextBigInt().toString()
+                model.id = genBigInt()
                 model.tenantId = tenantId
-                model.name = 'Hiri' + i
+                model.name = `Hiri ${i}`
                 model.age = Math.ceil(29 * Math.random())
                 createJobs.push(usrRepo.create(model))
             }

@@ -1,12 +1,12 @@
 import { expect } from 'chai'
 import * as moment from 'moment'
 
-import { MinorException, PagedData, SingleId, Maybe, Translatable, translatable } from '@micro-fleet/common'
-import { IdGenerator } from '@micro-fleet/id-generator'
+import { MinorException, PagedData, SingleId, Maybe, Translatable, decorators as d } from '@micro-fleet/common'
 
 import { PgCrudRepositoryBase, ORMModelBase, IDatabaseConnector,
         KnexDatabaseConnector, AtomicSessionFactory, AtomicSessionFlow } from '../app'
 import DB_DETAILS from './database-details'
+import { genBigInt } from './test-utils'
 
 
 const DB_TABLE = 'usersSoftDel',
@@ -24,7 +24,7 @@ class UserDTO extends Translatable {
 }
 
 
-@translatable()
+@d.translatable()
 class UserORM extends ORMModelBase {
     /**
      * @override
@@ -123,7 +123,6 @@ let cachedDTO: UserDTO,
     globalDbConnector: IDatabaseConnector,
     usrRepo: UserRepo
 
-const idGen = new IdGenerator()
 
 // These test suites make real changes to database.
 describe('PgCrudRepositoryBase', function() {
@@ -153,11 +152,11 @@ describe('PgCrudRepositoryBase', function() {
             // Arrange
             const modelOne = new UserDTO(),
                 modelTwo = new UserDTO()
-            modelOne.id = idGen.nextBigInt().toString()
+            modelOne.id = genBigInt()
             modelOne.name = 'One'
             modelOne.age = 11
 
-            modelTwo.id = idGen.nextBigInt().toString()
+            modelTwo.id = genBigInt()
             modelTwo.name = 'Two'
             modelTwo.age = 22
 
@@ -203,11 +202,11 @@ describe('PgCrudRepositoryBase', function() {
 
             const modelOne = new UserDTO(),
                 modelTwo = new UserDTO()
-            modelOne.id = idGen.nextBigInt().toString()
+            modelOne.id = genBigInt()
             modelOne.name = 'One'
             modelOne.age = 11
 
-            modelTwo.id = idGen.nextBigInt().toString()
+            modelTwo.id = genBigInt()
             modelTwo.name = null // fail
             modelTwo.age = 22
 
@@ -229,11 +228,11 @@ describe('PgCrudRepositoryBase', function() {
             // Arrange
             const modelOne = new UserDTO(),
                 modelTwo = new UserDTO()
-            modelOne.id = idGen.nextBigInt().toString()
+            modelOne.id = genBigInt()
             modelOne.name = 'One'
             modelOne.age = 11
 
-            modelTwo.id = idGen.nextBigInt().toString()
+            modelTwo.id = genBigInt()
             modelTwo.name = 'Two'
             modelTwo.age = 22
 
@@ -264,11 +263,11 @@ describe('PgCrudRepositoryBase', function() {
             // Arrange
             const modelOne = new UserDTO(),
                 modelTwo = new UserDTO()
-            modelOne.id = idGen.nextBigInt().toString()
+            modelOne.id = genBigInt()
             modelOne.name = 'One'
             modelOne.age = 11
 
-            modelTwo.id = idGen.nextBigInt().toString()
+            modelTwo.id = genBigInt()
             modelTwo.name = 'Two'
             modelTwo.age = 22
 
@@ -294,7 +293,7 @@ describe('PgCrudRepositoryBase', function() {
         it('should insert a row to database without transaction', async () => {
             // Arrange
             const model = new UserDTO()
-            model.id = idGen.nextBigInt().toString()
+            model.id = genBigInt()
             model.name = 'Hiri'
             model.age = 39
 
@@ -313,7 +312,7 @@ describe('PgCrudRepositoryBase', function() {
         it('should return DTO instance if success', async () => {
             // Arrange
             const model = new UserDTO()
-            model.id = idGen.nextBigInt().toString()
+            model.id = genBigInt()
             model.name = 'Hiri'
             model.age = 39
 
@@ -552,6 +551,7 @@ describe('PgCrudRepositoryBase', function() {
     }) // END describe 'deleteSingle'
 
     describe('page', function() {
+        // tslint:disable-next-line:no-invalid-this
         this.timeout(5000)
 
         it('Should return `null` if there is no records', async () => {
@@ -577,24 +577,25 @@ describe('PgCrudRepositoryBase', function() {
             const PAGE = 1,
                 SIZE = 10,
                 TOTAL = SIZE * 2
-            const firstPageModel: UserDTO[] = []
             let model: UserDTO
 
             // Deletes all from DB
             await usrRepo.deleteAll()
 
-            const createJobs = []
+            // const createJobs = []
+            const inputUsers: UserDTO[] = []
 
             for (let i = 0; i < TOTAL; ++i) {
                 model = new UserDTO()
-                model.id = idGen.nextBigInt().toString()
-                model.name = 'Hiri' + i
+                model.id = genBigInt()
+                model.name = `Hiri ${i}`
                 model.age = Math.ceil(29 * Math.random())
-                firstPageModel.push(model)
-                createJobs.push(usrRepo.create(model))
+                inputUsers.push(model)
             }
 
-            await Promise.all(createJobs)
+            inputUsers.sort((a, b) => parseInt(a.id) - parseInt(b.id))
+            const firstPageModels: UserDTO[] = inputUsers.slice(0, 10)
+            await usrRepo.createMany(inputUsers)
 
             // Act
             const fetchedModels: PagedData<UserDTO> = await usrRepo.page({
@@ -606,9 +607,9 @@ describe('PgCrudRepositoryBase', function() {
             // Assert
             expect(fetchedModels.length).to.be.equal(SIZE)
             fetchedModels.forEach((m, i) => {
-                expect(m.id, `[${i}].id`).to.equal(firstPageModel[i].id)
-                expect(m.name, `[${i}].name`).to.equal(firstPageModel[i].name)
-                expect(m.age, `[${i}].age`).to.equal(firstPageModel[i].age)
+                expect(m.id, `[${i}].id`).to.equal(firstPageModels[i].id)
+                expect(m.name, `[${i}].name`).to.equal(firstPageModels[i].name)
+                expect(m.age, `[${i}].age`).to.equal(firstPageModels[i].age)
             })
         })
 
@@ -626,8 +627,8 @@ describe('PgCrudRepositoryBase', function() {
 
             for (let i = 0; i < TOTAL; ++i) {
                 model = new UserDTO()
-                model.id = idGen.nextBigInt().toString()
-                model.name = 'Hiri' + i
+                model.id = genBigInt()
+                model.name = `Hiri ${i}`
                 model.age = Math.ceil(29 * Math.random())
                 createJobs.push(usrRepo.create(model))
             }
@@ -661,8 +662,8 @@ describe('PgCrudRepositoryBase', function() {
 
             for (let i = 0; i < SIZE; ++i) {
                 model = new UserDTO()
-                model.id = idGen.nextBigInt().toString()
-                model.name = 'Hiri' + i
+                model.id = genBigInt()
+                model.name = `Hiri ${i}`
                 model.age = Math.ceil(29 * Math.random())
                 firstPageModel.push(model)
                 createJobs.push(usrRepo.create(model))

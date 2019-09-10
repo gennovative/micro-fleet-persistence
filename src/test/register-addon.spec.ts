@@ -42,6 +42,7 @@ describe('registerDbAddOn', function () {
         registerDbAddOn()
 
         // Assert
+        // tslint:disable-next-line: no-unbound-method
         expect(depCon.bind).not.to.be.called
     })
 }) // describe

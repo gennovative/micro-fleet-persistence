@@ -47,7 +47,7 @@ let KnexDatabaseConnector = class KnexDatabaseConnector {
      * @see IDatabaseConnector.dispose
      */
     async dispose() {
-        this._connection.destroy();
+        await this._connection.destroy();
         this._connection = null;
         this._knex = null;
     }

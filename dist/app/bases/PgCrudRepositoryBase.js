@@ -22,7 +22,7 @@ let PgCrudRepositoryBase = class PgCrudRepositoryBase extends GeneralCrudReposit
     /**
      * @override
      */
-    _buildCountAllQuery(query, opts) {
+    $buildCountAllQuery(query, opts) {
         // Postgres returns count result as int64, so the pg driver returns string.
         // We cast it to int32 to be a valid NodeJS number
         query.select(objection_1.raw('CAST(count(*) AS INTEGER) as total'));
@@ -32,30 +32,30 @@ let PgCrudRepositoryBase = class PgCrudRepositoryBase extends GeneralCrudReposit
     /**
      * @override
      */
-    _buildCreateQuery(query, model, ormModel, opts) {
-        return super._buildCreateQuery(query, model, ormModel, opts)
+    $buildCreateQuery(query, model, ormModel, opts) {
+        return super.$buildCreateQuery(query, model, ormModel, opts)
             .returning('*');
     }
     /**
      * @override
      */
-    _buildCreateManyQuery(query, models, ormModels, opts) {
+    $buildCreateManyQuery(query, models, ormModels, opts) {
         // Bulk insert only works with PostgreSQL, MySQL, and SQL Server 2008 RC2
-        return super._buildCreateManyQuery(query, models, ormModels, opts)
+        return super.$buildCreateManyQuery(query, models, ormModels, opts)
             .returning('*');
     }
     /**
      * @override
      */
-    _buildPatchQuery(query, model, ormModel, opts) {
-        return super._buildPatchQuery(query, model, ormModel, opts)
+    $buildPatchQuery(query, model, ormModel, opts) {
+        return super.$buildPatchQuery(query, model, ormModel, opts)
             .returning('*');
     }
     /**
      * @override
      */
-    _buildUpdateQuery(query, model, ormModel, opts) {
-        return super._buildPatchQuery(query, model, ormModel, opts)
+    $buildUpdateQuery(query, model, ormModel, opts) {
+        return super.$buildPatchQuery(query, model, ormModel, opts)
             .returning('*');
     }
 };

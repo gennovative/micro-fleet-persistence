@@ -25,7 +25,6 @@ let AtomicSessionFactory = class AtomicSessionFactory {
     }
     /**
      * Starts executing queries in transactions.
-     * @param {string[]} names Only executes the queries on connections with specified names.
      */
     startSession() {
         return new AtomicSessionFlow_1.AtomicSessionFlow(this._dbConnector);

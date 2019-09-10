@@ -23,28 +23,28 @@ const it = require("../interfaces");
  * It does not use any specific techniques of a particular database.
  */
 let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
-    constructor(_ORMClass, _DomainClass, _dbConnector) {
-        this._ORMClass = _ORMClass;
-        this._DomainClass = _DomainClass;
-        this._dbConnector = _dbConnector;
-        common_1.Guard.assertArgDefined('EntityClass', _ORMClass);
-        common_1.Guard.assertIsTruthy(_ORMClass['tableName'], 'Param "ORMClass" must have tableName. It had better inherit "ORMModelBase"!');
-        common_1.Guard.assertArgDefined('DomainClass', _DomainClass);
-        common_1.Guard.assertArgDefined('dbConnector', _dbConnector);
-        this._idProps = this._ORMClass['idProp'];
+    constructor($ORMClass, $DomainClass, $dbConnector) {
+        this.$ORMClass = $ORMClass;
+        this.$DomainClass = $DomainClass;
+        this.$dbConnector = $dbConnector;
+        common_1.Guard.assertArgDefined('EntityClass', $ORMClass);
+        common_1.Guard.assertIsTruthy($ORMClass['tableName'], 'Param "ORMClass" must have tableName. It had better inherit "ORMModelBase"!');
+        common_1.Guard.assertArgDefined('DomainClass', $DomainClass);
+        common_1.Guard.assertArgDefined('dbConnector', $dbConnector);
+        this.$idProps = this.$ORMClass['idProp'];
     }
     /**
      * @see IRepository.countAll
      */
     async countAll(opts = {}) {
         const result = await this.executeQuery(query => {
-            const q = this._buildCountAllQuery(query, opts);
+            const q = this.$buildCountAllQuery(query, opts);
             debug('COUNT ALL: %s', q.toSql());
             return q;
         }, opts.atomicSession);
         return (result[0]['total']);
     }
-    _buildCountAllQuery(query, opts) {
+    $buildCountAllQuery(query, opts) {
         query.select(objection_1.raw('count(*) as total'));
         opts.tenantId && query.where('tenantId', opts.tenantId);
         return query;
@@ -55,13 +55,13 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
     create(domainModel, opts = {}) {
         const ormModelOrModels = this.toORMModel(domainModel, false);
         return this.executeQuery(query => {
-            const q = this._buildCreateQuery(query, domainModel, ormModelOrModels, opts);
+            const q = this.$buildCreateQuery(query, domainModel, ormModelOrModels, opts);
             debug('CREATE: %s', q.toSql());
             return q;
         }, opts.atomicSession)
             .then((refetch) => this.toDomainModel(refetch, false));
     }
-    _buildCreateQuery(query, model, ormModel, opts) {
+    $buildCreateQuery(query, model, ormModel, opts) {
         return opts.refetch
             ? query.insertAndFetch(ormModel)
             : query.insert(ormModel);
@@ -72,13 +72,13 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
     createMany(domainModels, opts = {}) {
         const ormModelOrModels = this.toORMModelMany(domainModels, false);
         return this.executeQuery(query => {
-            const q = this._buildCreateManyQuery(query, domainModels, ormModelOrModels, opts);
+            const q = this.$buildCreateManyQuery(query, domainModels, ormModelOrModels, opts);
             debug('CREATE MANY: %s', q.toSql());
             return q;
         }, opts.atomicSession)
             .then((refetch) => this.toDomainModelMany(refetch, false));
     }
-    _buildCreateManyQuery(query, models, ormModels, opts) {
+    $buildCreateManyQuery(query, models, ormModels, opts) {
         // Bulk insert only works with PostgreSQL, MySQL, and SQL Server 2008 RC2
         return opts.refetch
             ? query.insertAndFetch(ormModels)
@@ -89,12 +89,12 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
      */
     deleteSingle(id, opts = {}) {
         return this.executeQuery(query => {
-            const q = this._buildDeleteSingleQuery(query, id, opts);
+            const q = this.$buildDeleteSingleQuery(query, id, opts);
             debug('DELETE SINGLE: %s', q.toSql());
             return q;
         }, opts.atomicSession);
     }
-    _buildDeleteSingleQuery(query, id, opts) {
+    $buildDeleteSingleQuery(query, id, opts) {
         return query.deleteById(id.toArray());
     }
     /**
@@ -102,14 +102,14 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
      */
     deleteMany(idList, opts = {}) {
         return this.executeQuery(query => {
-            const q = this._buildDeleteManyQuery(query, idList, opts);
+            const q = this.$buildDeleteManyQuery(query, idList, opts);
             debug('DELETE MANY: %s', q.toSql());
             return q;
         }, opts.atomicSession);
     }
-    _buildDeleteManyQuery(query, idList, opts) {
+    $buildDeleteManyQuery(query, idList, opts) {
         const q = query.delete()
-            .whereInComposite(this._ORMClass['idColumn'], idList.map(id => id.toArray()));
+            .whereInComposite(this.$ORMClass['idColumn'], idList.map(id => id.toArray()));
         return q;
     }
     /**
@@ -117,13 +117,13 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
      */
     async exists(uniqPartial, opts = {}) {
         const result = await this.executeQuery(query => {
-            const q = this._buildExistsQuery(query, uniqPartial, opts);
+            const q = this.$buildExistsQuery(query, uniqPartial, opts);
             debug('EXIST: %s', q.toSql());
             return q;
         }, opts.atomicSession);
         return result[0]['total'] != 0;
     }
-    _buildExistsQuery(query, uniqPartial, opts) {
+    $buildExistsQuery(query, uniqPartial, opts) {
         query
             .count(`* as total`)
             .andWhere(builder => {
@@ -145,7 +145,7 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
      */
     findById(id, opts = {}) {
         return this.executeQuery(query => {
-            const q = this._buildFindByIdQuery(query, id, opts);
+            const q = this.$buildFindByIdQuery(query, id, opts);
             debug('FIND BY (%o): %s', id, q.toSql());
             return q;
         }, opts.atomicSession)
@@ -155,9 +155,14 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
                 : common_1.Maybe.Nothing();
         });
     }
-    _buildFindByIdQuery(query, id, opts) {
+    $buildFindByIdQuery(query, id, opts) {
         const q = query.findById(id.toArray());
-        opts.relations && q.eager(opts.relations);
+        if (opts.relations) {
+            if (typeof opts.relations !== 'object') {
+                throw new common_1.MinorException('`relations` only accepts object format');
+            }
+            q.eager(opts.relations);
+        }
         opts.fields && q.select(opts.fields);
         return q;
     }
@@ -166,7 +171,7 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
      */
     async page(opts) {
         const foundList = await this.executeQuery(query => {
-            const q = this._buildPageQuery(query, opts);
+            const q = this.$buildPageQuery(query, opts);
             debug('PAGE: %s', q.toSql());
             return q;
         }, opts.atomicSession);
@@ -176,7 +181,7 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
         const dtoList = this.toDomainModelMany(foundList.results, false);
         return new common_1.PagedData(dtoList, foundList.total);
     }
-    _buildPageQuery(query, opts) {
+    $buildPageQuery(query, opts) {
         const pageIndex = Math.max(0, opts.pageIndex - 1);
         const q = query
             .page(pageIndex, opts.pageSize);
@@ -192,7 +197,7 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
     async patch(domainModel, opts = {}) {
         const ormModel = this.toORMModel(domainModel, true);
         const refetchedEntities = await this.executeQuery(query => {
-            const q = this._buildPatchQuery(query, domainModel, ormModel, opts);
+            const q = this.$buildPatchQuery(query, domainModel, ormModel, opts);
             debug('PATCH: %s', q.toSql());
             return q;
         }, opts.atomicSession);
@@ -200,8 +205,8 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
             ? common_1.Maybe.Just(this.toDomainModel(refetchedEntities[0], false))
             : common_1.Maybe.Nothing();
     }
-    _buildPatchQuery(query, model, ormModel, opts) {
-        const idCondition = pick(ormModel, this._idProps);
+    $buildPatchQuery(query, model, ormModel, opts) {
+        const idCondition = pick(ormModel, this.$idProps);
         const q = opts.refetch
             ? query.patchAndFetch(ormModel)
             : query.patch(ormModel);
@@ -213,7 +218,7 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
     async update(domainModel, opts = {}) {
         const ormModel = this.toORMModel(domainModel, false);
         const refetchedEntities = await this.executeQuery(query => {
-            const q = this._buildUpdateQuery(query, domainModel, ormModel, opts);
+            const q = this.$buildUpdateQuery(query, domainModel, ormModel, opts);
             debug('UPDATE: %s', q.toSql());
             return q;
         }, opts.atomicSession);
@@ -221,15 +226,15 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
             ? common_1.Maybe.Just(this.toDomainModel(refetchedEntities[0], false))
             : common_1.Maybe.Nothing();
     }
-    _buildUpdateQuery(query, model, ormModel, opts) {
-        const idCondition = pick(ormModel, this._idProps);
+    $buildUpdateQuery(query, model, ormModel, opts) {
+        const idCondition = pick(ormModel, this.$idProps);
         const q = opts.refetch
             ? query.updateAndFetch(ormModel)
             : query.update(ormModel);
         return q.where(idCondition);
     }
     executeQuery(callback, atomicSession) {
-        return this._dbConnector.prepare(this._ORMClass, callback, atomicSession);
+        return this.$dbConnector.prepare(this.$ORMClass, callback, atomicSession);
     }
     /**
      * Translates from a domain model to an ORM model.
@@ -238,7 +243,7 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
         if (!domainModel) {
             return null;
         }
-        const translator = this._ORMClass.getTranslator();
+        const translator = this.$ORMClass.getTranslator();
         const ormModel = (isPartial)
             ? translator.partial(domainModel, { enableValidation: false }) // Disable validation because it's unnecessary.
             : translator.whole(domainModel, { enableValidation: false });
@@ -259,7 +264,7 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
         if (!ormModel) {
             return null;
         }
-        const translator = this._DomainClass.getTranslator();
+        const translator = this.$DomainClass.getTranslator();
         const domainModel = (isPartial)
             ? translator.partial(ormModel, { enableValidation: false }) // Disable validation because it's unnecessary.
             : translator.whole(ormModel, { enableValidation: false });

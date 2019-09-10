@@ -8,7 +8,6 @@ if (!Reflect || typeof Reflect['hasOwnMetadata'] !== 'function') {
     require('reflect-metadata');
 }
 const memoize = require("lodash.memoize");
-global['snakeCase'] = memoize(require('lodash.snakeCase'));
 global['camelCase'] = memoize(require('lodash.camelCase'));
 __export(require("./atom/AtomicSessionFactory"));
 __export(require("./atom/AtomicSessionFlow"));

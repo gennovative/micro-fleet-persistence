@@ -1,5 +1,5 @@
 import { transaction } from 'objection'
-import { MinorException } from '@micro-fleet/common'
+import { MinorException, Maybe } from '@micro-fleet/common'
 
 import { IDatabaseConnector } from '../connector/IDatabaseConnector'
 import { AtomicSession } from './AtomicSession'
@@ -54,9 +54,9 @@ export class AtomicSessionFlow {
                     this._loop()
 
                     // Waits for all transaction to complete,
-                    // but only takes output from primary (first) one.
+                    // but only takes output from last operation.
                     // `transPromises` resolves when `resolveAllTransactions` is called,
-                    // and reject when ``rejectAllTransactions()` is called.
+                    // and rejects when ``rejectAllTransactions()` is called.
                     const outputs = await transProm
                     resolve(outputs)
                 }
@@ -82,9 +82,9 @@ export class AtomicSessionFlow {
     }
 
 
-    private _initSession(): Promise<any[]> {
+    private _initSession(): void {
         const knexConn = this._dbConnector.connection
-        return this._initPromise = new Promise(resolve => {
+        this._initPromise = new Promise(resolve => {
                 const transProm = transaction(knexConn, trans => {
                     this._session = new AtomicSession(knexConn, trans)
                     // Avoid passing a promise to resolve(),
@@ -95,29 +95,28 @@ export class AtomicSessionFlow {
         })
     }
 
-    private _doTask(prevOutput: any): Promise<any[]> {
+    private _doTask(prevOutput: any): Maybe<Promise<any[]>> {
         const task = this._tasks.shift()
         prevOutput = prevOutput || []
 
         if (!task) {
             // When there's no more task, we commit all transactions.
             this._resolveTransactions(prevOutput)
-            return null
+            return Maybe.Nothing()
         }
 
-        // return this.collectTasksOutputs(task, prevOutputs)
-        return task(this._session, prevOutput)
+        return Maybe.Just(task(this._session, prevOutput))
     }
 
-    private async _loop(prevOutput?: any): Promise<void> {
-        const prevWorks = this._doTask(prevOutput)
-        if (!prevWorks) {
+    private _loop(prevOutput?: any): void {
+        const curTask = this._doTask(prevOutput)
+        if (curTask.isNothing) {
             return
         }
 
-        prevWorks
-            .then(prev => {
-                return this._loop(prev)
+        curTask.value
+            .then(output => {
+                this._loop(output)
             })
             .catch(err => this._rejectTransactions(err))
             // This catches both promise errors and AtomicSessionFlow's errors.
@@ -125,12 +124,14 @@ export class AtomicSessionFlow {
     }
 
     private _resolveTransactions(output: any): void {
-        this._session.knexTransaction.commit(output)
+        // tslint:disable-next-line: no-floating-promises
+        this._session.knexTransaction.commit(output) // Causes `transProm` to resolve
         this._session = this._tasks = null // Clean up
     }
 
     private _rejectTransactions(error: any): void {
-        this._session.knexTransaction.rollback(error)
+        // tslint:disable-next-line: no-floating-promises
+        this._session.knexTransaction.rollback(error) // Causes `transProm` to reject
         this._session = this._tasks = null // Clean up
     }
 }

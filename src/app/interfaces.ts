@@ -78,6 +78,9 @@ export type DbConnectionDetail = {
     }
 }
 
+
+// tslint:disable: interface-name
+
 /**
  * Options for repository's operations.
  * Note that different operations care about different option properties.
@@ -163,6 +166,7 @@ export interface RepositoryPatchOptions extends RepositoryCreateOptions {
 export interface RepositoryUpdateOptions extends RepositoryCreateOptions {
 }
 
+// tslint:enable: interface-name
 
 
 /**

@@ -388,7 +388,6 @@ declare module '@micro-fleet/persistence/dist/app/atom/AtomicSessionFactory' {
         constructor(_dbConnector: IDatabaseConnector);
         /**
          * Starts executing queries in transactions.
-         * @param {string[]} names Only executes the queries on connections with specified names.
          */
         startSession(): AtomicSessionFlow;
     }
@@ -406,65 +405,65 @@ declare module '@micro-fleet/persistence/dist/app/bases/GeneralCrudRepositoryBas
      * It does not use any specific techniques of a particular database.
      */
     export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extends object, TId extends IdBase = SingleId> implements it.IRepository<TDomain, TId> {
-        protected _ORMClass: ITranslatable;
-        protected _DomainClass: ITranslatable;
-        protected _dbConnector: IDatabaseConnector;
+        protected $ORMClass: ITranslatable;
+        protected $DomainClass: ITranslatable;
+        protected $dbConnector: IDatabaseConnector;
         /**
          * EntityClass' primary key properties.
          * Eg: ['id', 'tenantId']
          */
-        protected readonly _idProps: string[];
-        constructor(_ORMClass: ITranslatable, _DomainClass: ITranslatable, _dbConnector: IDatabaseConnector);
+        protected readonly $idProps: string[];
+        constructor($ORMClass: ITranslatable, $DomainClass: ITranslatable, $dbConnector: IDatabaseConnector);
         /**
          * @see IRepository.countAll
          */
         countAll(opts?: it.RepositoryCountAllOptions): Promise<number>;
-        protected _buildCountAllQuery(query: QueryBuilder<TORM>, opts: it.RepositoryCountAllOptions): QueryCallbackReturn;
+        protected $buildCountAllQuery(query: QueryBuilder<TORM>, opts: it.RepositoryCountAllOptions): QueryCallbackReturn;
         /**
          * @see IRepository.create
          */
         create(domainModel: TDomain, opts?: it.RepositoryCreateOptions): Promise<TDomain>;
-        protected _buildCreateQuery(query: QueryBuilder<TORM>, model: TDomain, ormModel: TORM, opts: it.RepositoryCreateOptions): QueryCallbackReturn;
+        protected $buildCreateQuery(query: QueryBuilder<TORM>, model: TDomain, ormModel: TORM, opts: it.RepositoryCreateOptions): QueryCallbackReturn;
         /**
          * @see IRepository.createMany
          */
         createMany(domainModels: TDomain[], opts?: it.RepositoryCreateOptions): Promise<TDomain[]>;
-        protected _buildCreateManyQuery(query: QueryBuilder<TORM>, models: TDomain[], ormModels: TORM[], opts: it.RepositoryCreateOptions): QueryCallbackReturn;
+        protected $buildCreateManyQuery(query: QueryBuilder<TORM>, models: TDomain[], ormModels: TORM[], opts: it.RepositoryCreateOptions): QueryCallbackReturn;
         /**
          * @see IRepository.deleteSingle
          */
         deleteSingle(id: TId, opts?: it.RepositoryDeleteOptions): Promise<number>;
-        protected _buildDeleteSingleQuery(query: QueryBuilder<TORM>, id: TId, opts: it.RepositoryDeleteOptions): QueryCallbackReturn;
+        protected $buildDeleteSingleQuery(query: QueryBuilder<TORM>, id: TId, opts: it.RepositoryDeleteOptions): QueryCallbackReturn;
         /**
          * @see IRepository.deleteMany
          */
         deleteMany(idList: TId[], opts?: it.RepositoryDeleteOptions): Promise<number>;
-        protected _buildDeleteManyQuery(query: QueryBuilder<TORM>, idList: TId[], opts: it.RepositoryDeleteOptions): QueryCallbackReturn;
+        protected $buildDeleteManyQuery(query: QueryBuilder<TORM>, idList: TId[], opts: it.RepositoryDeleteOptions): QueryCallbackReturn;
         /**
          * @see IRepository.exists
          */
         exists(uniqPartial: Partial<TDomain>, opts?: it.RepositoryExistsOptions): Promise<boolean>;
-        protected _buildExistsQuery(query: QueryBuilder<TORM>, uniqPartial: Partial<TDomain>, opts: it.RepositoryExistsOptions): QueryCallbackReturn;
+        protected $buildExistsQuery(query: QueryBuilder<TORM>, uniqPartial: Partial<TDomain>, opts: it.RepositoryExistsOptions): QueryCallbackReturn;
         /**
          * @see IRepository.findById
          */
         findById(id: TId, opts?: it.RepositoryFindOptions): Promise<Maybe<TDomain>>;
-        protected _buildFindByIdQuery(query: QueryBuilder<TORM>, id: TId, opts: it.RepositoryFindOptions): QueryCallbackReturn;
+        protected $buildFindByIdQuery(query: QueryBuilder<TORM>, id: TId, opts: it.RepositoryFindOptions): QueryCallbackReturn;
         /**
          * @see IRepository.page
          */
         page(opts: it.RepositoryPageOptions): Promise<PagedData<TDomain>>;
-        protected _buildPageQuery(query: QueryBuilder<TORM>, opts: it.RepositoryPageOptions): QueryCallbackReturn;
+        protected $buildPageQuery(query: QueryBuilder<TORM>, opts: it.RepositoryPageOptions): QueryCallbackReturn;
         /**
          * @see IRepository.patch
          */
         patch(domainModel: Partial<TDomain>, opts?: it.RepositoryPatchOptions): Promise<Maybe<TDomain>>;
-        protected _buildPatchQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM, opts: it.RepositoryPatchOptions): QueryCallbackReturn;
+        protected $buildPatchQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM, opts: it.RepositoryPatchOptions): QueryCallbackReturn;
         /**
          * @see IRepository.update
          */
         update(domainModel: TDomain, opts?: it.RepositoryUpdateOptions): Promise<Maybe<TDomain>>;
-        protected _buildUpdateQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM, opts: it.RepositoryUpdateOptions): QueryCallbackReturn;
+        protected $buildUpdateQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM, opts: it.RepositoryUpdateOptions): QueryCallbackReturn;
         protected executeQuery(callback: QueryCallback<TORM>, atomicSession?: AtomicSession): Promise<any>;
         /**
          * Translates from a domain model to an ORM model.
@@ -497,23 +496,23 @@ declare module '@micro-fleet/persistence/dist/app/bases/PgCrudRepositoryBase' {
         /**
          * @override
          */
-        protected _buildCountAllQuery(query: QueryBuilder<TORM>, opts: it.RepositoryCountAllOptions): QueryCallbackReturn;
+        protected $buildCountAllQuery(query: QueryBuilder<TORM>, opts: it.RepositoryCountAllOptions): QueryCallbackReturn;
         /**
          * @override
          */
-        protected _buildCreateQuery(query: QueryBuilder<TORM>, model: TDomain, ormModel: TORM, opts: it.RepositoryCreateOptions): QueryCallbackReturn;
+        protected $buildCreateQuery(query: QueryBuilder<TORM>, model: TDomain, ormModel: TORM, opts: it.RepositoryCreateOptions): QueryCallbackReturn;
         /**
          * @override
          */
-        protected _buildCreateManyQuery(query: QueryBuilder<TORM>, models: TDomain[], ormModels: TORM[], opts: it.RepositoryCreateOptions): QueryCallbackReturn;
+        protected $buildCreateManyQuery(query: QueryBuilder<TORM>, models: TDomain[], ormModels: TORM[], opts: it.RepositoryCreateOptions): QueryCallbackReturn;
         /**
          * @override
          */
-        protected _buildPatchQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM, opts: it.RepositoryPatchOptions): QueryCallbackReturn;
+        protected $buildPatchQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM, opts: it.RepositoryPatchOptions): QueryCallbackReturn;
         /**
          * @override
          */
-        protected _buildUpdateQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM, opts: it.RepositoryUpdateOptions): QueryCallbackReturn;
+        protected $buildUpdateQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM, opts: it.RepositoryUpdateOptions): QueryCallbackReturn;
     }
 
 }

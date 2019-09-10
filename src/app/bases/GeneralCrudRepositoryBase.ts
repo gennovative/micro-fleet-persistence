@@ -4,7 +4,8 @@ const debug: debug.IDebugger = require('debug')('mcft:persistence:GeneralRepoBas
 import { QueryBuilder, raw } from 'objection'
 import pick = require('lodash.pick')
 import { Guard, PagedData, Maybe, SingleId, IdBase, ITranslatable,
-    decorators as d } from '@micro-fleet/common'
+    decorators as d,
+    MinorException} from '@micro-fleet/common'
 
 import { AtomicSession } from '../atom/AtomicSession'
 import { IDatabaseConnector, QueryCallbackReturn,
@@ -25,20 +26,20 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
      * EntityClass' primary key properties.
      * Eg: ['id', 'tenantId']
      */
-    protected readonly _idProps: string[]
+    protected readonly $idProps: string[]
 
 
     constructor(
-            @d.unmanaged() protected _ORMClass: ITranslatable,
-            @d.unmanaged() protected _DomainClass: ITranslatable,
-            @d.unmanaged() protected _dbConnector: IDatabaseConnector) {
-        Guard.assertArgDefined('EntityClass', _ORMClass)
-        Guard.assertIsTruthy(_ORMClass['tableName'],
+            @d.unmanaged() protected $ORMClass: ITranslatable,
+            @d.unmanaged() protected $DomainClass: ITranslatable,
+            @d.unmanaged() protected $dbConnector: IDatabaseConnector) {
+        Guard.assertArgDefined('EntityClass', $ORMClass)
+        Guard.assertIsTruthy($ORMClass['tableName'],
             'Param "ORMClass" must have tableName. It had better inherit "ORMModelBase"!')
-        Guard.assertArgDefined('DomainClass', _DomainClass)
-        Guard.assertArgDefined('dbConnector', _dbConnector)
+        Guard.assertArgDefined('DomainClass', $DomainClass)
+        Guard.assertArgDefined('dbConnector', $dbConnector)
 
-        this._idProps = this._ORMClass['idProp']
+        this.$idProps = this.$ORMClass['idProp']
     }
 
 
@@ -48,7 +49,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
     public async countAll(opts: it.RepositoryCountAllOptions = {}): Promise<number> {
         const result = await this.executeQuery(
             query => {
-                const q = this._buildCountAllQuery(query, opts) as QueryBuilder<any>
+                const q = this.$buildCountAllQuery(query, opts) as QueryBuilder<any>
                 debug('COUNT ALL: %s', q.toSql())
                 return q
             },
@@ -58,7 +59,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
         return (result[0]['total'])
     }
 
-    protected _buildCountAllQuery(query: QueryBuilder<TORM>,
+    protected $buildCountAllQuery(query: QueryBuilder<TORM>,
             opts: it.RepositoryCountAllOptions): QueryCallbackReturn {
         query.select(raw('count(*) as total'))
         opts.tenantId && query.where('tenantId', opts.tenantId)
@@ -73,7 +74,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
 
         return this.executeQuery(
             query => {
-                const q = this._buildCreateQuery(query, domainModel, ormModelOrModels, opts) as QueryBuilder<any>
+                const q = this.$buildCreateQuery(query, domainModel, ormModelOrModels, opts) as QueryBuilder<any>
                 debug('CREATE: %s', q.toSql())
                 return q
             },
@@ -82,7 +83,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
         .then((refetch: TORM) => this.toDomainModel(refetch, false))
     }
 
-    protected _buildCreateQuery(query: QueryBuilder<TORM>, model: TDomain, ormModel: TORM,
+    protected $buildCreateQuery(query: QueryBuilder<TORM>, model: TDomain, ormModel: TORM,
             opts: it.RepositoryCreateOptions): QueryCallbackReturn {
         return opts.refetch
             ? query.insertAndFetch(ormModel) as any
@@ -97,7 +98,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
 
         return this.executeQuery(
             query => {
-                const q = this._buildCreateManyQuery(query, domainModels, ormModelOrModels, opts) as QueryBuilder<any>
+                const q = this.$buildCreateManyQuery(query, domainModels, ormModelOrModels, opts) as QueryBuilder<any>
                 debug('CREATE MANY: %s', q.toSql())
                 return q
             },
@@ -106,7 +107,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
         .then((refetch: TORM[]) => this.toDomainModelMany(refetch, false))
     }
 
-    protected _buildCreateManyQuery(query: QueryBuilder<TORM>, models: TDomain[], ormModels: TORM[],
+    protected $buildCreateManyQuery(query: QueryBuilder<TORM>, models: TDomain[], ormModels: TORM[],
             opts: it.RepositoryCreateOptions): QueryCallbackReturn {
         // Bulk insert only works with PostgreSQL, MySQL, and SQL Server 2008 RC2
         return opts.refetch
@@ -120,7 +121,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
     public deleteSingle(id: TId, opts: it.RepositoryDeleteOptions = {}): Promise<number> {
         return this.executeQuery(
             query => {
-                const q = this._buildDeleteSingleQuery(query, id, opts) as QueryBuilder<any>
+                const q = this.$buildDeleteSingleQuery(query, id, opts) as QueryBuilder<any>
                 debug('DELETE SINGLE: %s', q.toSql())
                 return q
             },
@@ -128,7 +129,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
         )
     }
 
-    protected _buildDeleteSingleQuery(query: QueryBuilder<TORM>, id: TId,
+    protected $buildDeleteSingleQuery(query: QueryBuilder<TORM>, id: TId,
             opts: it.RepositoryDeleteOptions): QueryCallbackReturn {
         return query.deleteById(id.toArray())
     }
@@ -139,7 +140,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
     public deleteMany(idList: TId[], opts: it.RepositoryDeleteOptions = {}): Promise<number> {
         return this.executeQuery(
             query => {
-                const q = this._buildDeleteManyQuery(query, idList, opts) as QueryBuilder<any>
+                const q = this.$buildDeleteManyQuery(query, idList, opts) as QueryBuilder<any>
                 debug('DELETE MANY: %s', q.toSql())
                 return q
             },
@@ -147,11 +148,11 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
         )
     }
 
-    protected _buildDeleteManyQuery(query: QueryBuilder<TORM>, idList: TId[],
+    protected $buildDeleteManyQuery(query: QueryBuilder<TORM>, idList: TId[],
             opts: it.RepositoryDeleteOptions): QueryCallbackReturn {
         const q = query.delete()
             .whereInComposite(
-                this._ORMClass['idColumn'],
+                this.$ORMClass['idColumn'],
                 idList.map(id => id.toArray()),
             )
         return q
@@ -163,7 +164,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
     public async exists(uniqPartial: Partial<TDomain>, opts: it.RepositoryExistsOptions = {}): Promise<boolean> {
         const result = await this.executeQuery(
             query => {
-                const q = this._buildExistsQuery(query, uniqPartial, opts) as QueryBuilder<any>
+                const q = this.$buildExistsQuery(query, uniqPartial, opts) as QueryBuilder<any>
                 debug('EXIST: %s', q.toSql())
                 return q
             },
@@ -173,7 +174,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
         return result[0]['total'] != 0
     }
 
-    protected _buildExistsQuery(query: QueryBuilder<TORM>, uniqPartial: Partial<TDomain>,
+    protected $buildExistsQuery(query: QueryBuilder<TORM>, uniqPartial: Partial<TDomain>,
             opts: it.RepositoryExistsOptions): QueryCallbackReturn {
         query
             .count(`* as total`)
@@ -197,7 +198,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
     public findById(id: TId, opts: it.RepositoryFindOptions = {}): Promise<Maybe<TDomain>> {
         return this.executeQuery(
             query => {
-                const q = this._buildFindByIdQuery(query, id, opts) as QueryBuilder<any>
+                const q = this.$buildFindByIdQuery(query, id, opts) as QueryBuilder<any>
                 debug('FIND BY (%o): %s', id, q.toSql())
                 return q
             },
@@ -210,10 +211,15 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
         }) as Promise<Maybe<TDomain>>
     }
 
-    protected _buildFindByIdQuery(query: QueryBuilder<TORM>, id: TId,
+    protected $buildFindByIdQuery(query: QueryBuilder<TORM>, id: TId,
             opts: it.RepositoryFindOptions): QueryCallbackReturn {
         const q = query.findById(id.toArray())
-        opts.relations && q.eager(opts.relations)
+        if (opts.relations) {
+            if (typeof opts.relations !== 'object') {
+                throw new MinorException('`relations` only accepts object format')
+            }
+            q.eager(opts.relations)
+        }
         opts.fields && q.select(opts.fields)
         return q
     }
@@ -225,7 +231,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
         type PageResult = { total: number, results: Array<TORM> }
         const foundList: PageResult = await this.executeQuery(
             query => {
-                const q = this._buildPageQuery(query, opts) as QueryBuilder<any>
+                const q = this.$buildPageQuery(query, opts) as QueryBuilder<any>
                 debug('PAGE: %s', q.toSql())
                 return q
             },
@@ -239,7 +245,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
         return new PagedData<TDomain>(dtoList, foundList.total)
     }
 
-    protected _buildPageQuery(query: QueryBuilder<TORM>,
+    protected $buildPageQuery(query: QueryBuilder<TORM>,
             opts: it.RepositoryPageOptions): QueryCallbackReturn {
         const pageIndex = Math.max(0, opts.pageIndex - 1)
         const q = query
@@ -260,7 +266,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
 
         const refetchedEntities: TORM[] = await this.executeQuery(
             query => {
-                const q = this._buildPatchQuery(query, domainModel, ormModel, opts) as QueryBuilder<any>
+                const q = this.$buildPatchQuery(query, domainModel, ormModel, opts) as QueryBuilder<any>
                 debug('PATCH: %s', q.toSql())
                 return q
             },
@@ -271,9 +277,9 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
             : Maybe.Nothing()
     }
 
-    protected _buildPatchQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM,
+    protected $buildPatchQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM,
             opts: it.RepositoryPatchOptions): QueryCallbackReturn {
-        const idCondition = pick(ormModel, this._idProps)
+        const idCondition = pick(ormModel, this.$idProps)
         const q = opts.refetch
             ? query.patchAndFetch(ormModel)
             : query.patch(ormModel)
@@ -288,7 +294,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
 
         const refetchedEntities: TORM[] = await this.executeQuery(
             query => {
-                const q = this._buildUpdateQuery(query, domainModel, ormModel, opts) as QueryBuilder<any>
+                const q = this.$buildUpdateQuery(query, domainModel, ormModel, opts) as QueryBuilder<any>
                 debug('UPDATE: %s', q.toSql())
                 return q
             },
@@ -299,9 +305,9 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
             : Maybe.Nothing()
     }
 
-    protected _buildUpdateQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM,
+    protected $buildUpdateQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM,
             opts: it.RepositoryUpdateOptions): QueryCallbackReturn {
-        const idCondition = pick(ormModel, this._idProps)
+        const idCondition = pick(ormModel, this.$idProps)
         const q = opts.refetch
             ? query.updateAndFetch(ormModel)
             : query.update(ormModel)
@@ -310,7 +316,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
 
 
     protected executeQuery(callback: QueryCallback<TORM>, atomicSession?: AtomicSession): Promise<any> {
-        return this._dbConnector.prepare(this._ORMClass as any, <any>callback, atomicSession)
+        return this.$dbConnector.prepare(this.$ORMClass as any, <any>callback, atomicSession)
     }
 
     /**
@@ -319,7 +325,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
     protected toORMModel(domainModel: TDomain | Partial<TDomain>, isPartial: boolean): TORM {
         if (!domainModel) { return null }
 
-        const translator = this._ORMClass.getTranslator()
+        const translator = this.$ORMClass.getTranslator()
         const ormModel: any = (isPartial)
             ? translator.partial(domainModel, { enableValidation: false }) // Disable validation because it's unnecessary.
             : translator.whole(domainModel, { enableValidation: false })
@@ -342,7 +348,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
     protected toDomainModel(ormModel: TORM | Partial<TORM>, isPartial: boolean): TDomain {
         if (!ormModel) { return null }
 
-        const translator = this._DomainClass.getTranslator()
+        const translator = this.$DomainClass.getTranslator()
         const domainModel: any = (isPartial)
             ? translator.partial(ormModel, { enableValidation: false }) // Disable validation because it's unnecessary.
             : translator.whole(ormModel, { enableValidation: false })

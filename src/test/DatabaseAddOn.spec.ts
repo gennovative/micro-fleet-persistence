@@ -36,11 +36,13 @@ class MockConfigAddOn implements IConfigurationProvider {
             switch (key) {
                 case D.DB_ENGINE: return Maybe.Just(DbClient.SQLITE3)
                 case D.DB_FILE: return Maybe.Just(CONN_FILE)
+                default: return Maybe.Nothing()
             }
         } else if (MODE_STRING == this._mode) {
             switch (key) {
                 case D.DB_ENGINE: return Maybe.Just(DbClient.POSTGRESQL)
                 case D.DB_CONN_STRING: return Maybe.Just(CONN_STRING)
+                default: return Maybe.Nothing()
             }
         } else if (MODE_CREDENTIALS  == this._mode) {
             switch (key) {
@@ -49,6 +51,7 @@ class MockConfigAddOn implements IConfigurationProvider {
                 case D.DB_USER: return Maybe.Just(DB_DETAILS.host.user)
                 case D.DB_PASSWORD: return Maybe.Just(DB_DETAILS.host.password)
                 case D.DB_NAME: return Maybe.Just(DB_DETAILS.host.database)
+                default: return Maybe.Nothing()
             }
         }
         return Maybe.Nothing()
