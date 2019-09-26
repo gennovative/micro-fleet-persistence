@@ -13,6 +13,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const objection_1 = require("objection");
+const pick = require("lodash.pick");
 const common_1 = require("@micro-fleet/common");
 const GeneralCrudRepositoryBase_1 = require("./GeneralCrudRepositoryBase");
 let PgCrudRepositoryBase = class PgCrudRepositoryBase extends GeneralCrudRepositoryBase_1.GeneralCrudRepositoryBase {
@@ -33,30 +34,36 @@ let PgCrudRepositoryBase = class PgCrudRepositoryBase extends GeneralCrudReposit
      * @override
      */
     $buildCreateQuery(query, model, ormModel, opts) {
-        return super.$buildCreateQuery(query, model, ormModel, opts)
-            .returning('*');
+        super.$buildCreateQuery(query, model, ormModel, opts);
+        query.returning('*');
+        return query;
     }
     /**
      * @override
      */
     $buildCreateManyQuery(query, models, ormModels, opts) {
         // Bulk insert only works with PostgreSQL, MySQL, and SQL Server 2008 RC2
-        return super.$buildCreateManyQuery(query, models, ormModels, opts)
-            .returning('*');
+        super.$buildCreateManyQuery(query, models, ormModels, opts);
+        query.returning('*');
+        return query;
     }
     /**
      * @override
      */
     $buildPatchQuery(query, model, ormModel, opts) {
-        return super.$buildPatchQuery(query, model, ormModel, opts)
-            .returning('*');
+        const idCondition = pick(ormModel, this.$idProps);
+        query.patch(ormModel).where(idCondition);
+        opts.refetch && query.returning('*');
+        return query;
     }
     /**
      * @override
      */
     $buildUpdateQuery(query, model, ormModel, opts) {
-        return super.$buildPatchQuery(query, model, ormModel, opts)
-            .returning('*');
+        const idCondition = pick(ormModel, this.$idProps);
+        query.update(ormModel).where(idCondition);
+        opts.refetch && query.returning('*');
+        return query;
     }
 };
 PgCrudRepositoryBase = __decorate([

@@ -4,7 +4,7 @@ if (!Reflect || typeof Reflect['hasOwnMetadata'] !== 'function') {
 }
 
 import memoize = require('lodash.memoize')
-global['camelCase'] = memoize(require('lodash.camelCase'))
+global['camelCase'] = memoize(require('lodash.camelcase'))
 
 export * from './atom/AtomicSessionFactory'
 export * from './atom/AtomicSessionFlow'

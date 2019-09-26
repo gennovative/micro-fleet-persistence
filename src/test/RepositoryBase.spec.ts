@@ -76,7 +76,7 @@ class UserRepo extends PgCrudRepositoryBase<UserORM, UserDTO, SingleId> {
 
     public createCoupleWithTransaction(adam: UserDTO, eva: UserDTO): Promise<UserDTO[]> {
         return this._sessionFactory.startSession()
-            .pipe(atomicSession => this.create(adam, { atomicSession }))
+            .pipe(atomicSession => this.create(adam, { atomicSession, refetch: true }))
             .pipe((atomicSession, createdAdam) => {
                 if (!createdAdam) {
                     debugger
@@ -84,7 +84,7 @@ class UserRepo extends PgCrudRepositoryBase<UserORM, UserDTO, SingleId> {
                     // Because when we come to this point, the previous task must have been successfull.
                     return Promise.reject('Cannot live without my husband!')
                 }
-                return this.create(eva, { atomicSession })
+                return this.create(eva, { atomicSession, refetch: true })
                     .then(createdEva => [createdAdam, createdEva])
             })
             .closePipe()
@@ -92,7 +92,7 @@ class UserRepo extends PgCrudRepositoryBase<UserORM, UserDTO, SingleId> {
 
     public createSessionPipe(adam: UserDTO, eva: UserDTO): AtomicSessionFlow {
         return this._sessionFactory.startSession()
-            .pipe(atomicSession => this.create(adam, { atomicSession }))
+            .pipe(atomicSession => this.create(adam, { atomicSession, refetch: true }))
             .pipe((atomicSession, createdAdam) => {
                 if (!createdAdam) {
                     debugger
@@ -115,7 +115,7 @@ class UserRepo extends PgCrudRepositoryBase<UserORM, UserDTO, SingleId> {
     }
 
     public deleteAll(): Promise<void> {
-        return this.executeQuery(query => query.delete())
+        return this.$executeQuery(query => query.delete())
     }
 }
 
@@ -298,7 +298,7 @@ describe('PgCrudRepositoryBase', function() {
             model.age = 39
 
             // Act
-            const createdDTO: UserDTO = cachedDTO = await usrRepo.create(model) as UserDTO
+            const createdDTO: UserDTO = cachedDTO = await usrRepo.create(model, { refetch: true }) as UserDTO
 
             // Assert
             expect(createdDTO).to.be.not.null
@@ -317,7 +317,7 @@ describe('PgCrudRepositoryBase', function() {
             model.age = 39
 
             // Act
-            const createdDTO: UserDTO = cachedDTO = await usrRepo.create(model) as UserDTO
+            const createdDTO: UserDTO = cachedDTO = await usrRepo.create(model, { refetch: true }) as UserDTO
 
             // Assert
             expect(createdDTO).to.be.not.null
@@ -630,7 +630,7 @@ describe('PgCrudRepositoryBase', function() {
                 model.id = genBigInt()
                 model.name = `Hiri ${i}`
                 model.age = Math.ceil(29 * Math.random())
-                createJobs.push(usrRepo.create(model))
+                createJobs.push(usrRepo.create(model, { refetch: true }))
             }
 
             await Promise.all(createJobs)
@@ -666,7 +666,7 @@ describe('PgCrudRepositoryBase', function() {
                 model.name = `Hiri ${i}`
                 model.age = Math.ceil(29 * Math.random())
                 firstPageModel.push(model)
-                createJobs.push(usrRepo.create(model))
+                createJobs.push(usrRepo.create(model, { refetch: true }))
             }
 
             await Promise.all(createJobs)

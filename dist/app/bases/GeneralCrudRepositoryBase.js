@@ -37,14 +37,14 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
      * @see IRepository.countAll
      */
     async countAll(opts = {}) {
-        const result = await this.executeQuery(query => {
-            const q = this.$buildCountAllQuery(query, opts);
+        const result = await this.$executeQuery((query, BoundClass) => {
+            const q = this.$buildCountAllQuery(query, opts, BoundClass);
             debug('COUNT ALL: %s', q.toSql());
             return q;
         }, opts.atomicSession);
         return (result[0]['total']);
     }
-    $buildCountAllQuery(query, opts) {
+    $buildCountAllQuery(query, opts, BoundClass) {
         query.select(objection_1.raw('count(*) as total'));
         opts.tenantId && query.where('tenantId', opts.tenantId);
         return query;
@@ -53,15 +53,15 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
      * @see IRepository.create
      */
     create(domainModel, opts = {}) {
-        const ormModelOrModels = this.toORMModel(domainModel, false);
-        return this.executeQuery(query => {
-            const q = this.$buildCreateQuery(query, domainModel, ormModelOrModels, opts);
+        const ormModelOrModels = this.$toORMModel(domainModel, false);
+        return this.$executeQuery((query, BoundClass) => {
+            const q = this.$buildCreateQuery(query, domainModel, ormModelOrModels, opts, BoundClass);
             debug('CREATE: %s', q.toSql());
             return q;
         }, opts.atomicSession)
-            .then((refetch) => this.toDomainModel(refetch, false));
+            .then((refetch) => this.$toDomainModel(refetch, false));
     }
-    $buildCreateQuery(query, model, ormModel, opts) {
+    $buildCreateQuery(query, model, ormModel, opts, BoundClass) {
         return opts.refetch
             ? query.insertAndFetch(ormModel)
             : query.insert(ormModel);
@@ -70,15 +70,15 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
      * @see IRepository.createMany
      */
     createMany(domainModels, opts = {}) {
-        const ormModelOrModels = this.toORMModelMany(domainModels, false);
-        return this.executeQuery(query => {
-            const q = this.$buildCreateManyQuery(query, domainModels, ormModelOrModels, opts);
+        const ormModelOrModels = this.$toORMModelMany(domainModels, false);
+        return this.$executeQuery((query, BoundClass) => {
+            const q = this.$buildCreateManyQuery(query, domainModels, ormModelOrModels, opts, BoundClass);
             debug('CREATE MANY: %s', q.toSql());
             return q;
         }, opts.atomicSession)
-            .then((refetch) => this.toDomainModelMany(refetch, false));
+            .then((refetch) => this.$toDomainModelMany(refetch, false));
     }
-    $buildCreateManyQuery(query, models, ormModels, opts) {
+    $buildCreateManyQuery(query, models, ormModels, opts, BoundClass) {
         // Bulk insert only works with PostgreSQL, MySQL, and SQL Server 2008 RC2
         return opts.refetch
             ? query.insertAndFetch(ormModels)
@@ -88,26 +88,26 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
      * @see IRepository.deleteSingle
      */
     deleteSingle(id, opts = {}) {
-        return this.executeQuery(query => {
-            const q = this.$buildDeleteSingleQuery(query, id, opts);
+        return this.$executeQuery((query, BoundClass) => {
+            const q = this.$buildDeleteSingleQuery(query, id, opts, BoundClass);
             debug('DELETE SINGLE: %s', q.toSql());
             return q;
         }, opts.atomicSession);
     }
-    $buildDeleteSingleQuery(query, id, opts) {
+    $buildDeleteSingleQuery(query, id, opts, BoundClass) {
         return query.deleteById(id.toArray());
     }
     /**
      * @see IRepository.deleteMany
      */
     deleteMany(idList, opts = {}) {
-        return this.executeQuery(query => {
-            const q = this.$buildDeleteManyQuery(query, idList, opts);
+        return this.$executeQuery((query, BoundClass) => {
+            const q = this.$buildDeleteManyQuery(query, idList, opts, BoundClass);
             debug('DELETE MANY: %s', q.toSql());
             return q;
         }, opts.atomicSession);
     }
-    $buildDeleteManyQuery(query, idList, opts) {
+    $buildDeleteManyQuery(query, idList, opts, BoundClass) {
         const q = query.delete()
             .whereInComposite(this.$ORMClass['idColumn'], idList.map(id => id.toArray()));
         return q;
@@ -116,14 +116,14 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
      * @see IRepository.exists
      */
     async exists(uniqPartial, opts = {}) {
-        const result = await this.executeQuery(query => {
-            const q = this.$buildExistsQuery(query, uniqPartial, opts);
+        const result = await this.$executeQuery((query, BoundClass) => {
+            const q = this.$buildExistsQuery(query, uniqPartial, opts, BoundClass);
             debug('EXIST: %s', q.toSql());
             return q;
         }, opts.atomicSession);
         return result[0]['total'] != 0;
     }
-    $buildExistsQuery(query, uniqPartial, opts) {
+    $buildExistsQuery(query, uniqPartial, opts, BoundClass) {
         query
             .count(`* as total`)
             .andWhere(builder => {
@@ -144,21 +144,21 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
      * @see IRepository.findById
      */
     findById(id, opts = {}) {
-        return this.executeQuery(query => {
-            const q = this.$buildFindByIdQuery(query, id, opts);
+        return this.$executeQuery((query, BoundClass) => {
+            const q = this.$buildFindByIdQuery(query, id, opts, BoundClass);
             debug('FIND BY (%o): %s', id, q.toSql());
             return q;
         }, opts.atomicSession)
             .then(foundORM => {
             return foundORM
-                ? common_1.Maybe.Just(this.toDomainModel(foundORM, false))
+                ? common_1.Maybe.Just(this.$toDomainModel(foundORM, false))
                 : common_1.Maybe.Nothing();
         });
     }
-    $buildFindByIdQuery(query, id, opts) {
+    $buildFindByIdQuery(query, id, opts, BoundClass) {
         const q = query.findById(id.toArray());
         if (opts.relations) {
-            if (typeof opts.relations !== 'object') {
+            if (typeof opts.relations !== 'object' || Array.isArray(opts.relations)) {
                 throw new common_1.MinorException('`relations` only accepts object format');
             }
             q.eager(opts.relations);
@@ -170,23 +170,28 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
      * @see IRepository.page
      */
     async page(opts) {
-        const foundList = await this.executeQuery(query => {
-            const q = this.$buildPageQuery(query, opts);
+        const foundList = await this.$executeQuery((query, BoundClass) => {
+            const q = this.$buildPageQuery(query, opts, BoundClass);
             debug('PAGE: %s', q.toSql());
             return q;
         }, opts.atomicSession);
         if (!foundList) {
             return new common_1.PagedData();
         }
-        const dtoList = this.toDomainModelMany(foundList.results, false);
+        const dtoList = this.$toDomainModelMany(foundList.results, false);
         return new common_1.PagedData(dtoList, foundList.total);
     }
-    $buildPageQuery(query, opts) {
+    $buildPageQuery(query, opts, BoundClass) {
         const pageIndex = Math.max(0, opts.pageIndex - 1);
         const q = query
             .page(pageIndex, opts.pageSize);
         opts.tenantId && q.where('tenantId', opts.tenantId);
-        opts.relations && q.eager(opts.relations);
+        if (opts.relations) {
+            if (typeof opts.relations !== 'object' || Array.isArray(opts.relations)) {
+                throw new common_1.MinorException('`relations` only accepts object format');
+            }
+            q.eager(opts.relations);
+        }
         opts.fields && q.select(opts.fields);
         opts.sortBy && q.orderBy(opts.sortBy, opts.sortType || it.SortType.ASC);
         return q;
@@ -195,51 +200,54 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
      * @see IRepository.patch
      */
     async patch(domainModel, opts = {}) {
-        const ormModel = this.toORMModel(domainModel, true);
-        const refetchedEntities = await this.executeQuery(query => {
-            const q = this.$buildPatchQuery(query, domainModel, ormModel, opts);
+        const ormModel = this.$toORMModel(domainModel, true);
+        const refetchedEntities = await this.$executeQuery((query, BoundClass) => {
+            const q = this.$buildPatchQuery(query, domainModel, ormModel, opts, BoundClass);
             debug('PATCH: %s', q.toSql());
             return q;
         }, opts.atomicSession);
         return (refetchedEntities.length > 0)
-            ? common_1.Maybe.Just(this.toDomainModel(refetchedEntities[0], false))
+            ? common_1.Maybe.Just(this.$toDomainModel(refetchedEntities[0], false))
             : common_1.Maybe.Nothing();
     }
-    $buildPatchQuery(query, model, ormModel, opts) {
+    $buildPatchQuery(query, model, ormModel, opts, BoundClass) {
+        if (opts.refetch) {
+            throw new common_1.NotImplementedException('Refetching after patch is not supported by GeneralCrudRepositoryBase. '
+                + 'You should try with another repository for specific database engine, eg: PgCrudRepositoryBase.');
+        }
         const idCondition = pick(ormModel, this.$idProps);
-        const q = opts.refetch
-            ? query.patchAndFetch(ormModel)
-            : query.patch(ormModel);
-        return q.where(idCondition);
+        query.patch(ormModel).where(idCondition);
+        return query;
     }
     /**
      * @see IRepository.update
      */
     async update(domainModel, opts = {}) {
-        const ormModel = this.toORMModel(domainModel, false);
-        const refetchedEntities = await this.executeQuery(query => {
-            const q = this.$buildUpdateQuery(query, domainModel, ormModel, opts);
+        const ormModel = this.$toORMModel(domainModel, false);
+        const refetchedEntities = await this.$executeQuery((query, BoundClass) => {
+            const q = this.$buildUpdateQuery(query, domainModel, ormModel, opts, BoundClass);
             debug('UPDATE: %s', q.toSql());
             return q;
         }, opts.atomicSession);
         return (refetchedEntities.length > 0)
-            ? common_1.Maybe.Just(this.toDomainModel(refetchedEntities[0], false))
+            ? common_1.Maybe.Just(this.$toDomainModel(refetchedEntities[0], false))
             : common_1.Maybe.Nothing();
     }
-    $buildUpdateQuery(query, model, ormModel, opts) {
+    $buildUpdateQuery(query, model, ormModel, opts, BoundClass) {
+        if (opts.refetch) {
+            throw new common_1.NotImplementedException('Refetching after update is not supported by GeneralCrudRepositoryBase. '
+                + 'You should try with another repository for specific database engine, eg: PgCrudRepositoryBase.');
+        }
         const idCondition = pick(ormModel, this.$idProps);
-        const q = opts.refetch
-            ? query.updateAndFetch(ormModel)
-            : query.update(ormModel);
-        return q.where(idCondition);
+        return query.update(ormModel).where(idCondition);
     }
-    executeQuery(callback, atomicSession) {
+    $executeQuery(callback, atomicSession) {
         return this.$dbConnector.prepare(this.$ORMClass, callback, atomicSession);
     }
     /**
      * Translates from a domain model to an ORM model.
      */
-    toORMModel(domainModel, isPartial) {
+    $toORMModel(domainModel, isPartial) {
         if (!domainModel) {
             return null;
         }
@@ -252,15 +260,15 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
     /**
      * Translates from domain models to ORM models.
      */
-    toORMModelMany(domainModels, isPartial) {
+    $toORMModelMany(domainModels, isPartial) {
         // ModelAutoMapper can handle both single and array of models
         // We separate into two methods for prettier typing.
-        return this.toORMModel(domainModels, isPartial);
+        return this.$toORMModel(domainModels, isPartial);
     }
     /**
      * Translates from an ORM model to a domain model.
      */
-    toDomainModel(ormModel, isPartial) {
+    $toDomainModel(ormModel, isPartial) {
         if (!ormModel) {
             return null;
         }
@@ -273,10 +281,13 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
     /**
      * Translates from ORM models to domain models.
      */
-    toDomainModelMany(ormModels, isPartial) {
+    $toDomainModelMany(ormModels, isPartial) {
         // ModelAutoMapper can handle both single and array of models
         // We separate into two methods for prettier typing.
-        return this.toDomainModel(ormModels, isPartial);
+        return this.$toDomainModel(ormModels, isPartial);
+    }
+    $buildIdArray(ormModel) {
+        return this.$idProps.map(prop => ormModel[prop]);
     }
 };
 GeneralCrudRepositoryBase = __decorate([

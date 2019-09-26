@@ -98,7 +98,7 @@ class UserBatchRepo
     }
 
     public deleteAll(): Promise<void> {
-        return this.executeQuery(query => query.delete())
+        return this.$executeQuery(query => query.delete())
     }
 }
 

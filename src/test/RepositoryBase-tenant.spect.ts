@@ -130,7 +130,7 @@ class UserTenantRepo extends PgCrudRepositoryBase<UserTenantEntity, UserTenantDT
     }
 
     public deleteAll(): Promise<void> {
-        return this.executeQuery(query => query.delete())
+        return this.$executeQuery(query => query.delete())
     }
 }
 

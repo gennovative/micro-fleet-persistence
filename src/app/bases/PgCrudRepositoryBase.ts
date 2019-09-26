@@ -1,4 +1,5 @@
 import { QueryBuilder, raw } from 'objection'
+import pick = require('lodash.pick')
 import { SingleId, IdBase, ITranslatable, decorators as d } from '@micro-fleet/common'
 
 import { IDatabaseConnector, QueryCallbackReturn } from '../connector/IDatabaseConnector'
@@ -37,8 +38,9 @@ export class PgCrudRepositoryBase<TORM extends ORMModelBase, TDomain extends obj
      */
     protected $buildCreateQuery(query: QueryBuilder<TORM>, model: TDomain, ormModel: TORM,
             opts: it.RepositoryCreateOptions): QueryCallbackReturn {
-        return (super.$buildCreateQuery(query, model, ormModel, opts) as QueryBuilder<TORM>)
-            .returning('*') as any
+        super.$buildCreateQuery(query, model, ormModel, opts) as QueryBuilder<TORM>
+        query.returning('*') as any
+        return query
     }
 
     /**
@@ -47,8 +49,9 @@ export class PgCrudRepositoryBase<TORM extends ORMModelBase, TDomain extends obj
     protected $buildCreateManyQuery(query: QueryBuilder<TORM>, models: TDomain[], ormModels: TORM[],
             opts: it.RepositoryCreateOptions): QueryCallbackReturn {
         // Bulk insert only works with PostgreSQL, MySQL, and SQL Server 2008 RC2
-        return (super.$buildCreateManyQuery(query, models, ormModels, opts) as QueryBuilder<TORM>)
-            .returning('*') as any
+        super.$buildCreateManyQuery(query, models, ormModels, opts) as QueryBuilder<TORM>
+        query.returning('*') as any
+        return query
     }
 
     /**
@@ -56,8 +59,10 @@ export class PgCrudRepositoryBase<TORM extends ORMModelBase, TDomain extends obj
      */
     protected $buildPatchQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM,
             opts: it.RepositoryPatchOptions): QueryCallbackReturn {
-        return (super.$buildPatchQuery(query, model, ormModel, opts) as QueryBuilder<TORM>)
-            .returning('*') as any
+        const idCondition = pick(ormModel, this.$idProps)
+        query.patch(ormModel).where(idCondition)
+        opts.refetch && query .returning('*')
+        return query
     }
 
     /**
@@ -65,7 +70,9 @@ export class PgCrudRepositoryBase<TORM extends ORMModelBase, TDomain extends obj
      */
     protected $buildUpdateQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM,
             opts: it.RepositoryUpdateOptions): QueryCallbackReturn {
-        return (super.$buildPatchQuery(query, model, ormModel, opts) as QueryBuilder<TORM>)
-            .returning('*') as any
+        const idCondition = pick(ormModel, this.$idProps)
+        query.update(ormModel).where(idCondition)
+        opts.refetch && query .returning('*')
+        return query
     }
 }
