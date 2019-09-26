@@ -373,7 +373,9 @@ describe('RepositoryBase-tenant', function() {
                     id: cachedDTO.id,
                     tenantId: cachedDTO.tenantId,
                     age: newAge,
-                })
+                },
+                { refetch: true }
+            )
             const refetchedDTO: Maybe<UserTenantDTO> = await usrRepo.findById(new TenantId(
                     cachedDTO.id,
                     cachedDTO.tenantId,
@@ -419,7 +421,7 @@ describe('RepositoryBase-tenant', function() {
             updatedDTO.name = newName
 
             // Act
-            const modified: Maybe<UserTenantDTO> = await usrRepo.update(updatedDTO),
+            const modified: Maybe<UserTenantDTO> = await usrRepo.update(updatedDTO, { refetch: true }),
                 refetchedDTO: Maybe<UserTenantDTO> = await usrRepo.findById(new TenantId(
                     cachedDTO.id,
                     cachedDTO.tenantId,

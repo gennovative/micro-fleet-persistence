@@ -384,7 +384,7 @@ describe('PgCrudRepositoryBase', function() {
             const newAge = 45
 
             // Act
-            const partial: Maybe<UserDTO> = await usrRepo.patch({ id: cachedDTO.id, age: newAge}),
+            const partial: Maybe<UserDTO> = await usrRepo.patch({ id: cachedDTO.id, age: newAge}, { refetch: true }),
                 refetchedDTO: Maybe<UserDTO> = await usrRepo.findById(new SingleId(cachedDTO.id))
 
             // Assert
@@ -422,7 +422,7 @@ describe('PgCrudRepositoryBase', function() {
             updatedDTO.name = newName
 
             // Act
-            const modified: Maybe<UserDTO> = await usrRepo.update(updatedDTO),
+            const modified: Maybe<UserDTO> = await usrRepo.update(updatedDTO, { refetch: true }),
                 refetchedDTO: Maybe<UserDTO> = await usrRepo.findById(new SingleId(cachedDTO.id))
 
             // Assert
@@ -444,7 +444,7 @@ describe('PgCrudRepositoryBase', function() {
             updatedDTO.name = newName
 
             // Act
-            const modified: Maybe<UserDTO> = await usrRepo.update(updatedDTO)
+            const modified: Maybe<UserDTO> = await usrRepo.update(updatedDTO, { refetch: true })
 
             // Assert
             expect(modified.isJust).to.be.true
