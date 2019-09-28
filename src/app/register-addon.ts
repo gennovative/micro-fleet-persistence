@@ -10,13 +10,13 @@ import { Types } from './Types'
 export function registerDbAddOn(): DatabaseAddOn {
     const depCon: IDependencyContainer = serviceContext.dependencyContainer
     if (!depCon.isBound(Types.DB_CONNECTOR)) {
-        depCon.bind<IDatabaseConnector>(Types.DB_CONNECTOR, KnexDatabaseConnector).asSingleton()
+        depCon.bindConstructor<IDatabaseConnector>(Types.DB_CONNECTOR, KnexDatabaseConnector).asSingleton()
     }
     if (!depCon.isBound(Types.ATOMIC_SESSION_FACTORY)) {
-        depCon.bind(Types.ATOMIC_SESSION_FACTORY, AtomicSessionFactory).asSingleton()
+        depCon.bindConstructor(Types.ATOMIC_SESSION_FACTORY, AtomicSessionFactory).asSingleton()
     }
     if (!depCon.isBound(Types.DB_ADDON)) {
-        depCon.bind<DatabaseAddOn>(Types.DB_ADDON, DatabaseAddOn).asSingleton()
+        depCon.bindConstructor<DatabaseAddOn>(Types.DB_ADDON, DatabaseAddOn).asSingleton()
     }
     const addon = depCon.resolve<DatabaseAddOn>(Types.DB_ADDON)
     return addon

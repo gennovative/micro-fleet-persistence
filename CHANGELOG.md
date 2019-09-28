@@ -3,8 +3,10 @@
 
 ### 2.3.0
 - Sync version with other packages.
-- Added `GeneralCrudRepositoryBase`
+- Added `GeneralCrudRepositoryBase`, but it doens't support refetching.
+- Added `PgCrudRepositoryBase` for Postgresql, which supports refetching after inserting, patching and updating.
 - Added settings for connection pool.
+- `
 
 ### 2.2.0
 - [Breaking change] Replaced `RepositoryBase` with `PgCrudRepositoryBase`.

@@ -34,15 +34,15 @@ describe('registerDbAddOn', function () {
 
     it('Should not register dependencies if already registered', () => {
         // Arrange
-        depCon.bind<IDatabaseConnector>(T.DB_CONNECTOR, KnexDatabaseConnector)
-        depCon.bind<DatabaseAddOn>(T.DB_ADDON, DatabaseAddOn)
-        chai.spy.on(depCon, 'bind')
+        depCon.bindConstructor<IDatabaseConnector>(T.DB_CONNECTOR, KnexDatabaseConnector)
+        depCon.bindConstructor<DatabaseAddOn>(T.DB_ADDON, DatabaseAddOn)
+        chai.spy.on(depCon, 'bindConstructor')
 
         // Act
         registerDbAddOn()
 
         // Assert
         // tslint:disable-next-line: no-unbound-method
-        expect(depCon.bind).not.to.be.called
+        expect(depCon.bindConstructor).not.to.be.called
     })
 }) // describe

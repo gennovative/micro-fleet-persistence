@@ -464,23 +464,24 @@ declare module '@micro-fleet/persistence/dist/app/bases/GeneralCrudRepositoryBas
          */
         update(domainModel: TDomain, opts?: it.RepositoryUpdateOptions): Promise<Maybe<TDomain>>;
         protected $buildUpdateQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM, opts: it.RepositoryUpdateOptions, BoundClass?: new () => TORM): QueryCallbackReturn;
-        protected executeQuery(callback: QueryCallback<TORM>, atomicSession?: AtomicSession): Promise<any>;
+        protected $executeQuery(callback: QueryCallback<TORM>, atomicSession?: AtomicSession): Promise<any>;
         /**
          * Translates from a domain model to an ORM model.
          */
-        protected toORMModel(domainModel: TDomain | Partial<TDomain>, isPartial: boolean): TORM;
+        protected $toORMModel(domainModel: TDomain | Partial<TDomain>, isPartial: boolean): TORM;
         /**
          * Translates from domain models to ORM models.
          */
-        protected toORMModelMany(domainModels: TDomain[] | Partial<TDomain>[], isPartial: boolean): TORM[];
+        protected $toORMModelMany(domainModels: TDomain[] | Partial<TDomain>[], isPartial: boolean): TORM[];
         /**
          * Translates from an ORM model to a domain model.
          */
-        protected toDomainModel(ormModel: TORM | Partial<TORM>, isPartial: boolean): TDomain;
+        protected $toDomainModel(ormModel: TORM | Partial<TORM>, isPartial: boolean): TDomain;
         /**
          * Translates from ORM models to domain models.
          */
-        protected toDomainModelMany(ormModels: TORM[] | Partial<TORM>[], isPartial: boolean): TDomain[];
+        protected $toDomainModelMany(ormModels: TORM[] | Partial<TORM>[], isPartial: boolean): TDomain[];
+        protected $buildIdArray(ormModel: Partial<TORM>): any[];
     }
 
 }
