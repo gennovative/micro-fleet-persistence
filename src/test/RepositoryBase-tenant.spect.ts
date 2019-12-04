@@ -369,7 +369,7 @@ describe('RepositoryBase-tenant', function() {
             const newAge = 45
 
             // Act
-            const partial: Maybe<UserTenantDTO> = await usrRepo.patch({
+            const partial: Maybe<Partial<UserTenantDTO>> = await usrRepo.patch({
                     id: cachedDTO.id,
                     tenantId: cachedDTO.tenantId,
                     age: newAge,
@@ -396,7 +396,7 @@ describe('RepositoryBase-tenant', function() {
             const newAge = 45
 
             // Act
-            const partial: Maybe<UserTenantDTO> = await usrRepo.patch({
+            const partial: Maybe<Partial<UserTenantDTO>> = await usrRepo.patch({
                     id: IMPOSSIBLE_ID,
                     tenantId: '0',
                     age: newAge,

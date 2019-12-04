@@ -97,7 +97,6 @@ export class AtomicSessionFlow {
 
     private _doTask(prevOutput: any): Maybe<Promise<any[]>> {
         const task = this._tasks.shift()
-        prevOutput = prevOutput || []
 
         if (!task) {
             // When there's no more task, we commit all transactions.

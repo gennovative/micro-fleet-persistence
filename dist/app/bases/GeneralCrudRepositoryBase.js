@@ -53,13 +53,13 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
      * @see IRepository.create
      */
     create(domainModel, opts = {}) {
-        const ormModelOrModels = this.$toORMModel(domainModel, false);
+        const ormModelOrModels = this.$toORMModel(domainModel);
         return this.$executeQuery((query, BoundClass) => {
             const q = this.$buildCreateQuery(query, domainModel, ormModelOrModels, opts, BoundClass);
             debug('CREATE: %s', q.toSql());
             return q;
         }, opts.atomicSession)
-            .then((refetch) => this.$toDomainModel(refetch, false));
+            .then((refetch) => this.$toDomainModel(refetch));
     }
     $buildCreateQuery(query, model, ormModel, opts, BoundClass) {
         return opts.refetch
@@ -70,13 +70,13 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
      * @see IRepository.createMany
      */
     createMany(domainModels, opts = {}) {
-        const ormModelOrModels = this.$toORMModelMany(domainModels, false);
+        const ormModelOrModels = this.$toORMModelMany(domainModels);
         return this.$executeQuery((query, BoundClass) => {
             const q = this.$buildCreateManyQuery(query, domainModels, ormModelOrModels, opts, BoundClass);
             debug('CREATE MANY: %s', q.toSql());
             return q;
         }, opts.atomicSession)
-            .then((refetch) => this.$toDomainModelMany(refetch, false));
+            .then((refetch) => this.$toDomainModelMany(refetch));
     }
     $buildCreateManyQuery(query, models, ormModels, opts, BoundClass) {
         // Bulk insert only works with PostgreSQL, MySQL, and SQL Server 2008 RC2
@@ -151,7 +151,7 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
         }, opts.atomicSession)
             .then(foundORM => {
             return foundORM
-                ? common_1.Maybe.Just(this.$toDomainModel(foundORM, false))
+                ? common_1.Maybe.Just(this.$toDomainModel(foundORM))
                 : common_1.Maybe.Nothing();
         });
     }
@@ -178,7 +178,7 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
         if (!foundList) {
             return new common_1.PagedData();
         }
-        const dtoList = this.$toDomainModelMany(foundList.results, false);
+        const dtoList = this.$toDomainModelMany(foundList.results);
         return new common_1.PagedData(dtoList, foundList.total);
     }
     $buildPageQuery(query, opts, BoundClass) {
@@ -200,15 +200,21 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
      * @see IRepository.patch
      */
     async patch(domainModel, opts = {}) {
-        const ormModel = this.$toORMModel(domainModel, true);
-        const refetchedEntities = await this.$executeQuery((query, BoundClass) => {
+        const ormModel = this.$toORMModel(domainModel);
+        const refetchedOrCount = await this.$executeQuery((query, BoundClass) => {
             const q = this.$buildPatchQuery(query, domainModel, ormModel, opts, BoundClass);
             debug('PATCH: %s', q.toSql());
             return q;
         }, opts.atomicSession);
-        return (refetchedEntities.length > 0)
-            ? common_1.Maybe.Just(this.$toDomainModel(refetchedEntities[0], false))
-            : common_1.Maybe.Nothing();
+        const isPositiveCount = (typeof refetchedOrCount === 'number') && refetchedOrCount > 0;
+        const isRefetched = (typeof refetchedOrCount === 'object');
+        if (isPositiveCount) {
+            return common_1.Maybe.Just(domainModel);
+        }
+        else if (isRefetched) {
+            return common_1.Maybe.Just(this.$toDomainModel(refetchedOrCount[0]));
+        }
+        return common_1.Maybe.Nothing();
     }
     $buildPatchQuery(query, model, ormModel, opts, BoundClass) {
         if (opts.refetch) {
@@ -223,15 +229,24 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
      * @see IRepository.update
      */
     async update(domainModel, opts = {}) {
-        const ormModel = this.$toORMModel(domainModel, false);
-        const refetchedEntities = await this.$executeQuery((query, BoundClass) => {
+        const ormModel = this.$toORMModel(domainModel);
+        const refetchedOrCount = await this.$executeQuery((query, BoundClass) => {
             const q = this.$buildUpdateQuery(query, domainModel, ormModel, opts, BoundClass);
             debug('UPDATE: %s', q.toSql());
             return q;
         }, opts.atomicSession);
-        return (refetchedEntities.length > 0)
-            ? common_1.Maybe.Just(this.$toDomainModel(refetchedEntities[0], false))
-            : common_1.Maybe.Nothing();
+        const isPositiveCount = (typeof refetchedOrCount === 'number') && refetchedOrCount > 0;
+        const isRefetched = (typeof refetchedOrCount === 'object');
+        if (isPositiveCount) {
+            return common_1.Maybe.Just(domainModel);
+        }
+        else if (isRefetched) {
+            return common_1.Maybe.Just(this.$toDomainModel(refetchedOrCount[0]));
+        }
+        return common_1.Maybe.Nothing();
+        // return (refetchedOrCount.length > 0)
+        //     ? Maybe.Just(this.$toDomainModel(refetchedOrCount[0], false))
+        //     : Maybe.Nothing()
     }
     $buildUpdateQuery(query, model, ormModel, opts, BoundClass) {
         if (opts.refetch) {
@@ -247,44 +262,40 @@ let GeneralCrudRepositoryBase = class GeneralCrudRepositoryBase {
     /**
      * Translates from a domain model to an ORM model.
      */
-    $toORMModel(domainModel, isPartial) {
+    $toORMModel(domainModel) {
         if (!domainModel) {
             return null;
         }
         const translator = this.$ORMClass.getTranslator();
-        const ormModel = (isPartial)
-            ? translator.partial(domainModel, { enableValidation: false }) // Disable validation because it's unnecessary.
-            : translator.whole(domainModel, { enableValidation: false });
+        const ormModel = translator.whole(domainModel, { enableValidation: false });
         return ormModel;
     }
     /**
      * Translates from domain models to ORM models.
      */
-    $toORMModelMany(domainModels, isPartial) {
+    $toORMModelMany(domainModels) {
         // ModelAutoMapper can handle both single and array of models
         // We separate into two methods for prettier typing.
-        return this.$toORMModel(domainModels, isPartial);
+        return this.$toORMModel(domainModels);
     }
     /**
      * Translates from an ORM model to a domain model.
      */
-    $toDomainModel(ormModel, isPartial) {
+    $toDomainModel(ormModel) {
         if (!ormModel) {
             return null;
         }
         const translator = this.$DomainClass.getTranslator();
-        const domainModel = (isPartial)
-            ? translator.partial(ormModel, { enableValidation: false }) // Disable validation because it's unnecessary.
-            : translator.whole(ormModel, { enableValidation: false });
+        const domainModel = translator.whole(ormModel, { enableValidation: false });
         return domainModel;
     }
     /**
      * Translates from ORM models to domain models.
      */
-    $toDomainModelMany(ormModels, isPartial) {
+    $toDomainModelMany(ormModels) {
         // ModelAutoMapper can handle both single and array of models
         // We separate into two methods for prettier typing.
-        return this.$toDomainModel(ormModels, isPartial);
+        return this.$toDomainModel(ormModels);
     }
     $buildIdArray(ormModel) {
         return this.$idProps.map(prop => ormModel[prop]);

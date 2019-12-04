@@ -379,12 +379,31 @@ describe('PgCrudRepositoryBase', function() {
     }) // END describe 'findByPk'
 
     describe('patch', () => {
-        it('should return an object with updated properties if found', async () => {
+        it('should return the input model if not refetching', async () => {
             // Arrange
             const newAge = 45
 
             // Act
-            const partial: Maybe<UserDTO> = await usrRepo.patch({ id: cachedDTO.id, age: newAge}, { refetch: true }),
+            const props = { id: cachedDTO.id, age: newAge}
+            const partial: Maybe<Partial<UserDTO>> = await usrRepo.patch(props),
+                refetchedDTO: Maybe<UserDTO> = await usrRepo.findById(new SingleId(cachedDTO.id))
+
+            // Assert
+            expect(partial.isJust).to.be.true
+            expect(partial.value).to.equal(props)
+            expect(refetchedDTO.isJust, 'refetchedDTO').to.be.true
+            expect(refetchedDTO.value.id, 'id').to.equal(cachedDTO.id)
+            expect(refetchedDTO.value.name, 'name').to.equal(cachedDTO.name)
+            expect(refetchedDTO.value.age, 'age').to.equal(newAge)
+            expect(refetchedDTO.value.updatedAt, 'updatedAt').to.be.not.empty
+        })
+
+        it('should return an object with updated properties if refetching is enabled', async () => {
+            // Arrange
+            const newAge = 45
+
+            // Act
+            const partial: Maybe<Partial<UserDTO>> = await usrRepo.patch({ id: cachedDTO.id, age: newAge}, { refetch: true }),
                 refetchedDTO: Maybe<UserDTO> = await usrRepo.findById(new SingleId(cachedDTO.id))
 
             // Assert
@@ -392,11 +411,11 @@ describe('PgCrudRepositoryBase', function() {
             expect(partial.value.id).to.equal(cachedDTO.id)
             expect(partial.value.age).to.equal(newAge)
             expect(partial.value.updatedAt).to.be.not.empty
-            expect(refetchedDTO.isJust).to.be.true
-            expect(refetchedDTO.value.id).to.equal(cachedDTO.id)
-            expect(refetchedDTO.value.name).to.equal(cachedDTO.name)
-            expect(refetchedDTO.value.age).to.equal(newAge)
-            expect(refetchedDTO.value.updatedAt).to.be.not.empty
+            expect(refetchedDTO.isJust, 'refetchedDTO').to.be.true
+            expect(refetchedDTO.value.id, 'id').to.equal(cachedDTO.id)
+            expect(refetchedDTO.value.name, 'name').to.equal(cachedDTO.name)
+            expect(refetchedDTO.value.age, 'age').to.equal(newAge)
+            expect(refetchedDTO.value.updatedAt, 'updatedAt').to.be.not.empty
         })
 
         it('should return Maybe.Nothing if not found', async () => {
@@ -404,7 +423,7 @@ describe('PgCrudRepositoryBase', function() {
             const newAge = 45
 
             // Act
-            const partial: Maybe<UserDTO> = await usrRepo.patch({ id: IMPOSSIBLE_ID, age: newAge}),
+            const partial: Maybe<Partial<UserDTO>> = await usrRepo.patch({ id: IMPOSSIBLE_ID, age: newAge}),
                 refetchedDTO: Maybe<UserDTO> = await usrRepo.findById(new SingleId(IMPOSSIBLE_ID))
 
             // Assert
@@ -415,7 +434,27 @@ describe('PgCrudRepositoryBase', function() {
     }) // END describe 'patch'
 
     describe('update', () => {
-        it('should return an updated model if found', async () => {
+        it('should return the input model if not refetching', async () => {
+            // Arrange
+            const newName = 'Brian',
+                updatedDTO: UserDTO = Object.assign(new UserDTO, cachedDTO)
+            updatedDTO.name = newName
+
+            // Act
+            const modified: Maybe<UserDTO> = await usrRepo.update(updatedDTO),
+                refetchedDTO: Maybe<UserDTO> = await usrRepo.findById(new SingleId(cachedDTO.id))
+
+            // Assert
+            expect(modified.isJust).to.be.true
+            expect(modified.value).to.equal(updatedDTO)
+            expect(refetchedDTO.isJust, 'refetchedDTO').to.be.true
+            expect(refetchedDTO.value.id, 'id').to.equal(cachedDTO.id)
+            expect(refetchedDTO.value.name, 'name').to.equal(newName)
+            expect(refetchedDTO.value.age, 'age').to.equal(cachedDTO.age)
+            expect(refetchedDTO.value.updatedAt, 'updatedAt').to.be.not.empty
+        })
+
+        it('should return an updated model if refetching is enabled', async () => {
             // Arrange
             const newName = 'Brian',
                 updatedDTO: UserDTO = Object.assign(new UserDTO, cachedDTO)
@@ -430,11 +469,11 @@ describe('PgCrudRepositoryBase', function() {
             expect(modified.value.id).to.equal(cachedDTO.id)
             expect(modified.value.name).to.equal(newName)
             expect(modified.value.updatedAt).to.be.not.empty
-            expect(refetchedDTO.isJust).to.be.true
-            expect(refetchedDTO.value.id).to.equal(cachedDTO.id)
-            expect(refetchedDTO.value.name).to.equal(newName)
-            expect(refetchedDTO.value.age).to.equal(cachedDTO.age)
-            expect(refetchedDTO.value.updatedAt).to.be.not.empty
+            expect(refetchedDTO.isJust, 'refetchedDTO').to.be.true
+            expect(refetchedDTO.value.id, 'id').to.equal(cachedDTO.id)
+            expect(refetchedDTO.value.name, 'name').to.equal(newName)
+            expect(refetchedDTO.value.age, 'age').to.equal(cachedDTO.age)
+            expect(refetchedDTO.value.updatedAt, 'updatedAt').to.be.not.empty
         })
 
         it('should return DTO instance if found', async () => {

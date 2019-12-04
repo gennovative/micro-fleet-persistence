@@ -78,7 +78,6 @@ class AtomicSessionFlow {
     }
     _doTask(prevOutput) {
         const task = this._tasks.shift();
-        prevOutput = prevOutput || [];
         if (!task) {
             // When there's no more task, we commit all transactions.
             this._resolveTransactions(prevOutput);

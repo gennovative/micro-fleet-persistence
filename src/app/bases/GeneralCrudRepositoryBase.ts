@@ -71,7 +71,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
      * @see IRepository.create
      */
     public create(domainModel: TDomain, opts: it.RepositoryCreateOptions = {}): Promise<TDomain> {
-        const ormModelOrModels = this.$toORMModel(domainModel, false)
+        const ormModelOrModels = this.$toORMModel(domainModel)
 
         return this.$executeQuery(
             (query, BoundClass) => {
@@ -81,7 +81,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
             },
             opts.atomicSession,
         )
-        .then((refetch: TORM) => this.$toDomainModel(refetch, false))
+        .then((refetch: TORM) => this.$toDomainModel(refetch))
     }
 
     protected $buildCreateQuery(query: QueryBuilder<TORM>, model: TDomain, ormModel: TORM,
@@ -95,7 +95,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
      * @see IRepository.createMany
      */
     public createMany(domainModels: TDomain[], opts: it.RepositoryCreateOptions = {}): Promise<TDomain[]> {
-        const ormModelOrModels = this.$toORMModelMany(domainModels, false)
+        const ormModelOrModels = this.$toORMModelMany(domainModels)
 
         return this.$executeQuery(
             (query, BoundClass) => {
@@ -105,7 +105,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
             },
             opts.atomicSession,
         )
-        .then((refetch: TORM[]) => this.$toDomainModelMany(refetch, false))
+        .then((refetch: TORM[]) => this.$toDomainModelMany(refetch))
     }
 
     protected $buildCreateManyQuery(query: QueryBuilder<TORM>, models: TDomain[], ormModels: TORM[],
@@ -207,7 +207,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
         )
         .then(foundORM => {
             return foundORM
-                ? Maybe.Just(this.$toDomainModel(foundORM, false))
+                ? Maybe.Just(this.$toDomainModel(foundORM))
                 : Maybe.Nothing()
         }) as Promise<Maybe<TDomain>>
     }
@@ -242,7 +242,7 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
         if (!foundList) {
             return new PagedData<TDomain>()
         }
-        const dtoList: TDomain[] = this.$toDomainModelMany(foundList.results, false) as TDomain[]
+        const dtoList: TDomain[] = this.$toDomainModelMany(foundList.results) as TDomain[]
         return new PagedData<TDomain>(dtoList, foundList.total)
     }
 
@@ -267,10 +267,10 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
     /**
      * @see IRepository.patch
      */
-    public async patch(domainModel: Partial<TDomain>, opts: it.RepositoryPatchOptions = {}): Promise<Maybe<TDomain>> {
-        const ormModel = this.$toORMModel(domainModel, true) as TORM
+    public async patch(domainModel: Partial<TDomain>, opts: it.RepositoryPatchOptions = {}): Promise<Maybe<Partial<TDomain>>> {
+        const ormModel = this.$toORMModel(domainModel) as TORM
 
-        const refetchedEntities: TORM[] = await this.$executeQuery(
+        const refetchedOrCount: TORM[] | number = await this.$executeQuery(
             (query, BoundClass) => {
                 const q = this.$buildPatchQuery(query, domainModel, ormModel, opts, BoundClass) as QueryBuilder<any>
                 debug('PATCH: %s', q.toSql())
@@ -278,9 +278,15 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
             },
             opts.atomicSession,
         )
-        return (refetchedEntities.length > 0)
-            ? Maybe.Just(this.$toDomainModel(refetchedEntities[0], false))
-            : Maybe.Nothing()
+        const isPositiveCount = (typeof refetchedOrCount === 'number') && refetchedOrCount > 0
+        const isRefetched = (typeof refetchedOrCount === 'object')
+        if (isPositiveCount) {
+            return Maybe.Just(domainModel)
+        }
+        else if (isRefetched) {
+            return Maybe.Just(this.$toDomainModel(refetchedOrCount[0]))
+        }
+        return Maybe.Nothing()
     }
 
     protected $buildPatchQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM,
@@ -298,9 +304,9 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
      * @see IRepository.update
      */
     public async update(domainModel: TDomain, opts: it.RepositoryUpdateOptions = {}): Promise<Maybe<TDomain>> {
-        const ormModel = this.$toORMModel(domainModel, false) as TORM
+        const ormModel = this.$toORMModel(domainModel) as TORM
 
-        const refetchedEntities: TORM[] = await this.$executeQuery(
+        const refetchedOrCount: TORM[] | number = await this.$executeQuery(
             (query, BoundClass) => {
                 const q = this.$buildUpdateQuery(query, domainModel, ormModel, opts, BoundClass) as QueryBuilder<any>
                 debug('UPDATE: %s', q.toSql())
@@ -308,9 +314,18 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
             },
             opts.atomicSession,
         )
-        return (refetchedEntities.length > 0)
-            ? Maybe.Just(this.$toDomainModel(refetchedEntities[0], false))
-            : Maybe.Nothing()
+        const isPositiveCount = (typeof refetchedOrCount === 'number') && refetchedOrCount > 0
+        const isRefetched = (typeof refetchedOrCount === 'object')
+        if (isPositiveCount) {
+            return Maybe.Just(domainModel)
+        }
+        else if (isRefetched) {
+            return Maybe.Just(this.$toDomainModel(refetchedOrCount[0]))
+        }
+        return Maybe.Nothing()
+        // return (refetchedOrCount.length > 0)
+        //     ? Maybe.Just(this.$toDomainModel(refetchedOrCount[0], false))
+        //     : Maybe.Nothing()
     }
 
     protected $buildUpdateQuery(query: QueryBuilder<TORM>, model: Partial<TDomain>, ormModel: TORM,
@@ -331,47 +346,41 @@ export class GeneralCrudRepositoryBase<TORM extends ORMModelBase, TDomain extend
     /**
      * Translates from a domain model to an ORM model.
      */
-    protected $toORMModel(domainModel: TDomain | Partial<TDomain>, isPartial: boolean): TORM {
+    protected $toORMModel(domainModel: TDomain | Partial<TDomain>): TORM {
         if (!domainModel) { return null }
 
         const translator = this.$ORMClass.getTranslator()
-        const ormModel: any = (isPartial)
-            ? translator.partial(domainModel, { enableValidation: false }) // Disable validation because it's unnecessary.
-            : translator.whole(domainModel, { enableValidation: false })
-
+        const ormModel: any = translator.whole(domainModel, { enableValidation: false })
         return ormModel
     }
 
     /**
      * Translates from domain models to ORM models.
      */
-    protected $toORMModelMany(domainModels: TDomain[] | Partial<TDomain>[], isPartial: boolean): TORM[] {
+    protected $toORMModelMany(domainModels: TDomain[] | Partial<TDomain>[]): TORM[] {
         // ModelAutoMapper can handle both single and array of models
         // We separate into two methods for prettier typing.
-        return this.$toORMModel(domainModels as any, isPartial as any) as any
+        return this.$toORMModel(domainModels as any) as any
     }
 
     /**
      * Translates from an ORM model to a domain model.
      */
-    protected $toDomainModel(ormModel: TORM | Partial<TORM>, isPartial: boolean): TDomain {
+    protected $toDomainModel(ormModel: TORM | Partial<TORM>): TDomain {
         if (!ormModel) { return null }
 
         const translator = this.$DomainClass.getTranslator()
-        const domainModel: any = (isPartial)
-            ? translator.partial(ormModel, { enableValidation: false }) // Disable validation because it's unnecessary.
-            : translator.whole(ormModel, { enableValidation: false })
-
+        const domainModel: any = translator.whole(ormModel, { enableValidation: false })
         return domainModel
     }
 
     /**
      * Translates from ORM models to domain models.
      */
-    protected $toDomainModelMany(ormModels: TORM[] | Partial<TORM>[], isPartial: boolean): TDomain[] {
+    protected $toDomainModelMany(ormModels: TORM[] | Partial<TORM>[]): TDomain[] {
         // ModelAutoMapper can handle both single and array of models
         // We separate into two methods for prettier typing.
-        return this.$toDomainModel(ormModels as any, isPartial as any) as any
+        return this.$toDomainModel(ormModels as any) as any
     }
 
     protected $buildIdArray(ormModel: Partial<TORM>): any[] {
